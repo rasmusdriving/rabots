@@ -1,0 +1,30 @@
+<!-- @dsCard group="Channels" height=520 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RouteList</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 560px; display: flex; flex-direction: column; gap: var(--space-6); }</style>
+</head>
+<body>
+<div class="demo">
+  <section class="pb-section">
+    <h2 class="pb-section-title">Tags</h2>
+    <p class="pb-section-text">A message that tags a bot here is an instruction to that bot. The messages before it are given as background.</p>
+    <ul class="pb-routes">
+      <li class="pb-route"><span class="pb-route-tag">Kaja</span><span class="pb-route-word">reaches</span><span class="pb-pick"><button class="pb-btn pb-btn-sm pb-pick-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="The bot the tag Kaja reaches: Kaja"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-pick-name">Kaja</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.75 6 7.75l3-3"/></svg></button></span><button class="pb-btn pb-btn-sm pb-btn-quiet pb-route-remove" type="button">Remove</button></li>
+      <li class="pb-route"><span class="pb-route-tag">Inbox</span><span class="pb-route-word">reaches</span><span class="pb-pick"><button class="pb-btn pb-btn-sm pb-pick-btn" type="button" aria-haspopup="menu" aria-expanded="true" aria-label="The bot the tag Inbox reaches: Inbox"><span class="pb-avatar pb-avatar-sm" data-eyes="round" data-gap="far"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-pick-name">Inbox</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.75 6 7.75l3-3"/></svg></button>
+        <div class="pb-pop pb-pick-menu" role="menu" aria-label="The bot the tag Inbox reaches">
+          <button class="pb-option" type="button" role="menuitemradio" aria-checked="false"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-pick-name">Kaja</span></button>
+          <button class="pb-option" type="button" role="menuitemradio" aria-checked="true"><span class="pb-avatar pb-avatar-sm" data-eyes="round" data-gap="far"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-pick-name">Inbox</span><svg class="pb-push" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg></button>
+          <button class="pb-option" type="button" role="menuitemradio" aria-checked="false"><span class="pb-avatar pb-avatar-sm" data-eyes="square"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-pick-name">HubSpot tickets</span></button>
+          <button class="pb-option" type="button" role="menuitemradio" aria-checked="false"><span class="pb-avatar pb-avatar-sm" data-eyes="wide" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-pick-name">Onboardings</span></button>
+        </div></span><button class="pb-btn pb-btn-sm pb-btn-quiet pb-route-remove" type="button">Remove</button></li>
+    </ul>
+    <form class="pb-add-row pb-route-add"><input class="pb-input pb-tag-input" type="text" placeholder="Tag, like Po" aria-label="New tag"><span class="pb-route-word">reaches</span><span class="pb-pick"><button class="pb-btn pb-btn-sm pb-pick-btn" type="button" aria-haspopup="menu"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-pick-name">Kaja</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.75 6 7.75l3-3"/></svg></button></span><button class="pb-btn pb-btn-sm" type="button" disabled>Add tag</button></form>
+  </section>
+  <div style="height: 120px"></div>
+</div>
+</body>
+</html>

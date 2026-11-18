@@ -1,0 +1,49 @@
+<!-- @dsCard group="Needs you" height=1180 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Todo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+</head>
+<body>
+<div style="display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start; padding: var(--space-4)">
+  <!-- The foot of the rail: Your to-do under Needs you and Later today. -->
+  <aside class="pb-rail" style="width: 344px; height: 300px; background: var(--ground)">
+    <section class="pb-card" style="flex: none"><div class="pb-card-head"><span class="pb-avatar pb-avatar-sm" data-eyes="wide" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><b>Onboardings</b> needs a choice</div><p class="pb-card-title">Kickoff date for the new onboarding</p></section>
+    <section class="pb-todo" aria-labelledby="todo-title">
+      <h3 class="pb-side-title pb-todo-title" id="todo-title">Your to-do<span class="pb-todo-count">4</span></h3>
+      <ul class="pb-todo-list">
+        <li><button class="pb-todo-item" type="button"><span class="pb-avatar pb-avatar-sm" data-eyes="wide" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-todo-name">Answer Aalto about the report template</span><span class="pb-todo-when" data-late>was due Thu</span></button></li>
+        <li><button class="pb-todo-item" type="button"><span class="pb-avatar pb-avatar-sm" data-eyes="wide" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-todo-name">Send the Nordvik import summary</span><span class="pb-todo-when">by Mon</span></button></li>
+        <li><button class="pb-todo-item" type="button"><span class="pb-avatar pb-avatar-sm" data-eyes="wide" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-todo-name">Pick a start date for Lindgren</span><span class="pb-todo-when">40 min</span></button></li>
+        <li><button class="pb-todo-item" type="button"><span class="pb-avatar pb-avatar-sm" data-eyes="wide" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-todo-name">Look at this week's onboarding numbers</span><span class="pb-todo-when">5 h</span></button></li>
+      </ul>
+    </section>
+  </aside>
+  <!-- The to-do's window, drawn from the bot's blocks. -->
+  <div class="pb-dialog pb-dialog-sheet" role="dialog" aria-labelledby="todo-win-title" style="max-height: none">
+    <h2 class="pb-dialog-title" id="todo-win-title">Send the Nordvik import summary</h2>
+    <p class="pb-dialog-text">The import is done and Nordvik waits for the summary.</p>
+    <div class="pb-todo-from"><span class="pb-avatar pb-avatar-sm" data-eyes="wide" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><b>HubSpot tickets</b><span>2 d ago</span><span>by Mon</span></div>
+    <div class="pb-todo-blocks">
+      <div class="pb-todo-text"><p>The import <strong>finished</strong> at 09:12 with no errors.</p></div>
+      <dl class="pb-todo-facts"><div class="pb-todo-fact"><dt>Customer</dt><dd>Nordvik AB</dd></div><div class="pb-todo-fact"><dt>Rows imported</dt><dd>4 210</dd></div></dl>
+      <a class="pb-todo-link" href="https://example.com/tickets/48211">The ticket in HubSpot</a>
+      <div class="pb-todo-copy"><div class="pb-todo-copy-head"><span class="pb-todo-copy-label">Email draft</span><button class="pb-btn pb-btn-sm pb-copy" type="button">Copy</button></div><div class="pb-draft pb-todo-copy-text">Hej Anna,
+
+Importen är klar: 4 210 personer finns nu i systemet.
+
+Vänliga hälsningar
+Kaja</div></div>
+      <div class="pb-chip-file pb-todo-file"><span class="pb-chip-thumb">PDF</span><span class="pb-chip-text"><span class="pb-chip-name">Import report.pdf</span><span class="pb-chip-meta">242 KB</span></span></div>
+      <button class="pb-todo-page" type="button"><span class="pb-todo-page-title">Onboarding status</span><span class="pb-todo-page-line">Open beside the chat</span></button>
+      <label class="pb-field pb-field-wide"><span class="pb-label">Anything to add for the customer?</span><textarea class="pb-input pb-textarea" placeholder="A line I should add"></textarea></label>
+      <div class="pb-field pb-field-wide"><span class="pb-label">Language</span><div class="pb-choices" role="radiogroup"><button class="pb-choice" type="button" role="radio" aria-checked="true"><span class="pb-choice-label">Swedish</span></button><button class="pb-choice" type="button" role="radio" aria-checked="false"><span class="pb-choice-label">English</span></button></div></div>
+    </div>
+    <p class="pb-hint pb-todo-error"></p>
+    <div class="pb-dialog-actions pb-todo-actions"><button class="pb-btn pb-btn-quiet" type="button">Dismiss</button><button class="pb-btn" type="button">Mark done</button><button class="pb-btn" type="button">Change the draft</button><button class="pb-btn pb-btn-primary" type="button">I sent it</button></div>
+  </div>
+</div>
+</body>
+</html>

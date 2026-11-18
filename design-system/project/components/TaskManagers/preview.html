@@ -1,0 +1,77 @@
+<!-- @dsCard group="Needs you" height=1080 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TaskManagers</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { margin: 0; }
+  .demo { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start; padding: var(--space-4); }
+  .demo-title { margin: 0 0 var(--space-2); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-faint); }
+  .demo-panel { display: flex; flex-direction: column; width: 640px; background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-panel); overflow: hidden; padding-top: var(--space-2); }
+</style>
+</head>
+<body>
+<div class="demo">
+  <!-- The foot of the rail: Task managers just above Helpers at work; a card from a task manager above it. -->
+  <div>
+    <p class="demo-title">The rail: a card from a task manager, Task managers just above Helpers at work</p>
+    <aside class="pb-rail" style="width: 344px; height: 600px; background: var(--ground)">
+      <section class="pb-card" style="flex: none">
+        <div class="pb-card-head pb-card-head-tm"><span class="pb-avatar pb-avatar-sm" data-eyes="tall" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-card-head-who"><b>Build the booking page</b>, for Kaja</span></div>
+        <div class="pb-card-helper">Needs a choice</div>
+        <p class="pb-card-title">Which calendar view should the booking page open on?</p>
+        <div class="pb-card-actions"><button class="pb-btn pb-btn-sm" type="button">Week view</button><button class="pb-btn pb-btn-sm" type="button">Month view</button><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Later</button></div>
+      </section>
+      <div class="pb-rail-foot">
+        <section class="pb-atwork pb-tms" aria-labelledby="tms-title">
+          <h3 class="pb-side-title pb-atwork-title" id="tms-title">Task managers<span class="pb-atwork-count">3</span></h3>
+          <ul class="pb-atwork-list">
+            <li class="pb-atwork-slot"><button class="pb-atwork-item pb-tms-item" type="button" data-state="resting"><span class="pb-avatar pb-avatar-sm" data-eyes="square" data-gap="mid"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-atwork-text"><span class="pb-atwork-name">Move the old tickets</span><span class="pb-atwork-whose">HubSpot tickets, resting</span></span><span class="pb-atwork-side"><time class="pb-atwork-when">1 h 10 min</time></span></button></li>
+            <li class="pb-atwork-slot"><button class="pb-atwork-item pb-tms-item" type="button" data-state="waiting"><span class="pb-avatar pb-avatar-sm" data-eyes="tall" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-atwork-text"><span class="pb-atwork-name">Build the booking page</span><span class="pb-atwork-whose">Kaja, waits for you</span></span><span class="pb-atwork-side"><span class="pb-mark pb-mark-waiting"></span><time class="pb-atwork-when">25 min</time></span></button></li>
+            <li class="pb-atwork-slot"><button class="pb-atwork-item pb-tms-item" type="button" data-state="working"><span class="pb-avatar pb-avatar-sm" data-eyes="round" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-atwork-text"><span class="pb-atwork-name">Check every onboarding survey</span><span class="pb-atwork-whose">Onboardings, 2 workers</span></span><span class="pb-atwork-side"><span class="pb-mark pb-mark-thinking"><i></i><i></i><i></i></span><time class="pb-atwork-when">8 min</time></span></button></li>
+          </ul>
+        </section>
+        <section class="pb-atwork" aria-labelledby="atwork-title">
+          <h3 class="pb-side-title pb-atwork-title" id="atwork-title">Helpers at work<span class="pb-atwork-count">2</span></h3>
+          <ul class="pb-atwork-list">
+            <li class="pb-atwork-slot"><button class="pb-atwork-item" type="button"><span class="pb-avatar pb-avatar-sm" data-eyes="round" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-atwork-text"><span class="pb-atwork-name">Read the Lindgren answers</span><span class="pb-atwork-whose">Onboardings, for Check every onboarding survey</span></span><span class="pb-atwork-side"><time class="pb-atwork-when">now</time></span></button></li>
+            <li class="pb-atwork-slot"><button class="pb-atwork-item" type="button"><span class="pb-avatar pb-avatar-sm" data-eyes="round" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-atwork-text"><span class="pb-atwork-name">Read the Aalto answers</span><span class="pb-atwork-whose">Onboardings, for Check every onboarding survey</span></span><span class="pb-atwork-side"><time class="pb-atwork-when">now</time></span></button></li>
+          </ul>
+        </section>
+      </div>
+    </aside>
+  </div>
+  <!-- Its thread, in the place of the bot's chat: the head, its settings, the foot with the message box. -->
+  <div>
+    <p class="demo-title">Its thread: the head with its state, one quiet line of its settings, a message box, Stop and End task manager</p>
+    <div class="demo-panel">
+      <div class="pb-helper-bar">
+        <button type="button" class="pb-helper-back" aria-label="Back to Kaja"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg><span class="pb-helper-back-name">Kaja</span></button>
+        <span class="pb-helper-bar-sep"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+        <h2 class="pb-helper-bar-title">Build the booking page</h2>
+        <span class="pb-helper-model pb-helper-bar-model">Opus 5.5</span>
+        <span class="pb-helper-bar-state pb-tm-state" data-state="working"><span class="pb-mark pb-mark-thinking"><i></i><i></i><i></i></span><span>Working</span></span>
+      </div>
+      <p class="pb-tm-settings"><span class="pb-tm-clip"><span class="pb-tm-list"><span>2 workers at once, 2 now</span><span>Workers, Questions to you, Notes to you, Messages to bots, Pages</span><span>May message Kaja, Onboardings</span></span></span></p>
+      <div class="pb-thread" style="padding: var(--space-4) var(--space-5)">
+        <article class="pb-msg pb-msg-task">
+          <span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span>
+          <div>
+            <div class="pb-msg-head"><b>Kaja</b><span class="pb-msg-from">asked the task manager</span><time>13:51</time></div>
+            <div class="pb-msg-body pb-task-body"><p>Build the booking page. Plan it, run the work through workers, check it and report back.</p></div>
+          </div>
+        </article>
+      </div>
+      <div class="pb-main-foot" style="position: static">
+        <div class="app-foot" style="padding: 0 var(--space-5) var(--space-3)">
+          <div class="pb-composer pb-tm-composer"><textarea rows="1" placeholder="Message the task manager" aria-label="Message the task manager"></textarea><div class="pb-composer-bar"><button class="pb-send pb-push" type="button" aria-label="Send" aria-disabled="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg></button></div></div>
+          <div class="pb-helper-foot pb-tm-foot"><p class="pb-helper-note">Works for Kaja.</p><button type="button" class="pb-btn pb-btn-sm pb-btn-quiet">Stop</button><button type="button" class="pb-btn pb-btn-sm">End task manager</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

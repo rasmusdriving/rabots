@@ -1,0 +1,7 @@
+Which tag reaches which bot in a channel. A tag is the word people use in the channel to call a bot, such as "Po" in "@Po can you draft the agenda".
+
+- **Row** (`pb-route`): the tag in weight 600 (`pb-route-tag`), the word "reaches", and the bot it reaches as a bot picker, then a quiet "Remove" on the right. Changing the bot or removing the tag saves at once and says "Saved" beside the section title.
+- **Bot picker** (`pb-pick`): a quiet button with the bot's face (20px) and name and a small chevron. It opens a short floating list (`pb-pop pb-pick-menu`, `surface-overlay`, `shadow-float`) of every bot with its face; the chosen one has a check in `accent-text`. Keyboard: Enter or the down arrow opens the list with the chosen bot in focus, the arrows move, Enter chooses and focus goes back to the button, Escape closes without a change. A click outside closes it. The list floats, so nothing under it moves.
+- **Add** (`pb-route-add`): a tag field, "reaches", a bot picker and "Add tag". A leading "@" or "#" is dropped. A tag that is a bot's name picks that bot by itself; otherwise the main bot, until another is chosen. A tag already there is said in clay and nothing is added.
+- The line under the title is the rule in one sentence: a tagged message is an instruction to that bot, the messages before it are background.
+- With no tags: "No tags yet. Add one so that a message here can reach a bot."

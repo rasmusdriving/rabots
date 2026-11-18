@@ -1,0 +1,49 @@
+<!-- @dsCard group="Triggers" height=820 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HookAddress</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 560px; display: flex; flex-direction: column; gap: var(--space-6); }</style>
+</head>
+<body>
+<div class="demo">
+  <section class="pb-section">
+    <h3 class="pb-section-title">Address</h3>
+    <div class="pb-hook">
+      <p class="pb-section-text">Anyone with this address can wake Inbox. Keep it like a password.</p>
+      <div class="pb-card-actions"><button class="pb-btn pb-btn-sm" type="button">Show address</button></div>
+    </div>
+  </section>
+  <section class="pb-section">
+    <h3 class="pb-section-title">Address, shown</h3>
+    <div class="pb-hook">
+      <p class="pb-section-text">Anyone with this address can wake Inbox. Keep it like a password.</p>
+      <div class="pb-address"><code class="pb-address-text">https://mac-mini.example.ts.net:4443/hook/tr113/uQa9MUGMRR3YBAgZaLoAi8_kqyapSpw5gIZLNk1GtoY</code><button class="pb-btn pb-btn-sm pb-copy" type="button" data-copied>Copied</button></div>
+      <span class="pb-label pb-hook-label">Try it</span>
+      <div class="pb-address"><code class="pb-address-text">curl -X POST "https://mac-mini.example.ts.net:4443/hook/tr113/uQa9MUGMRR3YBAgZaLoAi8_kqyapSpw5gIZLNk1GtoY" -H "Content-Type: application/json" -d '{"text": "Hello"}'</code><button class="pb-btn pb-btn-sm pb-copy" type="button">Copy</button></div>
+      <span class="pb-hint">Send JSON with a POST. What was sent reaches Inbox after what it is told.</span>
+      <div class="pb-card-actions"><button class="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button">Hide address</button><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">New address</button></div>
+    </div>
+  </section>
+  <section class="pb-section">
+    <h3 class="pb-section-title">A channel's address, without a public address yet</h3>
+    <div class="pb-hook">
+      <p class="pb-section-text">The Power Automate flow posts each tagged message to this address. Keep it like a password.</p>
+      <div class="pb-address"><code class="pb-address-text">http://127.0.0.1:47600/hook/ch-ops/acq0H2EYq9xx16tDsmB8VdodPgg08JrsDanrizN368w</code><button class="pb-btn pb-btn-sm pb-copy" type="button">Copy</button></div>
+      <span class="pb-hint">Power Automate can only reach this address once Pobots has a public address.</span>
+      <div class="pb-card-actions"><button class="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button">Hide address</button><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">New address</button></div>
+    </div>
+  </section>
+  <section class="pb-section">
+    <h3 class="pb-section-title">A channel's address, public</h3>
+    <div class="pb-hook">
+      <p class="pb-section-text">The Power Automate flow posts each tagged message to this address. Keep it like a password.</p>
+      <div class="pb-address"><code class="pb-address-text">https://pobots.example.com/hook/ch-ops/acq0H2EYq9xx16tDsmB8VdodPgg08JrsDanrizN368w</code><button class="pb-btn pb-btn-sm pb-copy" type="button">Copy</button></div>
+      <div class="pb-card-actions"><button class="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button">Hide address</button><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">New address</button></div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

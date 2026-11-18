@@ -1,0 +1,182 @@
+<!-- @dsCard group="Conversation" height=1720 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Attachment</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { background: var(--surface); margin: 0; }
+  .demo { max-width: 680px; padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-6); }
+  .demo-title { margin: 0 0 var(--space-3); font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); }
+  .demo-you { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); }
+  .demo-shot { width: 100%; height: 100%; }
+  .pb-scrim.demo-scrim { position: relative; inset: auto; z-index: auto; min-height: 420px; animation: none; border-radius: var(--radius-xl); }
+  .demo-drop { position: relative; height: 180px; background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-panel); }
+  .demo-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="demo">
+
+  <section>
+    <p class="demo-title">The message box with the tray: done, uploading, failed, refused</p>
+    <div class="pb-composer">
+      <div class="pb-tray" role="group" aria-label="Attached to this message">
+        <ul class="pb-tray-chips">
+          <li><div class="pb-chip-file" data-status="done" title="Screenshot 2026-11-13 08.12.png">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg class="demo-shot" viewBox="0 0 40 40"><rect width="40" height="40" fill="#dfe3f2"/><rect width="40" height="5" fill="#3c4470"/><rect x="3" y="8" width="11" height="29" fill="#b9c1e6"/><rect x="17" y="8" width="20" height="6" fill="#fff"/><rect x="17" y="17" width="20" height="6" fill="#fff"/><rect x="17" y="26" width="20" height="6" fill="#fff"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name"><span aria-hidden="true">Screenshot 2026…08.12.png</span><span class="demo-sr">Screenshot 2026-11-13 08.12.png</span></span><span class="pb-chip-meta">184 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Screenshot 2026-11-13 08.12.png"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="uploading" title="Nordvik import report.pdf">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Nordvik import…eport.pdf</span><span class="pb-chip-meta">Uploading</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Nordvik import report.pdf"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" data-on aria-hidden="true" style="transform: scaleX(0.45)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="failed" title="report.pdf didn't upload. Try again.">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">report.pdf</span><button type="button" class="pb-chip-retry" aria-label="Try again to upload report.pdf">Try again</button></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove report.pdf"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="refused" role="group" aria-label="The bot can't read Holiday video.mov. Attach pictures, PDFs, Word, Excel or text files." title="The bot can't read Holiday video.mov. Attach pictures, PDFs, Word, Excel or text files.">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Holiday video.mov</span><span class="pb-chip-meta">Can't attach</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Holiday video.mov"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true"></span>
+          </div></li>
+        </ul>
+        <p class="pb-tray-line" data-problem role="status">report.pdf didn't upload. Try again, and 1 more can't be attached.</p>
+      </div>
+      <textarea rows="1" placeholder="Message Kaja" aria-label="Message Kaja"></textarea>
+      <div class="pb-composer-bar">
+        <button class="pb-icon-btn" type="button" aria-label="Attach pictures or files" title="Attach pictures or files"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button>
+        <button class="pb-btn pb-btn-sm pb-btn-quiet pb-push" type="button">Opus 5.5 <small>High</small></button>
+        <button class="pb-send" type="button" data-waiting aria-busy="true" aria-label="Sends when the upload is done"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="demo-title">More than the row shows: the edge fades where more chips are, the line counts them</p>
+    <div class="pb-composer">
+      <div class="pb-tray" role="group" aria-label="Attached to this message, 10">
+        <ul class="pb-tray-chips" data-more-end>
+          <li><div class="pb-chip-file" data-status="done" title="Note 1.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 1.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 1.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="done" title="Note 2.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 2.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 2.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="done" title="Note 3.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 3.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 3.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="done" title="Note 4.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 4.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 4.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="done" title="Note 5.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 5.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 5.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="done" title="Note 6.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 6.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 6.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="done" title="Note 7.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 7.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 7.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="done" title="Note 8.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 8.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 8.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="done" title="Note 9.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 9.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 9.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+          <li><div class="pb-chip-file" data-status="done" title="Note 10.txt">
+            <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+            <span class="pb-chip-text"><span class="pb-chip-name">Note 10.txt</span><span class="pb-chip-meta">2 KB</span></span>
+            <button type="button" class="pb-chip-remove" aria-label="Remove Note 10.txt"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+            <span class="pb-chip-progress" aria-hidden="true" style="transform: scaleX(1)"></span>
+          </div></li>
+        </ul>
+        <p class="pb-tray-line" role="status">10 attached. Uploading 2 files.</p>
+      </div>
+      <textarea rows="1" placeholder="Message Kaja" aria-label="Message Kaja"></textarea>
+    </div>
+  </section>
+
+  <section>
+    <p class="demo-title">In the chat: two pictures in their boxes (one still loading), a file, a file that is gone</p>
+    <div class="demo-you">
+      <div class="pb-msg-pictures">
+        <button type="button" class="pb-picture" data-shown style="width: 320px; aspect-ratio: 320 / 180" aria-haspopup="dialog" title="Screenshot 2026-11-13 08.12.png. Open large">
+          <svg class="demo-shot" viewBox="0 0 320 180" role="img" aria-label="Screenshot 2026-11-13 08.12.png"><rect width="320" height="180" fill="#dfe3f2"/><rect width="320" height="16" fill="#3c4470"/><rect x="16" y="28" width="80" height="140" fill="#b9c1e6"/><rect x="112" y="28" width="192" height="30" fill="#fff"/><rect x="112" y="66" width="192" height="30" fill="#fff"/><rect x="112" y="104" width="192" height="30" fill="#fff"/></svg>
+        </button>
+        <button type="button" class="pb-picture" style="width: 180px; aspect-ratio: 180 / 320" aria-haspopup="dialog" title="Phone photo.jpg. Open large"></button>
+      </div>
+      <div class="pb-msg-files">
+        <a class="pb-chip-file pb-msg-file" href="#" title="Nordvik import report.pdf. Download">
+          <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+          <span class="pb-chip-text"><span class="pb-chip-name">Nordvik import report.pdf</span><span class="pb-chip-meta">242 KB</span></span>
+        </a>
+        <div class="pb-chip-file pb-msg-file" data-missing title="Old export.xlsx. This file is no longer on the Mac.">
+          <span class="pb-chip-thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 2.75h5l2.5 2.5v8h-7.5Z"/><path d="M6.25 7.25h3.5M6.25 9.25h3.5M6.25 11.25h2"/></svg></span>
+          <span class="pb-chip-text"><span class="pb-chip-name">Old export.xlsx</span><span class="pb-chip-meta">This file is no longer on the Mac.</span></span>
+        </div>
+      </div>
+      <div class="pb-msg-you">Here is the ticket and the export. What stands out?</div>
+    </div>
+  </section>
+
+  <section>
+    <p class="demo-title">Files dragged over a bot's chat</p>
+    <div class="pb-main demo-drop" data-drop>
+      <div class="pb-drop" aria-hidden="true"><span class="pb-drop-note">Drop here to attach</span></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="demo-title">A picture opened large</p>
+    <div class="pb-scrim pb-picture-scrim demo-scrim">
+      <div class="pb-picture-view" role="dialog" aria-modal="true" aria-label="Screenshot 2026-11-13 08.12.png">
+        <div class="pb-picture-view-head">
+          <span class="pb-picture-view-name">Screenshot 2026-11-13 08.12.png</span>
+          <button type="button" class="pb-icon-btn pb-picture-view-close" aria-label="Close" title="Close"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+        </div>
+        <div class="pb-picture-large" data-full style="width: 560px; height: 315px">
+          <svg class="demo-shot" viewBox="0 0 320 180" role="img" aria-label="Screenshot 2026-11-13 08.12.png"><rect width="320" height="180" fill="#dfe3f2"/><rect width="320" height="16" fill="#3c4470"/><rect x="16" y="28" width="80" height="140" fill="#b9c1e6"/><rect x="112" y="28" width="192" height="30" fill="#fff"/><rect x="112" y="66" width="192" height="30" fill="#fff"/><rect x="112" y="104" width="192" height="30" fill="#fff"/></svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

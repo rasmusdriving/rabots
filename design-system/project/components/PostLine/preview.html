@@ -1,0 +1,25 @@
+<!-- @dsCard group="Conversation" height=420 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PostLine</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+body { background: var(--surface); }
+.app-notice { display: flex; align-items: center; gap: var(--space-2); padding-left: 40px; font-size: 13px; line-height: 20px; color: var(--ink-faint); }
+.app-notice-error { color: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="pb-thread" style="padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4)">
+  <div class="pb-notice-wrap">
+    <div class="app-notice" data-mark="posted"><span>Posted in Ops - Internal</span><time class="pb-time">09:02</time><button type="button" class="pb-notice-btn" aria-expanded="true">Hide the post</button></div>
+    <div class="pb-notice-post app-md"><p><strong>Ops status, week 46</strong></p><ul><li>Nordvik imports on Thursday.</li><li>Aalto waits for the report template.</li><li>Two support tickets are open, none urgent.</li></ul></div>
+  </div>
+  <div class="pb-notice-wrap">
+    <div class="app-notice app-notice-error"><span class="pb-mark pb-mark-blocked"></span><span>Could not post in Ops - Internal: no answer in time. Check the channel before posting again</span><time class="pb-time">09:40</time><button type="button" class="pb-notice-btn" aria-expanded="false">Show the post</button></div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+.DS_Store
+node_modules
+dist/
+out/
+design-system/dist/
+*.local.*
+.env
+.env.*
+*.sqlite
+*.sqlite-*
+*.log

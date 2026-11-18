@@ -1,0 +1,90 @@
+<!-- @dsCard group="Settings" height=1900 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PobotsSettings</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--ground); padding: var(--space-4); } .demo { max-width: 720px; height: auto; }</style>
+</head>
+<body>
+<main class="pb-main demo" aria-label="Pobots settings">
+  <header class="pb-main-head">
+    <span class="pb-who pb-who-mark pb-who-lg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h3.25M9.25 4.5H13M3 8h6.25M12.25 8H13M3 11.5h1.75M7.75 11.5H13"/><circle cx="7.75" cy="4.5" r="1.5"/><circle cx="10.75" cy="8" r="1.5"/><circle cx="6.25" cy="11.5" r="1.5"/></svg></span>
+    <div style="flex: 1 1 auto; min-width: 0"><h1 class="pb-appsettings-title">Pobots settings</h1><div class="pb-row-line">For the whole app, not one bot</div></div>
+    <button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-appsettings-back"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg><span class="pb-appsettings-back-name">Back to Kaja</span></button>
+  </header>
+  <div class="pb-main-scroll" style="padding: var(--space-2) var(--space-5) var(--space-5)">
+    <div class="pb-settings">
+      <section class="pb-section pb-notify" aria-labelledby="ds-notify">
+        <h2 class="pb-section-title" id="ds-notify">Notifications</h2>
+        <p class="pb-section-text">Pobots can let this device know when a bot needs you, also when the page is closed. A notification only says which bot and what kind of thing, never what the chat says.</p>
+        <div class="pb-backup-part pb-notify-device-part">
+          <h3 class="pb-backup-part-title">This device</h3>
+          <p class="pb-notify-line" role="status"><span class="pb-mark pb-mark-check"></span><span class="pb-swap pb-notify-line-text"><span class="pb-swap-line" aria-hidden="true">Off on this device.</span><span class="pb-swap-line" aria-hidden="true">Waiting for your answer in the browser.</span><span class="pb-swap-line" aria-hidden="true">Notifications are blocked for Pobots in this browser.</span><span class="pb-swap-line" data-show>On for this device.</span></span></p>
+          <div class="pb-notify-act"><button type="button" class="pb-btn pb-btn-sm pb-notify-primary"><span class="pb-swap"><span class="pb-swap-line" data-show>Send a test</span><span class="pb-swap-line" aria-hidden="true">Sending</span></span></button><button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-notify-off">Turn off for this device</button></div>
+          <p class="pb-notify-note"><span class="pb-swap"><span class="pb-swap-line" aria-hidden="true">Allowed, but the browser could not set up notifications here. Try again in a moment.</span><span class="pb-swap-line" data-show>Sent at 14:02. It should arrive in a few seconds.</span></span></p>
+        </div>
+        <div class="pb-backup-part pb-notify-kinds-part">
+          <div class="pb-section-head"><h3 class="pb-backup-part-title">What to tell you</h3><span class="pb-saved">Saved</span></div>
+          <p class="pb-notify-kinds-note">For all your devices.</p>
+          <ul class="pb-notify-kinds">
+            <li><label class="pb-notify-kind"><span class="pb-notify-kind-text"><span class="pb-notify-kind-name">Needs your answer</span><span class="pb-hint">A bot asks you something or asks to do something.</span></span><input class="pb-switch" type="checkbox" role="switch" checked aria-label="Needs your answer"></label></li>
+            <li><label class="pb-notify-kind"><span class="pb-notify-kind-text"><span class="pb-notify-kind-name">Sent you a note</span><span class="pb-hint">A bot, or Pobots itself, puts a note in front of you.</span></span><input class="pb-switch" type="checkbox" role="switch" checked aria-label="Sent you a note"></label></li>
+            <li><label class="pb-notify-kind"><span class="pb-notify-kind-text"><span class="pb-notify-kind-name">Finished</span><span class="pb-hint">A bot finished something you asked it to do, or stopped because of a problem.</span></span><input class="pb-switch" type="checkbox" role="switch" aria-label="Finished"></label></li>
+          </ul>
+        </div>
+        <div class="pb-backup-part">
+          <h3 class="pb-backup-part-title">Your devices</h3>
+          <ul class="pb-notify-devices">
+            <li class="pb-notify-device"><span class="pb-notify-device-name"><span class="pb-notify-device-label">Home screen app on iPhone</span></span><button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-notify-forget" aria-label="Forget Home screen app on iPhone">Forget</button><span class="pb-notify-device-line">Added 10 Nov. Last sent yesterday at 18:40.</span></li>
+            <li class="pb-notify-device" data-gone><span class="pb-notify-device-name"><span class="pb-notify-device-label">Chrome on Android</span></span><button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-notify-forget" aria-label="Forget Chrome on Android">Forget</button><span class="pb-notify-device-line">Stopped working on 12 Nov. Open Pobots on that device and turn notifications on again.</span></li>
+            <li class="pb-notify-device"><span class="pb-notify-device-name"><span class="pb-notify-device-label">Edge on Windows</span><span class="pb-notify-device-here">This device</span></span><button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-notify-forget" aria-label="Forget Edge on Windows">Forget</button><span class="pb-notify-device-line">Added 13 Nov. Last sent today at 14:02.</span></li>
+          </ul>
+        </div>
+      </section>
+      <section class="pb-section pb-backup" aria-labelledby="ds-backup">
+        <h2 class="pb-section-title" id="ds-backup">Backup</h2>
+        <p class="pb-section-text">Every night at 03:00 Pobots packs all chats, every bot's folder and the settings into one locked file and puts it in your OneDrive. Only your key in 1Password can open it. The last 14 nights are kept.</p>
+        <div class="pb-backup-state">
+          <p class="pb-backup-line" data-tone="saved" role="status"><span class="pb-mark pb-mark-check"></span><span class="pb-swap"><span class="pb-swap-line" data-show>Last night at 03:00, 3.2 MB, saved to OneDrive.</span><span class="pb-swap-line" aria-hidden="true">Made last night at 00:00, but OneDrive has not confirmed it yet.</span></span></p>
+          <p class="pb-backup-next">Next backup tonight at 03:00.</p>
+          <div class="pb-backup-act"><button type="button" class="pb-btn pb-btn-sm pb-backup-now"><span class="pb-swap"><span class="pb-swap-line" data-show>Back up now</span><span class="pb-swap-line" aria-hidden="true">Backing up</span></span></button></div>
+        </div>
+        <div class="pb-backup-part pb-backup-key">
+          <div class="pb-section-head"><h3 class="pb-backup-part-title">Your key</h3><span class="pb-saved">Saved</span></div>
+          <p class="pb-section-text pb-backup-key-text">Compare this with the fingerprint in 1Password. If they are the same, new backups are locked to this key. To use another key, paste its public key below.</p>
+          <div class="pb-backup-print" data-set><span class="pb-backup-print-label">Fingerprint</span><span class="pb-backup-print-text">SHA256:Qm9zc2EgYmFja3VwIGtleSBmb3IgdGhlIG1vY2sgaGVyZQ</span><span class="pb-backup-print-facts">RSA 4096 · Saved 12 Nov at 21:14</span><span class="pb-backup-print-old">Backups made before you changed the key still need the old key.</span></div>
+          <div class="pb-field pb-field-wide">
+            <label class="pb-label" for="ds-key">New public key</label>
+            <div class="pb-backup-paste"><textarea id="ds-key" class="pb-input pb-textarea pb-backup-input" rows="3" placeholder="ssh-rsa AAAA..."></textarea><button type="button" class="pb-btn pb-btn-sm pb-backup-save">Save key</button></div>
+            <span class="pb-backup-note" style="color: var(--clay)">This RSA key has 2048 bits. Make one of 4096 bits.</span>
+          </div>
+          <div class="pb-backup-how">
+            <button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-backup-how-toggle" aria-expanded="true" aria-controls="ds-how">How to make a key</button>
+            <div class="pb-backup-how-steps" id="ds-how">
+              <ol class="pb-backup-how-list"><li>In 1Password, open your private vault and choose New Item, then SSH Key.</li><li>Choose Add Private Key, then Generate a New Key, of the kind RSA and the size 4096. Save it.</li><li>Copy its public key, paste it in the field above and press Save key.</li></ol>
+              <p class="pb-section-text pb-backup-how-note">The key belongs in your private vault, not in a shared one. The private key never leaves 1Password: Pobots only needs the public key, which can lock backups but not open them.</p>
+            </div>
+          </div>
+        </div>
+        <div class="pb-backup-part">
+          <h3 class="pb-backup-part-title">Where the files go</h3>
+          <p class="pb-backup-folder" title="~/Library/CloudStorage/OneDrive-Personal/Pobot">OneDrive, folder Pobot</p>
+          <p class="pb-hint pb-backup-folder-problem"><span class="pb-swap"><span class="pb-swap-line app-hint-error" aria-hidden="true">Pobots cannot write to the backup folder. Check that OneDrive is running on the Mac and that the folder is still there.</span><span class="pb-swap-line" data-show></span></span></p>
+        </div>
+        <div class="pb-backup-part">
+          <h3 class="pb-backup-part-title">Recent backups</h3>
+          <ul class="pb-runs pb-backup-runs">
+            <li class="pb-run" data-status="saved"><div class="pb-run-row"><span class="pb-mark pb-mark-check"></span><span class="pb-run-text"><span class="pb-run-word">Saved to OneDrive</span><span class="pb-run-note">3.0 MB · Nightly · 1 large file left out</span></span><time class="pb-time">10 Nov 03:00</time></div></li>
+            <li class="pb-run" data-status="unconfirmed"><div class="pb-run-row"><span class="pb-mark pb-mark-idle"></span><span class="pb-run-text"><span class="pb-run-word">Not confirmed by OneDrive</span><span class="pb-run-note">3.1 MB · Nightly · OneDrive did not take the file. Is OneDrive running and signed in on the Mac?</span></span><time class="pb-time">11 Nov 03:00</time></div></li>
+            <li class="pb-run" data-status="failed"><div class="pb-run-row"><span class="pb-mark pb-mark-blocked"></span><span class="pb-run-text"><span class="pb-run-word">Failed</span><span class="pb-run-note pb-run-note-full">Pobots could not write the file to the OneDrive folder.</span></span><time class="pb-time">Yesterday 14:12</time></div></li>
+            <li class="pb-run" data-status="saved"><div class="pb-run-row"><span class="pb-mark pb-mark-check"></span><span class="pb-run-text"><span class="pb-run-word">Saved to OneDrive</span><span class="pb-run-note">3.2 MB · Nightly</span></span><time class="pb-time">03:00</time></div></li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+</body>
+</html>

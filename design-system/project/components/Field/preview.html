@@ -1,0 +1,44 @@
+<!-- @dsCard group="Settings" height=400 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Field</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); }</style>
+</head>
+<body>
+<div class="pb-stage-col" style="gap: var(--space-5)">
+  <div class="pb-field">
+    <div class="pb-label-row"><label class="pb-label" for="bot-name">Name</label><span class="pb-saved" data-show>Saved</span></div>
+    <input class="pb-input" id="bot-name" type="text" value="Onboardings">
+    <span class="pb-hint">Shown in the roster and when the bot messages other bots.</span>
+  </div>
+  <div class="pb-field" style="max-width: none">
+    <span class="pb-label" id="access-label">Access</span>
+    <div class="pb-seg" role="group" aria-labelledby="access-label">
+      <button type="button" aria-pressed="true">Asks first</button>
+      <button type="button" aria-pressed="false">Edits freely</button>
+      <button type="button" aria-pressed="false">Decides itself</button>
+      <button type="button" aria-pressed="false">Full access</button>
+    </div>
+    <span class="pb-hint">Asks before every action outside its own folder.</span>
+  </div>
+  <label class="pb-toggle"><input class="pb-switch" id="may-message" type="checkbox" checked>May message Kaja</label>
+  <div style="display: flex; flex-direction: column; gap: var(--space-2)">
+    <button type="button" class="pb-fast" role="switch" aria-checked="true" aria-label="Fast" aria-describedby="fh1"><span class="pb-switch-quiet" aria-hidden="true"></span><span class="pb-fast-name">Fast</span><span class="pb-fast-hints"><span class="pb-option-note pb-fast-hint" id="fh1" data-show>1.5x speed</span></span></button>
+    <button type="button" class="pb-fast" role="switch" aria-checked="false" aria-label="Fast" aria-describedby="fh2"><span class="pb-switch-quiet" aria-hidden="true"></span><span class="pb-fast-name">Fast</span><span class="pb-fast-hints"><span class="pb-option-note pb-fast-hint" id="fh2" data-show>2x speed, increased usage</span></span></button>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('[role="switch"]').forEach(function (s) {
+    s.addEventListener('click', function () { s.setAttribute('aria-checked', s.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); });
+  });
+  document.querySelectorAll('.pb-seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      b.parentNode.querySelectorAll('button').forEach(function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!-- @dsCard group="Motion" height=324 page -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Motion</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+  .demo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); padding: var(--space-5); max-width: 960px; }
+  .demo > div { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+  .demo h3 { font-size: 15px; line-height: 22px; font-weight: 600; margin: 0; }
+  .demo p { font-size: 13px; line-height: 20px; color: var(--ink-muted); margin: 0; }
+  .demo code { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
+  .slot { min-height: 108px; display: flex; align-items: center; gap: var(--space-4); }
+  .slot .pb-card { width: 100%; }
+</style>
+</head>
+<body>
+<div class="demo">
+  <div>
+    <h3>Arrive</h3>
+    <div class="slot">
+      <div class="pb-card pb-arrive" id="arrive-card">
+        <div class="pb-card-head"><span class="pb-avatar pb-avatar-sm" data-eyes="round" data-gap="far"><span class="pb-eyes"><i></i><i></i></span></span><b>Inbox</b> asks to send</div>
+        <p class="pb-card-title">Send this reply in Teams?</p>
+      </div>
+    </div>
+    <p>New things fade in and rise 6px. They never slide in from an edge.</p>
+    <code>dur-calm · ease-out</code>
+    <div><button class="pb-btn pb-btn-sm" type="button" id="replay">Play again</button></div>
+  </div>
+  <div>
+    <h3>Breathe</h3>
+    <div class="slot">
+      <span class="pb-avatar pb-avatar-lg" data-eyes="round" data-gap="far" data-state="working"><span class="pb-eyes"><i></i><i></i></span></span>
+      <span class="pb-status"><span class="pb-mark pb-mark-working"></span>Working</span>
+      <span class="pb-status"><span class="pb-mark pb-mark-thinking"><i></i><i></i><i></i></span>Thinking</span>
+    </div>
+    <p>A working bot blinks now and then and its mark breathes. Only bots move. No spinners, no shimmer.</p>
+    <code>dur-breath · ease-breath</code>
+  </div>
+  <div>
+    <h3>Respond</h3>
+    <div class="slot">
+      <button class="pb-btn pb-btn-primary" type="button">Press me</button>
+      <label class="pb-toggle"><input class="pb-switch" id="motion-switch" type="checkbox" checked>On</label>
+    </div>
+    <p>A press settles at once. Hover and switches follow just behind.</p>
+    <code>dur-instant · dur-quick · ease-soft</code>
+  </div>
+</div>
+<script>
+  document.getElementById('replay').addEventListener('click', function () {
+    var card = document.getElementById('arrive-card');
+    card.classList.remove('pb-arrive');
+    void card.offsetWidth;
+    card.classList.add('pb-arrive');
+  });
+</script>
+</body>
+</html>

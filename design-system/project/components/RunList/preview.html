@@ -1,0 +1,33 @@
+<!-- @dsCard group="Triggers" height=760 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RunList</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 560px; }</style>
+</head>
+<body>
+<div class="demo">
+  <ol class="pb-runs" aria-label="Runs of Morning brief">
+    <li class="pb-run" data-status="running"><button class="pb-run-row" type="button" aria-expanded="false"><span class="pb-mark pb-mark-working"></span><span class="pb-run-text"><span class="pb-run-word">Running</span><span class="pb-run-note">On it now</span></span><time class="pb-time">Just now</time></button></li>
+    <li class="pb-run" data-status="done">
+      <button class="pb-run-row" type="button" aria-expanded="true"><span class="pb-mark pb-mark-check"></span><span class="pb-run-text"><span class="pb-run-word">Done</span><span class="pb-run-note">Good morning. Two things need a decision from you today, both are in the list on the right.</span></span><time class="pb-time">07:30</time></button>
+      <div class="pb-run-open">
+        <div class="pb-run-thread pb-thread" role="log" aria-label="What happened in this run">
+          <article class="pb-msg pb-msg-trigger"><span class="pb-who pb-who-mark" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.75"/><path d="M8 5v3l2 1.25"/></svg></span><div><div class="pb-msg-head"><b class="pb-msg-trigger-name">Morning brief</b><time>07:30</time></div><div class="pb-msg-body">Read the calendar, Teams and the other bots' notes, and write a short plan for today.</div></div></article>
+          <div class="pb-activity"><span class="pb-mark pb-mark-check"></span>Read 14 new messages in Teams<span class="pb-time">31 s</span></div>
+          <article class="pb-msg"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><div><div class="pb-msg-head"><b>Kaja</b><time>07:31</time></div><div class="pb-msg-body">Good morning. Two things need a decision from you today, both are in the list on the right.</div></div></article>
+        </div>
+      </div>
+    </li>
+    <li class="pb-run" data-status="silent"><button class="pb-run-row" type="button" aria-expanded="false"><span class="pb-mark"></span><span class="pb-run-text"><span class="pb-run-word">Nothing to report</span><span class="pb-run-note">Nothing was passed on to the chat</span></span><time class="pb-time">Yesterday 13:00</time></button></li>
+    <li class="pb-run" data-status="done"><button class="pb-run-row" type="button" aria-expanded="true"><span class="pb-mark pb-mark-check"></span><span class="pb-run-text"><span class="pb-run-word">Done</span><span class="pb-run-note">Two promises are still open.</span></span><time class="pb-time">Yesterday 16:30</time></button>
+      <div class="pb-run-open"><p class="pb-run-full">Two promises are still open: the Nordvik import date and the report template for Aalto.</p><div><button class="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button">Show in chat</button></div></div>
+    </li>
+    <li class="pb-run" data-status="skipped"><div class="pb-run-row"><span class="pb-mark pb-mark-idle"></span><span class="pb-run-text"><span class="pb-run-word">Skipped</span><span class="pb-run-note">Pobots was not running at 07:30</span></span><time class="pb-time">8 Nov 07:30</time></div></li>
+    <li class="pb-run" data-status="failed"><button class="pb-run-row" type="button" aria-expanded="false"><span class="pb-mark pb-mark-blocked"></span><span class="pb-run-text"><span class="pb-run-word">Failed</span><span class="pb-run-note">I could not reach the calendar. I will try again at the next run.</span></span><time class="pb-time">7 Nov 07:30</time></button></li>
+  </ol>
+</div>
+</body>
+</html>

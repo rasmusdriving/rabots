@@ -1,0 +1,30 @@
+<!-- @dsCard group="Dialogs" height=920 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dialog</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--ground); } .pb-scrim { position: relative; inset: auto; min-height: 640px; display: flex; flex-wrap: wrap; gap: var(--space-5); align-items: flex-start; justify-content: center; animation: none; padding: var(--space-5); }</style>
+</head>
+<body>
+<div class="pb-scrim">
+  <div class="pb-dialog pb-dialog-sheet" role="dialog" aria-labelledby="add-title">
+    <h2 class="pb-dialog-title" id="add-title">Add a bot</h2>
+    <form class="pb-dialog-form">
+      <div class="pb-field"><label class="pb-label" for="n">Name</label><input class="pb-input" id="n" type="text" value="Reports"></div>
+      <div class="pb-field"><label class="pb-label" for="p">Purpose <span class="pb-label-note">optional</span></label><input class="pb-input" id="p" type="text" placeholder="What it is for, in one line"></div>
+      <div class="pb-field pb-field-wide"><label class="pb-label" for="j">Its job <span class="pb-label-note">optional</span></label><textarea class="pb-input pb-textarea" id="j" rows="3" placeholder="A few sentences about what it does. You can change this later under Job."></textarea></div>
+      <div class="pb-field pb-field-wide"><span class="pb-label" id="m">Model</span><div class="pb-model-groups" role="group" aria-labelledby="m"><div class="pb-model-group"><span class="pb-model-group-title" aria-hidden="true"><span class="pb-group-name">Claude</span></span><div class="pb-seg" role="group" aria-label="Claude"><button type="button" aria-pressed="false">Fable 5.2</button><button type="button" aria-pressed="false">Opus 5.5</button><button type="button" aria-pressed="false">Sonnet 5.5</button><button type="button" aria-pressed="false">Haiku 5.5</button></div></div><div class="pb-model-group"><span class="pb-model-group-title" aria-hidden="true"><span class="pb-group-name">ChatGPT</span></span><div class="pb-seg" role="group" aria-label="ChatGPT"><button type="button" aria-pressed="false">GPT-6.1 Sol</button><button type="button" aria-pressed="false">GPT-6.1 Terra</button><button type="button" aria-pressed="true">GPT-6 Luna</button><button type="button" aria-pressed="false">GPT-6 Astra</button></div></div></div></div>
+      <div class="pb-field pb-field-wide"><div class="pb-label-row"><span class="pb-label" id="e">Effort</span><button type="button" class="pb-fast" role="switch" aria-checked="true" aria-label="Fast" aria-describedby="fh"><span class="pb-switch-quiet" aria-hidden="true"></span><span class="pb-fast-name">Fast</span><span class="pb-fast-hints"><span class="pb-option-note pb-fast-hint" id="fh" data-show>1.5x speed</span><span class="pb-option-note pb-fast-hint">2x speed, increased usage</span></span></button></div><div class="pb-effort-box"><div class="pb-seg pb-effort-ghost" aria-hidden="true"><button type="button" tabindex="-1">Low</button><button type="button" tabindex="-1">Medium</button><button type="button" tabindex="-1">High</button><button type="button" tabindex="-1">Extra high</button><button type="button" tabindex="-1">Max</button></div><div class="pb-seg" role="group" aria-labelledby="e"><button type="button" aria-pressed="false">Low</button><button type="button" aria-pressed="true">Medium</button><button type="button" aria-pressed="false">High</button><button type="button" aria-pressed="false">Extra high</button><button type="button" aria-pressed="false">Max</button></div></div></div>
+      <div class="pb-dialog-actions"><button class="pb-btn pb-btn-quiet" type="button">Cancel</button><button class="pb-btn pb-btn-primary" type="button">Create bot</button></div>
+    </form>
+  </div>
+  <div class="pb-dialog" role="alertdialog" aria-labelledby="r-title" aria-describedby="r-text">
+    <h2 class="pb-dialog-title" id="r-title">Retire Inbox?</h2>
+    <p class="pb-dialog-text" id="r-text">Inbox stops and leaves the roster. Its folder is archived and its chat is kept. Other bots can no longer message it.</p>
+    <div class="pb-dialog-actions"><button class="pb-btn pb-btn-quiet" type="button">Keep it</button><button class="pb-btn pb-btn-danger pb-btn-danger-strong" type="button">Retire Inbox</button></div>
+  </div>
+</div>
+</body>
+</html>

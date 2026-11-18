@@ -1,0 +1,22 @@
+<!-- @dsCard group="Channels" height=420 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ChannelSheet</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--ground); } .pb-scrim { position: relative; inset: auto; min-height: 420px; animation: none; }</style>
+</head>
+<body>
+<div class="pb-scrim">
+  <div class="pb-dialog pb-dialog-sheet" role="dialog" aria-labelledby="t" aria-describedby="d">
+    <h2 class="pb-dialog-title" id="t">New channel</h2>
+    <p class="pb-dialog-text" id="d">A Teams channel where people can write to bots, through a Power Automate flow.</p>
+    <form class="pb-dialog-form">
+      <div class="pb-field pb-field-wide"><label class="pb-label" for="n">Name</label><input class="pb-input" id="n" type="text" placeholder="Ops - Internal"><span class="pb-hint">Use the channel's name in Teams, so you and the bots know which one it is. Who may write and which tag reaches which bot are set on its page.</span></div>
+      <div class="pb-dialog-actions"><button class="pb-btn pb-btn-quiet" type="button">Cancel</button><button class="pb-btn pb-btn-primary" type="button" disabled>Create channel</button></div>
+    </form>
+  </div>
+</div>
+</body>
+</html>

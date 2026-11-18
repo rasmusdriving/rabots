@@ -1,0 +1,36 @@
+/* "What Kaja sees" in a bot's settings (ui/components/SeesSetting.tsx, docs/sees.md). Tokens only. */
+
+.app-sees-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); max-width: 480px; min-height: 28px; }
+.app-sees-line { flex: 1; min-width: 0; font-size: 14px; line-height: 20px; font-weight: 500; }
+.app-sees-summary > .pb-btn { flex: none; }
+/* Before the first read is back (fix 0.26.3): a quiet line in the same box, never a guess. */
+/* It comes in only when the read takes a while, so a quick read never flashes it up and away. */
+.app-sees-line[data-pending] { color: var(--ink-muted); font-weight: 400; animation: pb-fade var(--dur-calm) var(--ease-soft) var(--dur-slow) both; }
+@media (prefers-reduced-motion: reduce) { .app-sees-line[data-pending] { animation: none; } }
+/* The GPT line keeps the section text's width (480px, .pb-section-text). */
+.app-sees > [data-sees-gpt] { max-width: 480px; }
+
+/* While nothing is read yet the body holds its space, so the lists fill in place. */
+.app-sees-body { display: flex; flex-direction: column; gap: var(--space-5); max-width: 480px; }
+.app-sees-body[data-empty] { min-height: 320px; }
+.app-sees-status { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 28px; }
+.app-sees-own { padding: var(--space-1) var(--space-3) 0; }
+
+.app-sees-group { display: flex; flex-direction: column; gap: var(--space-2); }
+.app-sees-group-title { margin: 0; font-size: 13px; line-height: 20px; font-weight: 600; color: var(--ink-muted); }
+.app-sees-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.app-sees-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-1) 0; }
+.app-sees-row[data-sees-row="rest"] { padding: var(--space-2) var(--space-3); background: var(--fill); border-radius: var(--radius-md); }
+.app-sees-text { display: flex; flex-direction: column; min-width: 0; }
+.app-sees-name { font-size: 14px; line-height: 20px; font-weight: 500; overflow-wrap: anywhere; }
+.app-sees-hint { font-size: 12px; line-height: 16px; color: var(--ink-muted); overflow-wrap: anywhere; }
+.app-sees-seg button { white-space: nowrap; }
+.app-sees-seg button[disabled] { opacity: 0.5; cursor: default; }
+.app-sees-fold-row { padding: var(--space-1) 0; }
+.app-sees-fold { padding-left: 0; }
+
+@media (max-width: 699.98px), (pointer: coarse) and (max-height: 499.98px) {
+  .app-tabpanel :is(.app-sees-summary > .pb-btn, .app-sees-status > .pb-btn, .app-sees-fold) { height: 44px; }
+  .app-tabpanel .app-sees-seg button { height: 44px; min-width: 44px; }
+  .app-sees-row { gap: var(--space-2); }
+}

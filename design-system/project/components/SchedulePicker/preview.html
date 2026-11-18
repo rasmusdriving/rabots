@@ -1,0 +1,49 @@
+<!-- @dsCard group="Triggers" height=700 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SchedulePicker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface-overlay); } .demo { padding: var(--space-5); display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: var(--space-6) var(--space-7); max-width: 1040px; }</style>
+</head>
+<body>
+<div class="demo">
+  <div class="pb-field pb-field-wide pb-sched">
+    <span class="pb-label" id="w1">When</span>
+    <div class="pb-seg" role="group" aria-labelledby="w1"><button type="button" aria-pressed="true">At a time</button><button type="button" aria-pressed="false">Every</button><button type="button" aria-pressed="false">Once</button></div>
+    <div class="pb-sched-row"><label class="pb-sched-part"><span class="pb-label">Time</span><input class="pb-input pb-time-input" type="text" inputmode="numeric" value="07:30"></label></div>
+    <div class="pb-field pb-field-wide">
+      <span class="pb-label" id="d1">Days</span>
+      <div class="pb-days-row">
+        <div class="pb-days" role="group" aria-labelledby="d1"><button class="pb-day" type="button" aria-pressed="true">Mon</button><button class="pb-day" type="button" aria-pressed="true">Tue</button><button class="pb-day" type="button" aria-pressed="true">Wed</button><button class="pb-day" type="button" aria-pressed="true">Thu</button><button class="pb-day" type="button" aria-pressed="true">Fri</button><button class="pb-day" type="button" aria-pressed="false">Sat</button><button class="pb-day" type="button" aria-pressed="false">Sun</button></div>
+        <span class="pb-days-quick"><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button" aria-pressed="true">Weekdays</button><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button" aria-pressed="false">Every day</button></span>
+      </div>
+    </div>
+    <p class="pb-sched-say" role="status">Runs weekdays at 07:30. Next: tomorrow 07:30</p>
+  </div>
+
+  <div class="pb-field pb-field-wide pb-sched">
+    <span class="pb-label" id="w2">When</span>
+    <div class="pb-seg" role="group" aria-labelledby="w2"><button type="button" aria-pressed="false">At a time</button><button type="button" aria-pressed="true">Every</button><button type="button" aria-pressed="false">Once</button></div>
+    <div class="pb-sched-row"><label class="pb-sched-part"><span class="pb-label">Every</span><input class="pb-input pb-number-input" type="text" inputmode="numeric" value="30"></label><div class="pb-seg pb-sched-unit" role="group" aria-label="Unit"><button type="button" aria-pressed="true">Minutes</button><button type="button" aria-pressed="false">Hours</button></div></div>
+    <div class="pb-sched-row"><label class="pb-sched-part"><span class="pb-label">From <span class="pb-label-note">optional</span></span><input class="pb-input pb-time-input" type="text" value="08:00"></label><label class="pb-sched-part"><span class="pb-label">To <span class="pb-label-note">optional</span></span><input class="pb-input pb-time-input" type="text" value="17:00"></label><span class="pb-hint pb-sched-hint">Leave both empty to run all day. At least 5 minutes apart.</span></div>
+    <p class="pb-sched-say" role="status">Runs every 30 minutes, 08:00 to 17:00, weekdays. Next: today 10:30</p>
+  </div>
+
+  <div class="pb-field pb-field-wide pb-sched">
+    <span class="pb-label" id="w3">When</span>
+    <div class="pb-seg" role="group" aria-labelledby="w3"><button type="button" aria-pressed="false">At a time</button><button type="button" aria-pressed="false">Every</button><button type="button" aria-pressed="true">Once</button></div>
+    <div class="pb-sched-row"><label class="pb-sched-part"><span class="pb-label">Date</span><span class="pb-select"><select class="pb-input"><option>Friday 13 Nov</option></select></span></label><label class="pb-sched-part"><span class="pb-label">Time</span><input class="pb-input pb-time-input" type="text" value="13:00"></label></div>
+    <p class="pb-sched-say" role="status">Runs once on Friday 13 Nov at 13:00. Then it switches itself off.</p>
+  </div>
+
+  <div class="pb-field pb-field-wide pb-sched">
+    <span class="pb-label" id="w4">When, not allowed</span>
+    <div class="pb-seg" role="group" aria-labelledby="w4"><button type="button" aria-pressed="false">At a time</button><button type="button" aria-pressed="true">Every</button><button type="button" aria-pressed="false">Once</button></div>
+    <div class="pb-sched-row"><label class="pb-sched-part"><span class="pb-label">Every</span><input class="pb-input pb-number-input" type="text" value="3"></label><div class="pb-seg pb-sched-unit" role="group" aria-label="Unit"><button type="button" aria-pressed="true">Minutes</button><button type="button" aria-pressed="false">Hours</button></div></div>
+    <p class="pb-sched-say" data-problem role="alert">Runs must be at least 5 minutes apart.</p>
+  </div>
+</div>
+</body>
+</html>

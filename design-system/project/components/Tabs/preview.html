@@ -1,0 +1,38 @@
+<!-- @dsCard group="Bot page" height=200 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tabs</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--ground); } .demo { margin: var(--space-4); max-width: 680px; } .demo .pb-main-head { flex-wrap: wrap; row-gap: var(--space-2); } .demo .pb-tabs { margin-left: var(--space-4); }</style>
+</head>
+<body>
+<div class="pb-main demo">
+  <header class="pb-main-head">
+    <span class="pb-avatar" data-eyes="tall" data-state="waiting"><span class="pb-eyes"><i></i><i></i></span></span>
+    <div>
+      <h1>Kaja</h1>
+      <div class="pb-row-line">Main bot</div>
+    </div>
+    <div class="pb-tabs" role="tablist" aria-label="Kaja's page">
+      <button class="pb-tab" type="button" role="tab" aria-selected="false" tabindex="-1">Chat</button>
+      <button class="pb-tab" type="button" role="tab" aria-selected="true">Job</button>
+      <button class="pb-tab" type="button" role="tab" aria-selected="false" tabindex="-1">Files</button>
+      <button class="pb-tab" type="button" role="tab" aria-selected="false" tabindex="-1">Artifacts</button>
+      <button class="pb-tab" type="button" role="tab" aria-selected="false" tabindex="-1">Triggers</button>
+      <button class="pb-tab" type="button" role="tab" aria-selected="false" tabindex="-1">History</button>
+      <button class="pb-tab" type="button" role="tab" aria-selected="false" tabindex="-1">Settings</button>
+    </div>
+    <span class="pb-status pb-status-waiting"><span class="pb-mark pb-mark-waiting"></span>Waiting for you</span>
+  </header>
+</div>
+<script>
+  document.querySelectorAll('.pb-tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.pb-tab').forEach(function (o) { o.setAttribute('aria-selected', o === t ? 'true' : 'false'); o.tabIndex = o === t ? 0 : -1; });
+    });
+  });
+</script>
+</body>
+</html>

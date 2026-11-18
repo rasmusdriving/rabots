@@ -1,0 +1,35 @@
+/* Settings, Activity: a day of what happened in Pobots, read only (protocol 22, ui/components/ActivityView.tsx,
+   docs/build/step-activity-day-view.md, design-system/project/components/ActivityDay/). Tokens only.
+   Calm: the head keeps its size and place whatever the day; the rows only fade while the next day is read. */
+
+.pb-actday-about { margin: 0 0 var(--space-3); max-width: 480px; }
+.pb-actday-head { display: flex; align-items: center; gap: var(--space-1); min-height: 32px; }
+/* The day's name has a fixed room, so the arrows beside it never move ("Wed 30 Sep 2025" fits). */
+.pb-actday-name { flex: none; width: 9em; text-align: center; font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.pb-actday-head .pb-icon-btn[aria-disabled] { color: var(--ink-faint); background: none; cursor: default; }
+.pb-actday-today { margin-left: auto; }
+.pb-actday-today[data-hide] { visibility: hidden; }
+.pb-actday-checked { margin-top: var(--space-2); }
+
+.pb-actday-day { margin-top: var(--space-1); transition: opacity var(--dur-quick) var(--ease-soft); }
+.pb-actday[data-reading] .pb-actday-day { opacity: 0.6; }
+.pb-actday-summary { display: flex; flex-direction: column; gap: 2px; margin: 0 0 var(--space-3); }
+.pb-actday-summary .pb-hint, .pb-actday-empty { margin: 0; font-size: 13px; line-height: 20px; }
+.pb-actday-more { margin: var(--space-2) 0 0; }
+
+/* A row: the time in mono at the left (and its end under it), then who and what. Long titles wrap. */
+.pb-actday-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.pb-actday-row { display: grid; grid-template-columns: 4.5em minmax(0, 1fr); column-gap: var(--space-3); padding: var(--space-1) 0; font-size: 14px; line-height: 20px; }
+/* On a day the clocks change each time carries its offset: a wider column. */
+.pb-actday-rows[data-offsets] .pb-actday-row { grid-template-columns: 7.5em minmax(0, 1fr); }
+.pb-actday-time { display: flex; flex-direction: column; font-family: var(--font-mono); font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.pb-actday-end { font-size: 12px; line-height: 16px; color: var(--ink-faint); }
+.pb-actday-text { min-width: 0; overflow-wrap: anywhere; }
+.pb-actday-who { font-weight: 500; }
+.pb-actday-row[data-kind="you"] .pb-actday-who { color: var(--accent-text); }
+
+@media (prefers-reduced-motion: reduce) { .pb-actday-day { transition: none; } }
+
+/* On a phone the arrows are 44 px to tap, Today and Refresh 40 px. */
+.pb-shell[data-phone] .pb-actday-head .pb-icon-btn { width: 44px; height: 44px; }
+.pb-shell[data-phone] .pb-actday-today { height: 40px; }

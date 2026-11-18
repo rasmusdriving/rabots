@@ -1,0 +1,217 @@
+/* The phone layout, the chat and typing (docs/build/step-phone.md, builder B).
+   Every rule in this file stands inside the one phone query below, the same words as PHONE_QUERY in
+   ui/lib/phone.ts. Nothing here may apply to a window 700 px or wider with a fine pointer. */
+@media (max-width: 699.98px), (pointer: coarse) and (max-height: 499.98px) {
+  /* ------------------------------------------------------------ text fields
+     A field under 16 px makes iOS Safari zoom the whole page when it gets the focus. Every field is
+     16 px on a phone; the page's own zoom stays allowed everywhere. Stronger than the components'
+     own sizes on purpose: this is a floor for every field, also ones added later. */
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="button"], [type="submit"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* ------------------------------------------------------------ the chat
+     Reading width is the full width less space-4 on each side (and the notch on a phone on its side). */
+  .app-main .pb-main-scroll:not(.app-view) {
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
+
+  /* The foot with the message box: clear of the home bar while the keyboard is closed; with the
+     keyboard open the box sits right on top of it. */
+  .app-main .pb-main-foot {
+    padding: var(--space-2) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-3), env(safe-area-inset-bottom)) max(var(--space-3), env(safe-area-inset-left));
+  }
+  [data-keyboard] .app-main .pb-main-foot { padding-bottom: var(--space-3); }
+
+  /* The quiet lines that open in the chat ("Worked for 1m", a folded turn, "Show the messages before
+     it") keep their height; a 44 px hit area is centred on each, so nothing in the chat moves. */
+  .app-main .pb-main-scroll :is(.pb-worked, .pb-fold, .pb-fresh-btn, .app-activity-btn) { position: relative; }
+  .app-main .pb-main-scroll :is(.pb-worked, .pb-fold, .pb-fresh-btn, .app-activity-btn)::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; margin-top: -22px;
+  }
+
+  /* ------------------------------------------------------------ the message box
+     The add button and the send button are 44 px to tap, the model is a 44 px tall quiet button. */
+  .pb-composer { padding: var(--space-1) var(--space-2) var(--space-2) var(--space-3); gap: 0; }
+  .pb-composer textarea { line-height: 24px; padding: 10px var(--space-1); scroll-padding-block: 10px; }
+  .pb-composer > .pb-tray { padding-top: var(--space-2); }
+  .pb-composer-bar { gap: 0; margin-left: calc(var(--space-1) * -1); }
+  .pb-composer .pb-attach { width: 44px; height: 44px; }
+  /* Holding the send button while a bot works does the other for one message (steering): no callout or selection on it. */
+  .pb-composer .pb-send { width: 44px; height: 44px; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  /* "Steer now" under a queued message: drawn as it is, with a 44 px place to tap. */
+  .app-you-steer::after { content: ""; position: absolute; inset: -14px calc(var(--space-2) * -1); }
+  .pb-composer .pb-composer-bar > .pb-btn-sm { height: 44px; padding: 0 var(--space-2); }
+
+  /* The tray fits the width: the chips scroll inside their own row, never the page. A chip's remove
+     is drawn at 28 px with a 44 px hit area (it stays inside the chip's 48 px). */
+  .pb-tray { width: 100%; }
+  .pb-tray-chips { max-width: 100%; scrollbar-width: none; }
+  .pb-tray-chips::-webkit-scrollbar { display: none; }
+  .pb-chip-file { max-width: min(264px, calc(100vw - var(--space-8) * 2)); }
+  .pb-chip-remove { position: relative; width: 28px; height: 28px; }
+  .pb-chip-remove::after { content: ""; position: absolute; inset: -8px; }
+  /* A chip keeps its width while its line goes from "Preparing" to "Uploading" to the size: the line
+     always has the room of the longest of them (the same font, so no size is written here). */
+  .pb-chip-meta::before { content: "Preparing"; display: block; height: 0; overflow: hidden; visibility: hidden; }
+  .pb-chip-retry { position: relative; }
+  .pb-chip-retry::after { content: ""; position: absolute; inset: -14px calc(var(--space-1) * -1); }
+
+  /* ------------------------------------------------------------ a picture opened large
+     Full screen on the window's ground, its name and Close at the top inside the safe area. Only the
+     picture takes the fingers (touch-action), so the page's own zoom is blocked nowhere else. */
+  .pb-picture-scrim { padding: 0; background: var(--ground); place-items: stretch; }
+  .pb-picture-view { width: 100%; height: 100%; min-height: 0; max-width: none; padding: 0; gap: 0; background: var(--ground); box-shadow: none; border-radius: 0; }
+  .pb-picture-view-head {
+    flex: none; box-sizing: content-box; height: 44px;
+    padding: env(safe-area-inset-top) max(var(--space-2), env(safe-area-inset-right)) 0 max(var(--space-4), env(safe-area-inset-left));
+  }
+  .pb-picture-view-close { width: 44px; height: 44px; }
+  .pb-picture-stage {
+    flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden;
+    margin: var(--space-2) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .pb-picture-stage > .pb-picture-large { border-radius: 0; overflow: visible; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .pb-picture-zoom { position: absolute; inset: 0; transform-origin: center; }
+  .pb-picture-zoom[data-eased] { transition: transform var(--dur-calm) var(--ease-out); }
+
+  /* ------------------------------------------------------------ the model picker
+     A sheet from the bottom of the screen, full width, one column: search, the models one per line,
+     the efforts as a row, then Fast and the foot. It fits the visible height and scrolls inside. */
+  .app-picker {
+    /* Its foot on the bottom of the visible part: the screen's bottom, or the keyboard's top on iOS,
+       where the keyboard leaves the page as tall and pans it (--vvtop and --vvh from lib/phone.ts). */
+    left: 0; right: 0; bottom: calc(100% - var(--vvtop, 0px) - var(--vvh, 100%)); width: auto; max-width: none;
+    max-height: calc(var(--vvh, 100dvh) - var(--space-6));
+    overflow-y: auto; overscroll-behavior: contain;
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--space-3) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-3), env(safe-area-inset-bottom)) max(var(--space-3), env(safe-area-inset-left));
+  }
+  .app-picker:focus { outline: none; }
+  .app-picker .pb-search { height: 44px; }
+  .app-picker .pb-option { height: 44px; }
+  .app-picker .pb-picker-group { padding-top: var(--space-3); }
+  .app-picker .pb-picker-side { flex-direction: row; flex-wrap: wrap; gap: 2px; }
+  .app-picker .pb-picker-side > .pb-picker-title { flex: 1 0 100%; padding: var(--space-1) var(--space-2) var(--space-2); }
+  .app-picker .pb-picker-side > .pb-option { flex: 1 1 calc(33.333% - 2px); min-width: 0; justify-content: center; padding: 0 var(--space-2); white-space: nowrap; }
+  .app-picker .pb-picker-side > .pb-option svg,
+  .app-picker .pb-picker-side > .pb-option .pb-option-note { display: none; }
+  .app-picker .pb-picker-side > .pb-option[aria-selected="true"] { background: var(--fill-strong); }
+  .app-picker .pb-fast-room { flex: 1 0 100%; }
+  .app-picker .pb-fast-option { min-height: 44px; }
+  .app-picker-foot { flex-wrap: wrap; }
+  .app-picker-fact { height: 44px; }
+  .app-picker .app-access > .pb-btn-sm { height: 44px; }
+  .app-access-menu { width: min(264px, calc(100vw - var(--space-6))); }
+
+  /* ------------------------------------------------------------ dialogs
+     Centred sheets almost the screen's width, fitting the visible height (the keyboard's space taken
+     off), the foot reached by scrolling inside. With the keyboard open they stand at the top. */
+  .app-scrim { padding: var(--space-2); }
+  [data-keyboard] .app-scrim { place-items: start center; bottom: auto; top: var(--vvtop, 0px); height: var(--vvh, 100%); }
+  .pb-dialog { width: 100%; max-height: calc(var(--vvh, 100dvh) - var(--space-4)); overscroll-behavior: contain; }
+  .pb-dialog-sheet { padding: var(--space-5) var(--space-4); }
+  .pb-dialog:focus { outline: none; }
+  .pb-dialog .pb-btn:not(.pb-btn-sm) { height: 44px; }
+  .pb-dialog .pb-btn-sm { height: 40px; }
+  .pb-dialog .pb-input { height: 44px; }
+  /* As specific as the laptop's to-do window rule (36 px) it overrides: a finger's height. */
+  .pb-dialog .pb-cq[data-place="todo"] .pb-cq-input { height: 44px; padding-block: 11px; }
+  /* The to-do's window keeps its top where it opened on the phone too, near the top edge. */
+  .pb-scrim:has(.pb-cq[data-place="todo"]) { --sheet-top: var(--space-2); }
+  .pb-scrim:has(.pb-cq[data-place="todo"]) > .pb-dialog { max-height: calc(var(--vvh, 100dvh) - var(--sheet-top) - var(--space-4)); }
+  .pb-dialog .pb-cq[data-place="todo"] .pb-cq-form .pb-btn { height: 44px; min-width: 64px; }
+  .pb-dialog .pb-textarea { height: auto; }
+  .pb-dialog .pb-field { max-width: none; }
+  .pb-dialog .pb-seg button { height: 40px; }
+
+  /* ------------------------------------------------------------ the bot's page
+     The row of tabs scrolls sideways inside itself, never the page; tabs are 40 px tall. */
+  .app-head .pb-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; max-width: 100%; }
+  .app-head .pb-tabs::-webkit-scrollbar { display: none; }
+  .app-head .pb-tab { flex: none; height: 44px; min-width: 44px; padding: 0 var(--space-3); }
+
+  /* Inside each tab: space-4 at the sides, fields at the full width and 44 px tall, buttons 44 px
+     (the small ones 40), segmented choices 40, nothing wider than the screen. */
+  .app-view, .app-view.pb-main-scroll {
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
+  .app-tabpanel .pb-btn:not(.pb-btn-sm), .app-appsettings .pb-backup .pb-btn:not(.pb-btn-sm) { height: 44px; }
+  .app-tabpanel .pb-btn-sm, .app-appsettings .pb-backup .pb-btn-sm { height: 40px; }
+  /* Small controls drawn at 40 px get a 44 px hit area around them. */
+  :is(.app-tabpanel, .pb-dialog, .app-appsettings .pb-backup) :is(.pb-btn-sm, .pb-seg button, .pb-day) { position: relative; }
+  :is(.app-tabpanel, .pb-dialog, .app-appsettings .pb-backup) :is(.pb-btn-sm, .pb-seg button, .pb-day)::after { content: ""; position: absolute; inset: -2px; }
+  .app-tabpanel .pb-field, .app-appsettings .pb-backup .pb-field { max-width: none; }
+  .app-tabpanel .pb-input:not(.pb-textarea, .pb-backup-input), .app-appsettings .pb-backup .pb-input:not(.pb-textarea, .pb-backup-input) { height: 44px; }
+  .app-tabpanel .pb-seg button { height: 40px; }
+  .app-tabpanel .pb-seg { max-width: 100%; flex-wrap: wrap; }
+  .app-tabpanel .pb-select { display: flex; max-width: 100%; }
+  .app-tabpanel .pb-select select { min-width: 0; width: 100%; }
+  :is(.app-tabpanel, .pb-dialog) .pb-day { height: 40px; }
+  .app-tabpanel .pb-editor-text { line-height: 24px; padding: var(--space-3) var(--space-4); }
+  .app-tabpanel .pb-time-input { width: 96px; }
+  .app-tabpanel .pb-number-input { width: 80px; }
+  .app-tabpanel .pb-file, .app-tabpanel .pb-change, .app-tabpanel .pb-choice { min-height: 44px; }
+  /* A switch is drawn as it is; a clear edge around it makes the place to tap 44 px tall. */
+  .app-tabpanel .pb-switch, .app-appsettings .pb-backup .pb-switch {
+    box-sizing: content-box; border: 12px solid transparent; margin: -12px; background-clip: padding-box;
+  }
+  .app-tabpanel pre, .app-tabpanel .pb-diff { max-width: 100%; }
+
+  /* The Backup part of Pobots settings: the key field at 16 px with lines to match. */
+  .app-appsettings .pb-backup-input { line-height: 22px; height: calc(22px * 3 + var(--space-2) * 2); }
+  .app-appsettings .pb-backup-act { flex-wrap: wrap; min-height: 44px; }
+
+  /* The Notifications part of Pobots settings (job 4): buttons 40 px with a 44 px hit area, the
+     switches with a clear edge that makes them 44 px to tap, each row of "What to tell you" and the
+     row of actions 44 px tall, and a device's line under its name and Forget at the full width. */
+  .app-appsettings .pb-notify .pb-btn-sm { height: 40px; position: relative; }
+  .app-appsettings .pb-notify .pb-btn-sm::after { content: ""; position: absolute; inset: -2px; }
+  .app-appsettings .pb-notify .pb-switch { box-sizing: content-box; border: 12px solid transparent; margin: -12px; background-clip: padding-box; }
+  .app-appsettings .pb-notify-act { min-height: 44px; }
+  .app-appsettings .pb-notify-kind { min-height: 44px; }
+  .app-appsettings .pb-notify-device { grid-template-areas: "name forget" "line line"; row-gap: 2px; }
+
+  /* ------------------------------------------------------------ touch
+     A tap leaves no hover fill behind on a touch screen. */
+  @media (hover: none) {
+    .pb-option:hover:not([aria-selected="true"]),
+    .pb-chip-remove:hover,
+    .pb-composer .pb-icon-btn:hover,
+    .pb-picture-view-close:hover,
+    .pb-composer-bar > .pb-btn-quiet:hover,
+    .app-tabpanel .pb-btn-quiet:hover,
+    .app-appsettings .pb-notify .pb-btn-quiet:hover,
+    .app-appsettings .pb-followup .pb-choice:hover:not([aria-checked="true"]),
+    .pb-dialog .pb-btn-quiet:hover { background: none; }
+    .app-you-steer:hover { color: var(--accent-text); }
+    .pb-composer .pb-send:hover { background: var(--accent); }
+    .pb-dialog .pb-btn-primary:hover, .app-tabpanel .pb-btn-primary:hover { background: var(--accent); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pb-picture-zoom[data-eased] { transition: none; }
+  }
+}
+
+/* Job 7, the chat (step 7a), on a phone: places to tap of 44 px for the colours, for taking a waiting
+   message back, and for the to-do line. The same query as above. */
+@media (max-width: 699.98px), (pointer: coarse) and (max-height: 499.98px) {
+  .pb-colors .pb-color-pick, .pb-colors.pb-colors-sm .pb-color-pick { width: 44px; height: 44px; }
+  .pb-label-row:has(.pb-colors-sm) { flex-wrap: wrap; }
+  .pb-colors-sm { margin-left: 0; gap: 0; }
+  .pb-queued-remove { position: relative; }
+  .pb-queued-remove::after { content: ""; position: absolute; left: -12px; top: -12px; width: 44px; height: 44px; }
+  .pb-plan-chip { position: relative; }
+  .pb-plan-chip::after { content: ""; position: absolute; left: 0; top: -8px; width: 100%; height: 44px; }
+  .pb-queued { max-width: 88%; }
+  .pb-queued-text { -webkit-line-clamp: 2; }
+}
+@media (max-width: 699.98px), (pointer: coarse) and (max-height: 499.98px) {
+  .pb-queue-list { max-height: 30vh; }
+}

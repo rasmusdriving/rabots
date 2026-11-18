@@ -1,0 +1,21 @@
+<!-- @dsCard group="Settings" height=280 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ChoiceList</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); }</style>
+</head>
+<body>
+<div class="pb-stage-col">
+  <span class="pb-label" id="access">Access</span>
+  <div class="pb-choices" role="radiogroup" aria-labelledby="access">
+    <button class="pb-choice" type="button" role="radio" aria-checked="true"><span class="pb-choice-label">Asks first</span><span class="pb-choice-hint">Asks before every action that changes something.</span><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg></button>
+    <button class="pb-choice" type="button" role="radio" aria-checked="false" tabindex="-1"><span class="pb-choice-label">Edits freely</span><span class="pb-choice-hint">Edits files in its own folder without asking. Asks for the rest.</span></button>
+    <button class="pb-choice" type="button" role="radio" aria-checked="false" tabindex="-1"><span class="pb-choice-label">Decides itself</span><span class="pb-choice-hint">Decides what is safe to do. Asks when unsure.</span></button>
+    <button class="pb-choice" type="button" role="radio" aria-checked="false" tabindex="-1"><span class="pb-choice-label">Full access</span><span class="pb-choice-hint">Does everything without asking.</span></button>
+  </div>
+</div>
+</body>
+</html>

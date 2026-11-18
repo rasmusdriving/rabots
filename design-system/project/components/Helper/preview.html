@@ -1,0 +1,202 @@
+<!-- @dsCard group="Conversation" height=2290 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Helper</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { background: var(--surface); margin: 0; }
+  .demo { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-6); }
+  .demo-title { margin: 0; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-faint); }
+  .demo-panel { display: flex; flex-direction: column; background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-panel); overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="demo">
+
+  <p class="demo-title">In the chat: two helpers started together, one that failed, inside Po's answer in the order it happened (the finished turn opened)</p>
+  <div class="pb-thread">
+    <div class="pb-msg-you">Read through the old work bot and tell me what to bring over.</div>
+    <article class="pb-msg pb-answer">
+      <span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span>
+      <div class="pb-answer-col">
+        <div class="pb-msg-head"><b>Po</b><time>09:30</time></div>
+        <div class="pb-answer-flow">
+          <button type="button" class="pb-worked" aria-expanded="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.75 6 7.75l3-3"/></svg><span class="pb-worked-words">Worked for 7m · 2 helpers</span><time class="pb-time">09:37</time></button>
+          <div class="pb-work" role="group" aria-label="The work">
+            <div class="pb-activity pb-step"><span class="pb-mark pb-mark-check"></span>Read AGENTS.md <span class="pb-time">3 s</span></div>
+          <div class="pb-helper-group" role="group" aria-label="Helpers">
+            <button type="button" class="pb-helper" data-status="done">
+              <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+              <span class="pb-helper-text"><span class="pb-helper-title">Inventory the work-bot agents, their schedules, their webhooks and the flows that feed them from Teams and HubSpot</span><span class="pb-helper-last">Nine agents in all. Five run on schedules, two on webhooks and two only when asked.</span></span>
+              <span class="pb-helper-state"><span class="pb-helper-word">Finished</span><span class="pb-helper-dot">·</span><time class="pb-time">09:36</time></span>
+              <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+            </button>
+            <button type="button" class="pb-helper" data-status="failed">
+              <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+              <span class="pb-helper-text"><span class="pb-helper-title">Read the dispatcher's logs</span><span class="pb-helper-last">I could not open the log folder. The path in the notes does not exist.</span></span>
+              <span class="pb-helper-state"><span class="pb-helper-word">Failed</span><span class="pb-helper-dot">·</span><time class="pb-time">09:33</time></span>
+              <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+            </button>
+          </div>
+          </div>
+          <div class="pb-msg-body"><p>Bring over Inbox, Tickets and Onboardings. The Friday report and the evening sweep were switched off in October, so leave them.</p></div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <p class="demo-title">Every state, one height: working (with its step), just started, finished, stopped</p>
+  <div class="pb-thread">
+    <div class="pb-helper-group">
+      <button type="button" class="pb-helper" data-status="running">
+        <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <span class="pb-helper-text"><span class="pb-helper-title">Read the notes and find what is still open</span><span class="pb-helper-last">Reading memory/MEMORY.md</span></span>
+        <span class="pb-helper-state"><span class="pb-mark pb-mark-thinking"><i></i><i></i><i></i></span><span class="pb-helper-word">Working</span><span class="pb-helper-dot">·</span><time class="pb-time">3 min</time></span>
+        <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      </button>
+    </div>
+    <div class="pb-helper-group">
+      <button type="button" class="pb-helper" data-status="running">
+        <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <span class="pb-helper-text"><span class="pb-helper-title">Check the job description for anything out of date</span><span class="pb-helper-last">Starting</span></span>
+        <span class="pb-helper-state"><span class="pb-mark pb-mark-thinking"><i></i><i></i><i></i></span><span class="pb-helper-word">Working</span></span>
+        <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      </button>
+    </div>
+    <div class="pb-helper-group">
+      <button type="button" class="pb-helper" data-status="done">
+        <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <span class="pb-helper-text"><span class="pb-helper-title">Check which schedules still run</span><span class="pb-helper-last">Seven schedules are on. Two were switched off in October.</span></span>
+        <span class="pb-helper-state"><span class="pb-helper-word">Finished</span><span class="pb-helper-dot">·</span><time class="pb-time">Yesterday 16:40</time></span>
+        <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      </button>
+    </div>
+    <div class="pb-helper-group">
+      <button type="button" class="pb-helper" data-status="stopped">
+        <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <span class="pb-helper-text"><span class="pb-helper-title">Search the onboarding chat for Nordvik</span><span class="pb-helper-last">Searching for Nordvik</span></span>
+        <span class="pb-helper-state"><span class="pb-helper-word">Stopped</span><span class="pb-helper-dot">·</span><time class="pb-time">09:42</time></span>
+        <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      </button>
+    </div>
+  </div>
+
+  <p class="demo-title">A helper on a model the bot chose: a quiet label after the title (the model's name and the effort, and fast for a helper in fast mode). A long title gives way to it; a helper on the bot's own model has none; one height for all</p>
+  <div class="pb-thread">
+    <div class="pb-helper-group" role="group" aria-label="Helpers">
+      <button type="button" class="pb-helper" data-status="running">
+        <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <span class="pb-helper-text"><span class="pb-helper-head"><span class="pb-helper-title">Try the new picker in a browser</span><span class="pb-helper-model">GPT-6.1 Terra, high</span></span><span class="pb-helper-last">Opening the test copy</span></span>
+        <span class="pb-helper-state"><span class="pb-mark pb-mark-thinking"><i></i><i></i><i></i></span><span class="pb-helper-word">Working</span></span>
+        <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      </button>
+      <button type="button" class="pb-helper" data-status="done">
+        <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <span class="pb-helper-text"><span class="pb-helper-head"><span class="pb-helper-title">Read every model picker in the app and say what each one shows in both themes and at every width</span><span class="pb-helper-model">Sonnet 5.5</span></span><span class="pb-helper-last">All three show the same two groups in the same order.</span></span>
+        <span class="pb-helper-state"><span class="pb-helper-word">Finished</span><span class="pb-helper-dot">·</span><time class="pb-time">09:44</time></span>
+        <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      </button>
+      <button type="button" class="pb-helper" data-status="done">
+        <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <span class="pb-helper-text"><span class="pb-helper-head"><span class="pb-helper-title">Count the open cards</span></span><span class="pb-helper-last">Two cards. The oldest is from this morning.</span></span>
+        <span class="pb-helper-state"><span class="pb-helper-word">Finished</span><span class="pb-helper-dot">·</span><time class="pb-time">09:44</time></span>
+        <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      </button>
+      <button type="button" class="pb-helper" data-status="done">
+        <span class="pb-helper-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <span class="pb-helper-text"><span class="pb-helper-head"><span class="pb-helper-title">Review the change</span><span class="pb-helper-model">GPT-6.1 Terra, extra high, fast</span></span><span class="pb-helper-last">No faults found. One risk: the picker's room for the switch.</span></span>
+        <span class="pb-helper-state"><span class="pb-helper-word">Finished</span><span class="pb-helper-dot">·</span><time class="pb-time">09:44</time></span>
+        <span class="pb-helper-go"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      </button>
+    </div>
+  </div>
+
+  <p class="demo-title">The top of its thread names the model too, after the title</p>
+  <div class="demo-panel">
+    <div class="pb-helper-bar">
+      <button type="button" class="pb-helper-back" aria-label="Back to Po"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg><span class="pb-helper-back-name">Po</span></button>
+      <span class="pb-helper-bar-sep"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      <h2 class="pb-helper-bar-title">Review the change</h2>
+      <span class="pb-helper-model pb-helper-bar-model">GPT-6.1 Terra, extra high, fast</span>
+      <span class="pb-helper-bar-state" data-status="done"><span>Finished</span></span>
+    </div>
+  </div>
+
+  <p class="demo-title">A helper's thread, in the place of the chat, while it works: never folded, the helper's mark once, the thinking line at the end between steps</p>
+  <div class="demo-panel">
+    <div class="pb-helper-bar">
+      <button type="button" class="pb-helper-back" aria-label="Back to Po"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg><span class="pb-helper-back-name">Po</span></button>
+      <span class="pb-helper-bar-sep"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      <h2 class="pb-helper-bar-title">Inventory the work-bot agents, their schedules, their webhooks and the flows that feed them</h2>
+      <span class="pb-helper-bar-state" data-status="running"><span class="pb-mark pb-mark-thinking"><i></i><i></i><i></i></span><span>Working</span></span>
+    </div>
+    <div class="pb-thread" style="padding: var(--space-4) var(--space-5)">
+      <article class="pb-msg pb-msg-task">
+        <span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span>
+        <div>
+          <div class="pb-msg-head"><b>Po</b><span class="pb-msg-from">asked the helper</span><time>09:31</time></div>
+          <div class="pb-msg-body pb-task-body" data-long style="--task-lines: 4"><p>Go through the old work bot and list every agent it has. For each one, write down what it is for, what wakes it, which flows feed it, and whether it still runs.</p><p>Keep it short. I will use this to decide with the person what to bring over, so leave out anything about how the old one was set up.</p></div>
+          <button type="button" class="pb-task-more" aria-expanded="false">Show all</button>
+        </div>
+      </article>
+      <article class="pb-msg pb-answer" data-helper>
+        <span class="pb-who pb-who-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <div class="pb-answer-col">
+          <div class="pb-msg-head"><b>Helper</b><time>09:31</time></div>
+          <div class="pb-answer-flow">
+            <div class="pb-msg-body"><p>I will start with the agents folder and then read each job.</p></div>
+            <div class="pb-activity pb-step"><span class="pb-mark pb-mark-check"></span>Listed agents/ <span class="pb-time">4 s</span></div>
+            <div class="pb-activity pb-step"><span class="pb-mark pb-mark-check"></span>Read agents/inbox/AGENTS.md <span class="pb-time">2 s</span></div>
+            <div class="pb-pending" role="status"><span class="pb-pending-line"><span class="pb-mark pb-mark-thinking"><i></i><i></i><i></i></span><span>Working</span></span></div>
+          </div>
+        </div>
+      </article>
+    </div>
+    <div class="pb-main-foot" style="padding-top: 0">
+      <div class="pb-helper-foot">
+        <p class="pb-helper-note">This helper works for Po. Write to Po to change what it does.</p>
+        <button type="button" class="pb-btn pb-btn-sm">Stop helper</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="demo-title">After it ended: the line above says so, and Stop helper keeps its room out of sight</p>
+  <div class="demo-panel">
+    <div class="pb-helper-bar">
+      <button type="button" class="pb-helper-back" aria-label="Back to Inventory the work-bot agents"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg><span class="pb-helper-back-name">Inventory the work-bot agents, their schedules</span></button>
+      <span class="pb-helper-bar-sep"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 11 8l-4.5 4.5"/></svg></span>
+      <h2 class="pb-helper-bar-title">Read the dispatcher's logs</h2>
+      <span class="pb-helper-bar-state" data-status="failed"><span>Failed</span></span>
+    </div>
+    <div class="pb-thread" style="padding: var(--space-4) var(--space-5)">
+      <article class="pb-msg pb-msg-task">
+        <span class="pb-who pb-who-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <div>
+          <div class="pb-msg-head"><b>Helper</b><span class="pb-msg-from">asked this helper</span><time>09:31</time></div>
+          <div class="pb-msg-body"><p>Read the dispatcher's logs from the last week and note any errors, with the time of each.</p></div>
+        </div>
+      </article>
+      <article class="pb-msg pb-answer" data-helper>
+        <span class="pb-who pb-who-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v4.5a2.5 2.5 0 0 0 2.5 2.5h5.5M9.75 7.25 12.5 10l-2.75 2.75"/></svg></span>
+        <div class="pb-answer-col">
+          <div class="pb-msg-head"><b>Helper</b><time>09:32</time></div>
+          <div class="pb-answer-flow">
+            <div class="pb-activity pb-step"><span class="pb-mark pb-mark-blocked"></span>Could not list logs/dispatcher</div>
+            <div class="pb-msg-body"><p>I could not open the log folder. The path in the notes does not exist.</p></div>
+          </div>
+        </div>
+      </article>
+    </div>
+    <div class="pb-main-foot" style="padding-top: 0">
+      <div class="pb-helper-foot">
+        <p class="pb-helper-note">This helper works for Po. Write to Po to change what it does.</p>
+        <button type="button" class="pb-btn pb-btn-sm" data-gone aria-hidden="true" tabindex="-1">Stop helper</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

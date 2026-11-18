@@ -1,0 +1,19 @@
+<!-- @dsCard group="Channels" height=560 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ChannelMessages</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 560px; display: flex; flex-direction: column; gap: var(--space-6); }</style>
+</head>
+<body>
+<div class="demo">
+  <section class="pb-section">
+    <h2 class="pb-section-title">Messages</h2>
+    <ol class="pb-cmsgs" aria-label="What came in on Ops - Internal"><li class="pb-cmsg" data-status="delivered"><button class="pb-cmsg-row" type="button" aria-expanded="false"><span class="pb-mark pb-mark-working"></span><span class="pb-cmsg-text"><span class="pb-cmsg-top"><span class="pb-cmsg-who">Bo Example</span><span class="pb-cmsg-to">to Inbox</span></span><span class="pb-cmsg-line"><span class="pb-cmsg-word">Delivered</span><span class="pb-cmsg-note">Inbox has Nordvik written back about the import date</span></span></span><time class="pb-time">2 min ago</time></button></li><li class="pb-cmsg" data-status="answered"><button class="pb-cmsg-row" type="button" aria-expanded="true"><span class="pb-mark pb-mark-check"></span><span class="pb-cmsg-text"><span class="pb-cmsg-top"><span class="pb-cmsg-who">Ada Example</span><span class="pb-cmsg-to">to Kaja</span></span><span class="pb-cmsg-line"><span class="pb-cmsg-word">Answered</span><span class="pb-cmsg-note">Kaja can you draft the agenda for Thursday</span></span></span><time class="pb-time">08:40</time></button><div class="pb-run-open"><p class="pb-run-full">Kaja can you draft the agenda for Thursday</p><div><button class="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button">Show in chat</button></div></div></li><li class="pb-cmsg" data-status="reply-failed"><button class="pb-cmsg-row" type="button" aria-expanded="false"><span class="pb-mark pb-mark-blocked"></span><span class="pb-cmsg-text"><span class="pb-cmsg-top"><span class="pb-cmsg-who">Ada Example</span><span class="pb-cmsg-to">to Kaja</span></span><span class="pb-cmsg-line"><span class="pb-cmsg-word">Answer not posted</span><span class="pb-cmsg-note">The answer could not be posted. The flow answered 502.</span></span></span><time class="pb-time">Yesterday 15:20</time></button></li><li class="pb-cmsg" data-status="unanswered"><button class="pb-cmsg-row" type="button" aria-expanded="false"><span class="pb-mark"></span><span class="pb-cmsg-text"><span class="pb-cmsg-top"><span class="pb-cmsg-who">Ada Example</span><span class="pb-cmsg-to">tagged Inbox, to Onboardings</span></span><span class="pb-cmsg-line"><span class="pb-cmsg-word">No answer</span><span class="pb-cmsg-note">No reply address is set for this channel</span></span></span><time class="pb-time">Yesterday 11:02</time></button></li><li class="pb-cmsg" data-status="ignored"><div class="pb-cmsg-row"><span class="pb-mark pb-mark-idle"></span><span class="pb-cmsg-text"><span class="pb-cmsg-top"><span class="pb-cmsg-who">Bo Example</span></span><span class="pb-cmsg-line"><span class="pb-cmsg-word">No tag matched</span><span class="pb-cmsg-note">No tag in the message matched a bot here</span></span></span><time class="pb-time">9 Nov 14:45</time></div></li><li class="pb-cmsg" data-status="refused"><div class="pb-cmsg-row"><span class="pb-mark pb-mark-idle"></span><span class="pb-cmsg-text"><span class="pb-cmsg-top"><span class="pb-cmsg-who">Cy Example</span></span><span class="pb-cmsg-line"><span class="pb-cmsg-word">Refused</span><span class="pb-cmsg-note">The writer is not on the list for this channel</span></span></span><time class="pb-time">9 Nov 09:12</time></div></li></ol>
+    <div><button class="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button">Show earlier messages</button></div>
+  </section>
+</div>
+</body>
+</html>

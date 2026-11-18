@@ -1,0 +1,48 @@
+<!-- @dsCard group="Bot page" height=470 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>History</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 680px; }</style>
+</head>
+<body>
+<div class="demo">
+  <ol class="pb-changes" aria-label="Changes to Kaja's folder">
+    <li>
+      <button class="pb-change" type="button" aria-expanded="true">
+        <span class="pb-who pb-who-word">You</span>
+        <span class="pb-change-text"><span class="pb-change-summary">Edited the job</span><span class="pb-change-files">AGENTS.md</span></span>
+        <time class="pb-time">Just now</time>
+      </button>
+      <div class="pb-change-open">
+        <div class="pb-diff" role="group" aria-label="What changed">
+          <div class="pb-diff-file">AGENTS.md</div>
+          <div class="pb-diff-line" data-kind="same"><span class="pb-diff-sign"> </span><span>## Your job</span></div>
+          <div class="pb-diff-line" data-kind="same"><span class="pb-diff-sign"> </span><span> </span></div>
+          <div class="pb-diff-line" data-kind="del"><span class="pb-diff-sign" aria-label="Removed">-</span><span>You run the person's day.</span></div>
+          <div class="pb-diff-line" data-kind="add"><span class="pb-diff-sign" aria-label="Added">+</span><span>You run the person's day. Every morning at 07:30, write a short plan.</span></div>
+          <div class="pb-diff-line" data-kind="same"><span class="pb-diff-sign"> </span><span> </span></div>
+        </div>
+        <div class="pb-card-actions"><button class="pb-btn pb-btn-sm" type="button">Undo this change</button></div>
+      </div>
+    </li>
+    <li>
+      <button class="pb-change" type="button" aria-expanded="false">
+        <span class="pb-who"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span></span>
+        <span class="pb-change-text"><span class="pb-change-summary">Kaja changed 2 files</span><span class="pb-change-files">memory/MEMORY.md · memory/topics/customers.md</span></span>
+        <time class="pb-time">12 min ago</time>
+      </button>
+    </li>
+    <li>
+      <button class="pb-change" type="button" aria-expanded="false">
+        <span class="pb-who pb-who-word">App</span>
+        <span class="pb-change-text"><span class="pb-change-summary">Undid: Added state/plan.md</span><span class="pb-change-files">state/plan.md</span></span>
+        <time class="pb-time">09:30</time>
+      </button>
+    </li>
+  </ol>
+</div>
+</body>
+</html>

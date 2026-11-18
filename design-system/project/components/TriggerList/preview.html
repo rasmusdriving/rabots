@@ -1,0 +1,53 @@
+<!-- @dsCard group="Triggers" height=420 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TriggerList</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 720px; display: flex; flex-direction: column; gap: var(--space-3); } .empty { margin: var(--space-4) 0 0; padding: 0 var(--space-3); font-size: 13px; line-height: 20px; color: var(--ink-muted); }</style>
+</head>
+<body>
+<div class="demo">
+  <div class="pb-triggers-bar">
+    <p class="pb-section-text">What wakes Inbox by itself.</p>
+    <button class="pb-btn pb-btn-sm" type="button">New trigger</button>
+  </div>
+  <ul class="pb-triggers" aria-label="Inbox's triggers">
+    <li class="pb-trigger">
+      <button class="pb-trigger-open" type="button">
+        <span class="pb-trigger-title"><span class="pb-trigger-name">Morning brief</span></span>
+        <span class="pb-trigger-when">Weekdays at 07:30</span>
+        <span class="pb-trigger-meta"><span class="pb-trigger-last" data-status="done"><span class="pb-mark pb-mark-check"></span><span>Done</span><time class="pb-time">07:31</time></span><span class="pb-trigger-next">Next tomorrow 07:30</span></span>
+      </button>
+      <input class="pb-switch" type="checkbox" role="switch" checked aria-label="Morning brief on">
+    </li>
+    <li class="pb-trigger">
+      <button class="pb-trigger-open" type="button">
+        <span class="pb-trigger-title"><span class="pb-trigger-name">New Teams message</span></span>
+        <span class="pb-trigger-when">When its address is called</span>
+        <span class="pb-trigger-meta"><span class="pb-trigger-last" data-status="running"><span class="pb-mark pb-mark-working"></span><span>Running</span><time class="pb-time">1 min ago</time></span><span class="pb-trigger-next">Waits for a call</span></span>
+      </button>
+      <input class="pb-switch" type="checkbox" role="switch" checked aria-label="New Teams message on">
+    </li>
+    <li class="pb-trigger">
+      <button class="pb-trigger-open" type="button">
+        <span class="pb-trigger-title"><span class="pb-trigger-name">Check mail</span><span class="pb-trigger-by">Made by Inbox</span></span>
+        <span class="pb-trigger-when">Every 15 minutes, 07:00 to 18:00, weekdays</span>
+        <span class="pb-trigger-meta"><span class="pb-trigger-last" data-status="silent"><span class="pb-mark"></span><span>Nothing to report</span><time class="pb-time">10:00</time></span><span class="pb-trigger-next">Next today 10:15</span></span>
+      </button>
+      <input class="pb-switch" type="checkbox" role="switch" checked aria-label="Check mail on">
+    </li>
+    <li class="pb-trigger" data-off>
+      <button class="pb-trigger-open" type="button">
+        <span class="pb-trigger-title"><span class="pb-trigger-name">New ticket</span></span>
+        <span class="pb-trigger-when">When its address is called</span>
+        <span class="pb-trigger-meta"><span class="pb-trigger-last" data-status="failed"><span class="pb-mark pb-mark-blocked"></span><span>Failed</span><time class="pb-time">25 min ago</time></span><span class="pb-trigger-next">Switched off</span></span>
+      </button>
+      <input class="pb-switch" type="checkbox" role="switch" aria-label="New ticket on">
+    </li>
+  </ul>
+  <p class="empty">With none: No triggers yet. A trigger wakes Reports without you: at a time you choose, or when another system calls its address.</p>
+</div>
+</body>
+</html>

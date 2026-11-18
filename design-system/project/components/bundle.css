@@ -1,0 +1,1575 @@
+/* Pobots components. Surfaces are told apart by lightness and shadow, never by borders.
+   Every colour, space, radius, shadow, duration and easing comes from tokens.css. */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-sans); font-size: 15px; line-height: 24px; background: var(--ground); color: var(--ink); -webkit-font-smoothing: antialiased; }
+.pb-stage { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; padding: var(--space-5); }
+.pb-stage-col { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); max-width: 600px; }
+
+/* Button */
+.pb-btn { font: inherit; font-size: 14px; line-height: 20px; font-weight: 500; height: 36px; padding: 0 var(--space-4); border-radius: var(--radius-md); border: 0; background: var(--fill); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft), transform var(--dur-instant) var(--ease-soft); }
+.pb-btn:hover { background: var(--fill-strong); }
+.pb-btn:active { transform: scale(0.98); }
+.pb-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-btn-primary { background: var(--accent); color: var(--on-accent); }
+.pb-btn-primary:hover { background: var(--accent-strong); }
+.pb-btn-quiet { background: none; color: var(--ink-muted); }
+.pb-btn-quiet:hover { background: var(--fill); color: var(--ink); }
+.pb-btn-danger { background: none; color: var(--clay); }
+.pb-btn-danger:hover { background: var(--clay-soft); }
+.pb-btn-sm { height: 28px; padding: 0 var(--space-3); font-size: 13px; border-radius: var(--radius-sm); }
+.pb-btn[disabled] { opacity: 0.5; cursor: default; }
+.pb-btn small { font-size: inherit; color: var(--ink-muted); }
+.pb-icon-btn { width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--radius-full); background: none; color: var(--ink-muted); display: inline-grid; place-items: center; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-icon-btn:hover { background: var(--fill); color: var(--ink); }
+.pb-icon-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Status: a mark and a word */
+.pb-status { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-muted); white-space: nowrap; }
+.pb-status-waiting { color: var(--amber); }
+.pb-status-blocked { color: var(--clay); }
+.pb-status-done { color: var(--ink); }
+.pb-mark { width: 10px; height: 10px; flex: none; position: relative; display: inline-block; }
+/* The idle ring and the working halo are drawn shapes, not 1.5px borders, so they stay crisp at 125% and 150%. */
+.pb-mark-idle { background: var(--ink-faint); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1.5'%3E%3Ccircle cx='5' cy='5' r='4.25'/%3E%3C/svg%3E") center / 10px 10px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1.5'%3E%3Ccircle cx='5' cy='5' r='4.25'/%3E%3C/svg%3E") center / 10px 10px no-repeat; }
+.pb-mark-working { background: var(--accent-text); border-radius: var(--radius-full); }
+.pb-mark-working::after { content: ""; position: absolute; inset: -4px; background: var(--accent-text); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' fill='none' stroke='black' stroke-width='1.5'%3E%3Ccircle cx='9' cy='9' r='8.25'/%3E%3C/svg%3E") center / 18px 18px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' fill='none' stroke='black' stroke-width='1.5'%3E%3Ccircle cx='9' cy='9' r='8.25'/%3E%3C/svg%3E") center / 18px 18px no-repeat; opacity: 0.4; animation: pb-breath var(--dur-breath) var(--ease-breath) infinite; }
+.pb-mark-thinking { width: 16px; display: inline-flex; align-items: center; justify-content: space-between; }
+.pb-mark-thinking i { width: 4px; height: 4px; border-radius: var(--radius-full); background: var(--accent-text); animation: pb-think 1600ms var(--ease-breath) infinite; }
+.pb-mark-thinking i:nth-child(2) { animation-delay: 200ms; }
+.pb-mark-thinking i:nth-child(3) { animation-delay: 400ms; }
+.pb-mark-waiting { background: var(--amber); border-radius: var(--radius-full); box-shadow: 0 0 0 3px var(--amber-soft); }
+.pb-mark-blocked { background: var(--clay); border-radius: 2px; }
+.pb-mark-done { width: 16px; height: 16px; margin: -3px; border-radius: var(--radius-full); background: var(--accent-soft); animation: pb-settle var(--dur-slow) var(--ease-out) both; }
+/* The checks are drawn as a mask, not with borders, so they stay crisp at any screen scaling. */
+.pb-mark-done::after { content: ""; position: absolute; inset: 0; background: var(--accent-text); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.75 8.25 7 10.5 11.25 5.75'/%3E%3C/svg%3E") center / 16px 16px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.75 8.25 7 10.5 11.25 5.75'/%3E%3C/svg%3E") center / 16px 16px no-repeat; }
+/* The quiet check, for a line of finished work inside a chat. */
+.pb-mark-check { background: var(--ink-muted); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.5 5.25 4 7.75 8.5 2.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.5 5.25 4 7.75 8.5 2.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat; }
+
+/* Bot avatar: a pebble with a face. Sizes are in em of the pebble, so a face scales as one piece.
+   data-eyes = round | tall | wide | square, data-gap = near | far: the bot's own look, for life.
+   data-state = idle | thinking | working | waiting | blocked | done: what the face is doing now. */
+.pb-avatar { --size: 36px; width: var(--size); height: var(--size); font-size: var(--size); line-height: 1; flex: none; border-radius: var(--radius-pebble); display: inline-grid; place-items: center; background: var(--pebble); overflow: hidden; }
+.pb-avatar-sm { --size: 28px; }
+.pb-avatar-lg { --size: 48px; }
+.pb-avatar-xl { --size: 96px; }
+.pb-eyes { display: flex; align-items: center; gap: 0.2em; transition: transform var(--dur-calm) var(--ease-out), gap var(--dur-calm) var(--ease-out); }
+.pb-eyes i { display: block; position: relative; width: 0.15em; height: 0.15em; border-radius: var(--radius-full); background: var(--ink); transition: height var(--dur-quick) var(--ease-soft), width var(--dur-quick) var(--ease-soft), transform var(--dur-quick) var(--ease-soft), border-radius var(--dur-quick) var(--ease-soft); }
+.pb-avatar[data-eyes="tall"] .pb-eyes i { width: 0.13em; height: 0.25em; }
+.pb-avatar[data-eyes="wide"] .pb-eyes i { width: 0.22em; height: 0.12em; }
+.pb-avatar[data-eyes="square"] .pb-eyes i { width: 0.16em; height: 0.16em; border-radius: 28%; }
+.pb-avatar[data-gap="near"] .pb-eyes { gap: 0.12em; }
+.pb-avatar[data-gap="far"] .pb-eyes { gap: 0.3em; }
+/* Idle: asleep. Eyes closed, nothing moves. Hovering the bot's row makes it peek. */
+.pb-avatar[data-state="idle"] .pb-eyes i { height: max(1.5px, 0.035em); border-radius: var(--radius-full); }
+.pb-row:hover .pb-avatar[data-state="idle"] .pb-eyes i:first-child { height: 0.1em; }
+/* Thinking: eyes drift slowly from side to side, looking up. */
+.pb-avatar[data-state="thinking"] .pb-eyes { animation: pb-look 4800ms var(--ease-breath) infinite; }
+/* Working: eyes down on the work, with a blink now and then. */
+.pb-avatar[data-state="working"] .pb-eyes { transform: translateY(0.06em); }
+.pb-avatar[data-state="working"] .pb-eyes i { animation: pb-blink 5200ms var(--ease-soft) infinite; }
+/* Waiting: looking straight at you, a little wider, with a slow blink. */
+.pb-avatar[data-state="waiting"] .pb-eyes { transform: scale(1.12); }
+.pb-avatar[data-state="waiting"] .pb-eyes i { animation: pb-blink 6400ms var(--ease-soft) infinite; }
+/* Blocked: lids half down, tilted with worry. Still. */
+.pb-avatar[data-state="blocked"] .pb-eyes i { height: max(2px, 0.06em); border-radius: var(--radius-full); }
+.pb-avatar[data-state="blocked"] .pb-eyes i:first-child { transform: rotate(-16deg); }
+.pb-avatar[data-state="blocked"] .pb-eyes i:last-child { transform: rotate(16deg); }
+/* Done: happy arcs. Still. */
+.pb-avatar[data-state="done"] .pb-eyes i { width: 0.19em; height: 0.19em; border-radius: var(--radius-full); }
+.pb-avatar[data-state="done"] .pb-eyes i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--pebble); transform: translateY(36%); }
+
+/* Roster row */
+.pb-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: inherit; text-decoration: none; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), box-shadow var(--dur-quick) var(--ease-soft); }
+.pb-row:hover { background: var(--fill); }
+.pb-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-row[aria-current="true"] { background: var(--surface-raised); box-shadow: var(--shadow-raise); }
+.pb-row-text { display: block; min-width: 0; }
+.pb-row-name, .pb-row-text .pb-row-line { display: block; }
+.pb-row-name { font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-row-line { font-size: 13px; line-height: 18px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-row > .pb-mark { margin-right: var(--space-1); }
+.pb-row[data-state="done"] .pb-row-line { color: var(--ink); }
+
+/* Conversation */
+.pb-thread { display: flex; flex-direction: column; gap: var(--space-5); max-width: 680px; }
+.pb-msg { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--space-3); }
+.pb-msg-head { display: flex; align-items: baseline; gap: var(--space-2); font-size: 13px; line-height: 20px; }
+.pb-msg-head b { font-weight: 600; }
+.pb-msg-head time, .pb-time { font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); }
+/* The quiet thinking line. It stands at the very end of a bot's answer only while nothing is live,
+   exactly where the next thing will appear: the height and left edge of a line of work. */
+.pb-pending { display: flex; align-items: center; height: 20px; }
+.pb-pending-line { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-msg-body { font-size: 15px; line-height: 24px; }
+.pb-msg-body p { margin: 0; }
+.pb-msg-you { align-self: flex-end; max-width: 78%; background: var(--fill); padding: var(--space-2) var(--space-4); border-radius: var(--radius-lg); font-size: 15px; line-height: 24px; }
+.pb-fold, .pb-activity { display: flex; align-items: center; gap: var(--space-2); padding-left: 40px; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-fold { cursor: pointer; background: none; border: 0; font-family: inherit; text-align: left; transition: color var(--dur-quick) var(--ease-soft); }
+.pb-fold:hover { color: var(--ink); }
+.pb-fold:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.pb-fold-faces { display: inline-flex; gap: 2px; }
+.pb-fold-faces .pb-avatar { --size: 18px; }
+
+/* Cards */
+.pb-card { background: var(--surface-raised); border-radius: var(--radius-lg); box-shadow: var(--shadow-raise); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; overflow-wrap: anywhere; }
+/* Nothing in a card reaches past its edge: a long word or address wraps, a long button label too. */
+.pb-card .pb-card-actions .pb-btn { max-width: 100%; height: auto; min-height: 36px; padding-block: var(--space-2); white-space: normal; text-align: left; }
+.pb-card .pb-card-actions .pb-btn-sm { min-height: 28px; padding-block: var(--space-1); }
+.pb-card-head { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-card-head b { color: var(--ink); font-weight: 600; }
+.pb-card-title { font-size: 15px; line-height: 22px; font-weight: 600; margin: 0; }
+.pb-card-text { font-size: 14px; line-height: 22px; color: var(--ink-muted); margin: 0; }
+.pb-card-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.pb-card-foot { font-size: 12px; line-height: 16px; color: var(--ink-faint); }
+.pb-draft { background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: 14px; line-height: 22px; }
+.pb-draft-to { display: block; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); margin-bottom: var(--space-1); }
+/* A meeting card (calendar tools, 16 Nov 2026): the meeting written out in the well. */
+.pb-meet { display: flex; flex-direction: column; gap: var(--space-1); white-space: normal; }
+.pb-meet-what { font-weight: 600; }
+.pb-meet-was, .pb-meet-line { color: var(--ink-muted); }
+.pb-meet-people { list-style: none; margin: var(--space-1) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.pb-meet-person { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); min-width: 0; }
+.pb-meet-addr { font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--ink-faint); overflow-wrap: anywhere; }
+.pb-meet-tag { font-size: 12px; line-height: 18px; color: var(--ink-muted); }
+.pb-meet-tag[data-unchecked] { color: var(--amber); }
+.pb-meet-clash { color: var(--amber); }
+.pb-meet-text { display: block; white-space: pre-wrap; margin-top: var(--space-1); color: var(--ink-muted); }
+.pb-calendar-note { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+.pb-meet-label { display: block; font-size: 12px; line-height: 18px; color: var(--ink-faint); }
+
+/* Composer and chips */
+.pb-composer { background: var(--surface-raised); border-radius: var(--radius-xl); box-shadow: var(--shadow-raise); padding: var(--space-4) var(--space-3) var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-composer textarea { font: inherit; color: var(--ink); background: none; border: 0; outline: 0; resize: none; height: 24px; padding: 0 var(--space-1); }
+.pb-composer textarea::placeholder { color: var(--ink-faint); }
+.pb-composer-bar { display: flex; align-items: center; gap: var(--space-1); margin-left: calc(var(--space-2) * -1); }
+.pb-composer-bar .pb-push { margin-left: auto; }
+.pb-chip { display: inline-flex; align-items: center; gap: var(--space-1); height: 24px; padding: 0 var(--space-2); border-radius: var(--radius-sm); background: var(--fill); color: var(--ink-muted); font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; }
+.pb-chip-mono { font-family: var(--font-mono); font-size: 11px; font-weight: 400; }
+.pb-send { width: 36px; height: 36px; margin-left: var(--space-2); flex: none; border-radius: var(--radius-full); border: 0; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), transform var(--dur-instant) var(--ease-soft); }
+.pb-send:hover { background: var(--accent-strong); }
+.pb-send:active { transform: scale(0.94); }
+.pb-send:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Menus and pickers */
+.pb-pop { background: var(--surface-overlay); border-radius: var(--radius-lg); box-shadow: var(--shadow-float); padding: var(--space-2); }
+.pb-picker { display: grid; grid-template-columns: minmax(0, 1fr) 208px; gap: var(--space-2); width: 580px; }
+.pb-picker-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pb-picker-side { background: var(--fill); border-radius: var(--radius-md); padding: var(--space-2); }
+.pb-picker-title { display: flex; justify-content: space-between; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-muted); padding: var(--space-2) var(--space-3); }
+.pb-search { font: inherit; font-size: 14px; line-height: 20px; height: 40px; width: 100%; padding: 0 var(--space-3); border: 0; outline: 0; background: none; color: var(--ink); }
+.pb-search::placeholder { color: var(--ink-muted); }
+.pb-option { font: inherit; font-size: 14px; line-height: 20px; display: flex; align-items: center; gap: var(--space-3); width: 100%; height: 36px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink); text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-option:hover, .pb-option[aria-selected="true"] { background: var(--fill); }
+.pb-option:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-option .pb-push { margin-left: auto; }
+.pb-option-note { margin-left: auto; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-option svg { flex: none; color: var(--ink-muted); }
+/* Two kinds of models (step 3a): a quiet heading over each group, "Claude" and "ChatGPT". Not an
+   option, never focused; with one kind in the list there are no headings. */
+.pb-picker-group { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-muted); padding: var(--space-2) var(--space-3) var(--space-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-option + .pb-picker-group { margin-top: var(--space-1); }
+.pb-key { font-family: var(--font-mono); font-size: 11px; line-height: 16px; padding: 2px 6px; border-radius: 6px; background: var(--fill); color: var(--ink-muted); white-space: nowrap; }
+/* The switch "Fast" as the last row of the effort column (step 3b): the name and the switch on one
+   line, the model's few words under the name in the manner of "Default". Its room under the efforts
+   is kept while any model in the list has a fast mode, so the column never changes height. */
+.pb-fast-room { height: 44px; flex: none; margin-top: var(--space-1); }
+.pb-fast-option { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center; column-gap: var(--space-3); height: auto; min-height: 36px; padding: var(--space-1) var(--space-3); }
+.pb-fast-option .pb-fast-hint { grid-column: 1 / -1; margin-left: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-pop-foot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; padding: var(--space-1) var(--space-1) 0; }
+
+/* Settings fields */
+.pb-field { display: flex; flex-direction: column; gap: var(--space-1); max-width: 360px; }
+.pb-label { font-size: 13px; line-height: 20px; font-weight: 500; }
+.pb-hint { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-input { font: inherit; font-size: 14px; height: 36px; padding: 0 var(--space-3); border-radius: var(--radius-md); border: 0; background: var(--surface-sunken); box-shadow: var(--shadow-well); color: var(--ink); }
+.pb-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pb-toggle { display: flex; align-items: center; gap: var(--space-3); font-size: 14px; line-height: 20px; }
+.pb-switch { appearance: none; -webkit-appearance: none; width: 36px; height: 20px; margin: 0; flex: none; border-radius: var(--radius-full); background: var(--track); position: relative; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: var(--radius-full); background: var(--on-accent); transition: transform var(--dur-quick) var(--ease-out); }
+.pb-switch:checked { background: var(--accent); }
+.pb-switch:checked::after { transform: translateX(16px); }
+.pb-switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* The quiet switch (step 3b): for a setting that stands beside a choice and must be as calm as the
+   choice. On and off are told by where the knob is and by the track turning from a tint to the grey
+   of a check mark, never by colour. A fixed size: switching moves nothing around it. */
+.pb-switch-quiet { position: relative; flex: none; display: block; width: 28px; height: 16px; border-radius: var(--radius-full); background: var(--fill-strong); transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-switch-quiet::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: var(--radius-full); background: var(--ink-muted); transition: transform var(--dur-quick) var(--ease-out), background-color var(--dur-quick) var(--ease-soft); }
+[aria-checked="true"] > .pb-switch-quiet { background: var(--ink-muted); }
+[aria-checked="true"] > .pb-switch-quiet::after { transform: translateX(12px); background: var(--surface-overlay); }
+/* The switch "Fast" as a field with the effort choice (a bot's settings: on its own line under the
+   efforts; "Add a bot": on the line of the label "Effort"): the switch, the name in the type of an
+   effort option, the model's few words. The words stand in a box as wide as the longest words of any
+   model offered; out of sight (data-gone) it keeps its room. */
+.pb-fast { font: inherit; display: inline-flex; align-items: center; gap: var(--space-2); flex: none; height: 24px; padding: 0 var(--space-1) 0 0; margin: 0; border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); text-align: left; cursor: pointer; }
+.pb-fast .pb-fast-name { font-size: 13px; line-height: 20px; font-weight: 500; transition: color var(--dur-quick) var(--ease-soft); }
+.pb-fast:hover .pb-fast-name, .pb-fast[aria-checked="true"] .pb-fast-name { color: var(--ink); }
+.pb-fast:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pb-fast[data-gone] { visibility: hidden; }
+.pb-label-row > .pb-fast { height: 20px; align-self: center; }
+.pb-fast-hints { display: grid; margin-left: var(--space-1); }
+.pb-fast-hints .pb-fast-hint { grid-area: 1 / 1; margin-left: 0; white-space: nowrap; visibility: hidden; }
+.pb-fast-hints .pb-fast-hint[data-show] { visibility: visible; animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+/* The effort choice with the switch "Fast" on its own line under it, at the same place whichever
+   model is chosen. */
+.pb-effort-line { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); max-width: 100%; }
+.pb-seg { display: inline-flex; align-self: flex-start; padding: 3px; gap: 2px; background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-md); }
+.pb-seg button { font: inherit; font-size: 13px; line-height: 20px; font-weight: 500; height: 28px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-seg button:hover { color: var(--ink); }
+.pb-seg button[aria-pressed="true"] { background: var(--fill-strong); color: var(--ink); }
+.pb-seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+/* The models as rows of choices in two quiet groups (step 3a), each under a small heading. */
+.pb-model-groups { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); max-width: 100%; }
+.pb-model-group { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); max-width: 100%; }
+.pb-model-group-title { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The quiet second part of a group's heading, on the heading's own line at its height: on the group a
+   bot is not on, "starts a fresh session". It gives way first when the line is short. */
+.pb-group-note { font-weight: 400; color: var(--ink-faint); margin-left: var(--space-2); }
+/* A row of choices whose number changes (the efforts of the chosen model) in a box that keeps its
+   height: the longest row stands under it out of sight. */
+.pb-effort-box { display: grid; justify-items: start; align-items: start; max-width: 100%; }
+.pb-effort-box > .pb-seg { grid-area: 1 / 1; }
+.pb-effort-ghost { visibility: hidden; }
+/* One quiet line under the choices in a box that keeps its height whichever line it shows, or none:
+   every line it can show stands in the same place, only one of them seen. */
+.pb-model-note { display: grid; }
+.pb-model-note-line { grid-area: 1 / 1; visibility: hidden; }
+.pb-model-note-line[data-show] { visibility: visible; animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+
+/* Window: roster and rail on the ground, one reading panel floating between them */
+.pb-shell { display: grid; grid-template-columns: 264px minmax(0, 1fr) 344px; height: 100%; padding: var(--space-2) 0; background: var(--ground); }
+.pb-side { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-2) var(--space-3); min-height: 0; }
+.pb-side-group { display: flex; flex-direction: column; gap: 2px; }
+.pb-side-title { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-faint); padding: 0 var(--space-3) var(--space-1); }
+.pb-side-line { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); padding: 2px var(--space-3); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-side-line span:last-child { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
+.pb-wordmark { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; padding: var(--space-1) var(--space-3); }
+.pb-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-panel); overflow: hidden; }
+.pb-main-head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5); }
+.pb-main-head h1 { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+.pb-main-head .pb-status { margin-left: auto; }
+.pb-main-scroll { flex: 1; min-height: 0; overflow: auto; padding: var(--space-4) var(--space-5); display: flex; flex-direction: column; }
+.pb-main-scroll .pb-thread { margin: auto auto 0; width: 100%; }
+.pb-main-foot { padding: var(--space-2) var(--space-5) var(--space-5); }
+.pb-main-foot .pb-composer { max-width: 680px; margin: 0 auto; }
+.pb-rail { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-2) var(--space-4); min-width: 0; min-height: 0; overflow: auto; overflow-x: hidden; }
+/* The rail's handle on its left edge, in its own padding (step rail-resize): dragged it makes the
+   rail wider or narrower, a double-click puts it back. Its grip is always there, quietly. */
+.pb-rail-handle { grid-row: 1; grid-column: 3; justify-self: start; z-index: 1; width: var(--space-3); display: grid; place-items: center; cursor: col-resize; touch-action: none; border-radius: var(--radius-sm); }
+.pb-rail-handle:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-rail-grip { width: 4px; height: var(--space-7); border-radius: var(--radius-full); background: var(--fill); transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-rail-handle:hover .pb-rail-grip, .pb-rail-handle:focus-visible .pb-rail-grip, [data-dragging="rail"] .pb-rail-grip { background: var(--fill-strong); }
+[data-dragging="rail"], [data-dragging="rail"] * { cursor: col-resize; user-select: none; }
+[data-dragging="rail"] iframe { pointer-events: none; }
+.pb-rail-title { display: flex; align-items: baseline; justify-content: space-between; font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 0; padding: var(--space-1) 0; }
+.pb-rail-title span { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); letter-spacing: 0.01em; }
+.pb-later { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); }
+.pb-later-item { display: flex; gap: var(--space-3); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-later-item time { font-family: var(--font-mono); font-size: 11px; line-height: 20px; color: var(--ink-faint); min-width: 76px; }
+
+/* Motion */
+.pb-arrive { animation: pb-arrive var(--dur-calm) var(--ease-out) both; }
+@keyframes pb-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pb-breath { 0%, 100% { opacity: 0.12; transform: scale(0.8); } 50% { opacity: 0.55; transform: scale(1); } }
+@keyframes pb-think { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-2px); opacity: 1; } }
+@keyframes pb-settle { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+@keyframes pb-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pb-blink { 0%, 93%, 100% { transform: scaleY(1); } 96.5% { transform: scaleY(0.1); } }
+@keyframes pb-look { 0%, 100% { transform: translate(-0.07em, -0.05em); } 50% { transform: translate(0.07em, -0.05em); } }
+@media (prefers-reduced-motion: reduce) {
+  .pb-mark-working::after, .pb-mark-thinking i, .pb-mark-done, .pb-avatar .pb-eyes, .pb-avatar .pb-eyes i { animation: none; }
+  .pb-arrive { animation: pb-fade var(--dur-quick) linear both; }
+  .pb-btn, .pb-send { transition: none; }
+}
+
+/* ------------------------------------------------------------ A bot's page (step 2a) */
+
+/* Side head: the "Bots" title with a quiet add control. */
+.pb-side-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.pb-side-head .pb-side-title { padding-bottom: 0; }
+.pb-icon-btn-sm { width: 28px; height: 28px; }
+
+/* Tabs: quiet words in the panel's head. The open one is ink on a soft fill. */
+.pb-tabs { display: flex; align-items: center; gap: 2px; }
+.pb-tab { font: inherit; font-size: 13px; line-height: 20px; font-weight: 500; height: 28px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-faint); cursor: pointer; white-space: nowrap; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-tab:hover { color: var(--ink); }
+.pb-tab[aria-selected="true"] { color: var(--ink); background: var(--fill); }
+.pb-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* A row of tabs wider than its place (a phone) scrolls inside itself: its edge fades softly on the
+   side where more tabs are, so the last ones can be found. A mask only, so nothing moves. */
+.pb-tabs[data-more-end] { -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - var(--space-6)), transparent); mask-image: linear-gradient(to right, var(--ink) calc(100% - var(--space-6)), transparent); }
+.pb-tabs[data-more-start] { -webkit-mask-image: linear-gradient(to left, var(--ink) calc(100% - var(--space-6)), transparent); mask-image: linear-gradient(to left, var(--ink) calc(100% - var(--space-6)), transparent); }
+.pb-tabs[data-more-start][data-more-end] { -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) var(--space-6), var(--ink) calc(100% - var(--space-6)), transparent); mask-image: linear-gradient(to right, transparent, var(--ink) var(--space-6), var(--ink) calc(100% - var(--space-6)), transparent); }
+
+/* Editor: a plain text well that fills the space, with a bar above it. */
+.pb-editor-bar { display: flex; align-items: center; gap: var(--space-3); min-height: 36px; }
+.pb-editor-name { display: flex; align-items: baseline; gap: var(--space-2); flex: 1; min-width: 0; }
+.pb-editor-title { font-size: 15px; line-height: 24px; font-weight: 600; white-space: nowrap; }
+.pb-editor-path { font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-editor-state { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); white-space: nowrap; }
+.pb-editor-state[data-state="dirty"] { color: var(--ink-muted); }
+.pb-editor { flex: 1; min-height: 160px; display: flex; background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-lg); }
+/* A text box that fills a surface rings the whole surface on keyboard focus. Text fields match
+   :focus-visible on any focus, so the app marks keyboard use with data-input="keyboard" on <html>. */
+[data-input="keyboard"] .pb-editor:has(:focus), [data-input="keyboard"] .pb-composer:has(textarea:focus) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-editor-text { flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: none; color: var(--ink); font-family: var(--font-mono); font-size: 13px; line-height: 20px; padding: var(--space-4) var(--space-5); tab-size: 2; }
+.pb-editor-text:disabled { color: var(--ink-faint); }
+/* A note above the editor when the file changed underneath. Raised, so it reads as something to answer. */
+.pb-editor-note { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface-raised); box-shadow: var(--shadow-raise); border-radius: var(--radius-md); font-size: 13px; line-height: 20px; }
+.pb-editor-note > span:first-child { display: inline-flex; align-items: center; gap: var(--space-2); flex: 1 1 240px; }
+.pb-editor-note-actions { display: flex; gap: var(--space-2); }
+
+/* File list: groups of files on the panel, the open one raised like a roster row. */
+.pb-files { display: flex; flex-direction: column; gap: var(--space-4); }
+.pb-files-group { display: flex; flex-direction: column; gap: 2px; }
+.pb-files-title { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-faint); padding: 0 var(--space-3) var(--space-1); }
+.pb-file { display: flex; flex-direction: column; align-items: flex-start; width: 100%; min-width: 0; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), box-shadow var(--dur-quick) var(--ease-soft); }
+.pb-file:hover { background: var(--fill); }
+.pb-file[aria-current="true"] { background: var(--surface-raised); box-shadow: var(--shadow-raise); }
+.pb-file:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-file-name { max-width: 100%; font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-file-path { max-width: 100%; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-files-empty { margin: 0; padding: 0 var(--space-3); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+
+/* History: who, what and when, newest first. Opening one shows the diff in a well. */
+.pb-changes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pb-change { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; width: 100%; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-change:hover, .pb-change[aria-expanded="true"] { background: var(--fill); }
+.pb-change:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-change-text { display: flex; flex-direction: column; min-width: 0; }
+.pb-change-summary { font-size: 14px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-change-files { font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-change[aria-expanded="true"] .pb-change-files, .pb-change:hover .pb-change-files { color: var(--ink-muted); }
+.pb-who { width: 28px; height: 28px; display: grid; place-items: center; flex: none; }
+.pb-who-word { border-radius: var(--radius-full); background: var(--fill); font-size: 11px; line-height: 16px; font-weight: 500; color: var(--ink-muted); }
+.pb-change-open { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-3) var(--space-4) calc(28px + var(--space-3) * 2); }
+.pb-diff { background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-md); padding: var(--space-3) 0; font-family: var(--font-mono); font-size: 13px; line-height: 20px; color: var(--ink-muted); max-height: 420px; overflow: auto; }
+.pb-diff-file { padding: 0 var(--space-4) var(--space-1); font-size: 11px; line-height: 16px; color: var(--ink-faint); }
+.pb-diff-line + .pb-diff-file { margin-top: var(--space-3); }
+.pb-diff-line { display: grid; grid-template-columns: var(--space-5) minmax(0, 1fr); padding: 0 var(--space-4) 0 var(--space-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pb-diff-line[data-kind="add"] { background: var(--diff-added); color: var(--ink); }
+.pb-diff-line[data-kind="del"] { background: var(--diff-removed); color: var(--ink); }
+.pb-diff-sign { color: var(--ink-faint); text-align: center; user-select: none; }
+.pb-diff-gap { height: var(--space-3); }
+
+/* Settings page: sections with a heading, saved as they change. */
+.pb-settings { display: flex; flex-direction: column; gap: var(--space-6); width: 100%; max-width: 560px; margin: 0 auto; padding: var(--space-2) 0 var(--space-6); }
+.pb-section { display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-section-head, .pb-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.pb-section-title { margin: 0; font-size: 15px; line-height: 24px; font-weight: 600; }
+.pb-section-text { margin: 0; max-width: 480px; font-size: 14px; line-height: 22px; color: var(--ink-muted); }
+/* "Saved" beside a field, for a moment. Fades, never moves. */
+.pb-saved { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); opacity: 0; transition: opacity var(--dur-calm) var(--ease-soft); }
+.pb-saved[data-show], .pb-saved[role="alert"] { opacity: 1; }
+.pb-label-note { font-weight: 400; color: var(--ink-faint); margin-left: var(--space-1); }
+.pb-field-wide { max-width: none; }
+.pb-textarea { height: auto; min-height: 96px; padding: var(--space-2) var(--space-3); line-height: 22px; resize: vertical; }
+
+/* Face picker: the twelve looks as small faces. The chosen one sits on a soft accent tile. */
+.pb-faces { display: grid; grid-template-columns: repeat(4, 48px); gap: var(--space-2); }
+.pb-face-pick { width: 48px; height: 48px; padding: 0; border: 0; border-radius: var(--radius-md); background: none; display: grid; place-items: center; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-face-pick:hover { background: var(--fill); }
+.pb-face-pick[aria-checked="true"] { background: var(--accent-soft); }
+.pb-face-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-face-pick .pb-avatar { --size: 32px; }
+
+/* Choice list: a few options with a hint each, exactly one chosen. Used for the access level. */
+.pb-choices { display: flex; flex-direction: column; gap: 2px; max-width: 480px; }
+.pb-choice { display: grid; grid-template-columns: minmax(0, 1fr) 16px; column-gap: var(--space-3); align-items: center; width: 100%; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-choice:hover { background: var(--fill); }
+.pb-choice[aria-checked="true"] { background: var(--accent-soft); }
+.pb-choice:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-choice-label { font-size: 14px; line-height: 20px; font-weight: 500; }
+.pb-choice-hint { grid-column: 1; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-choice svg { grid-column: 2; grid-row: 1 / span 2; color: var(--accent-text); }
+
+/* Who a bot may message: the other bots with their faces, each a switch. */
+.pb-peers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); max-width: 480px; }
+.pb-peer { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-1) 0; }
+.pb-peer-text { display: flex; flex-direction: column; min-width: 0; }
+.pb-peer-name { font-size: 14px; line-height: 20px; font-weight: 500; }
+.pb-peer-line { font-size: 12px; line-height: 16px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-peer-always { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); }
+/* May steer other bots: one switch with what it means beside it (15 Nov 2026). */
+.pb-steer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-1) 0; max-width: 480px; }
+
+/* Saved rules: what is always allowed, each with "Forget". */
+.pb-rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); max-width: 480px; }
+.pb-rule { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--fill); border-radius: var(--radius-md); }
+.pb-rule-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pb-rule-label { font-size: 14px; line-height: 20px; }
+.pb-rule-detail { font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-muted); overflow-wrap: anywhere; }
+
+/* Dialogs: a dimmed layer and one overlay surface. Sheets hold a form, confirms a question. */
+.pb-scrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: var(--space-4); background: var(--scrim); animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+.pb-dialog { width: min(420px, 100%); max-height: calc(100vh - var(--space-6)); overflow: auto; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); background: var(--surface-overlay); box-shadow: var(--shadow-float); border-radius: var(--radius-xl); }
+.pb-dialog-sheet { width: min(520px, 100%); gap: var(--space-4); padding: var(--space-6); }
+.pb-dialog-title { margin: 0; font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
+.pb-dialog-sheet .pb-dialog-title { font-size: 24px; line-height: 30px; letter-spacing: -0.015em; }
+.pb-dialog-text { margin: 0; font-size: 14px; line-height: 22px; color: var(--ink-muted); }
+.pb-dialog-form { display: flex; flex-direction: column; gap: var(--space-4); }
+.pb-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+/* A danger button that must read as a button on its own, as the last word of a confirm. */
+.pb-btn-danger-strong { background: var(--clay-soft); }
+
+/* Folded turns between bots, and a message from a bot. */
+.pb-fold-wrap { display: flex; flex-direction: column; gap: var(--space-4); }
+.pb-fold[aria-expanded="true"] { color: var(--ink); }
+.pb-fold .pb-time { margin-left: var(--space-1); }
+.pb-fold-body { display: flex; flex-direction: column; gap: var(--space-5); }
+.pb-msg-from { font-size: 12px; line-height: 16px; color: var(--ink-faint); }
+
+/* Note card: a bot tells you something; one quiet "Got it". */
+.pb-btn-flush { margin-left: calc(var(--space-3) * -1); }
+
+/* ------------------------------------------------------------ Triggers (step 2b) */
+
+/* Trigger list: one soft row per trigger, a switch on the right. The row's parts keep their places,
+   so a run finishing or the switch turning only changes words, never the height. */
+.pb-triggers-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding: 0 var(--space-3); }
+.pb-triggers-bar .pb-section-text { font-size: 13px; line-height: 20px; }
+.pb-triggers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pb-trigger { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding-right: var(--space-3); border-radius: var(--radius-md); transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-trigger:hover { background: var(--fill); }
+.pb-trigger-open { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; width: 100%; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.pb-trigger-open:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-trigger-title { display: flex; align-items: baseline; gap: var(--space-2); max-width: 100%; min-width: 0; }
+.pb-trigger-name { font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-trigger-by { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); white-space: nowrap; }
+.pb-trigger-when { max-width: 100%; font-size: 13px; line-height: 20px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-trigger-meta { display: flex; align-items: center; gap: var(--space-2); max-width: 100%; min-width: 0; height: 20px; font-size: 12px; line-height: 16px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; }
+.pb-trigger-last { display: inline-flex; align-items: center; gap: var(--space-2); flex: none; color: var(--ink-muted); }
+.pb-trigger-last[data-status="failed"] { color: var(--clay); }
+.pb-trigger-next { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pb-trigger-next::before { content: "\00b7"; margin-right: var(--space-2); }
+.pb-trigger[data-off] .pb-trigger-name, .pb-trigger[data-off] .pb-trigger-when { color: var(--ink-muted); }
+.pb-triggers-empty { max-width: 480px; }
+
+/* Days: seven toggles in a well, any number chosen, with two quiet shortcuts beside them. */
+.pb-days-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.pb-days { display: inline-flex; padding: 3px; gap: 2px; background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-md); }
+.pb-day { font: inherit; font-size: 13px; line-height: 20px; font-weight: 500; height: 28px; min-width: 40px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-day:hover { color: var(--ink); }
+.pb-day[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-text); }
+.pb-day:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pb-days-quick { display: inline-flex; gap: var(--space-1); }
+.pb-days-quick .pb-btn[aria-pressed="true"] { background: var(--fill); color: var(--ink); }
+
+/* Schedule picker: three plain choices, the controls for the chosen one, and a sentence that says what it means. */
+.pb-sched { gap: var(--space-3); }
+.pb-sched-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2) var(--space-3); }
+.pb-sched-part { display: flex; flex-direction: column; gap: var(--space-1); }
+.pb-sched-hint { flex-basis: 100%; }
+.pb-time-input { width: 88px; font-family: var(--font-mono); font-size: 13px; }
+.pb-number-input { width: 72px; font-family: var(--font-mono); font-size: 13px; }
+.pb-sched-unit { align-self: flex-end; }
+.pb-sched-say { margin: 0; font-size: 14px; line-height: 22px; color: var(--ink); }
+.pb-sched-say[data-problem] { color: var(--clay); }
+/* A plain select in a well, with a small drawn chevron. */
+.pb-select { position: relative; display: inline-flex; }
+.pb-select select { appearance: none; -webkit-appearance: none; min-width: 232px; padding-right: var(--space-7); cursor: pointer; }
+.pb-select select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pb-select::after { content: ""; position: absolute; right: var(--space-3); top: 50%; width: 10px; height: 10px; margin-top: -5px; background: var(--ink-muted); pointer-events: none; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4 5 6.5 7.5 4'/%3E%3C/svg%3E") center / 10px 10px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4 5 6.5 7.5 4'/%3E%3C/svg%3E") center / 10px 10px no-repeat; }
+
+/* A webhook's address: shown on request, in mono in a well, with a quiet Copy. */
+.pb-hook { display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-hook-label { margin-bottom: calc(var(--space-2) * -1); }
+.pb-address { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-md); }
+.pb-address-text { flex: 1; min-width: 0; padding: var(--space-1) 0; font-family: var(--font-mono); font-size: 13px; line-height: 20px; color: var(--ink); overflow-wrap: anywhere; word-break: break-all; user-select: all; }
+.pb-copy { min-width: 76px; }
+
+/* Runs: newest first, a status mark and word, the note, when. A run opens what happened in place. */
+.pb-runs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pb-run-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; width: 100%; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: inherit; font: inherit; text-align: left; }
+.pb-run-row > .pb-mark { justify-self: center; }
+button.pb-run-row { cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+button.pb-run-row:hover, .pb-run-row[aria-expanded="true"] { background: var(--fill); }
+.pb-run-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-run-text { display: flex; flex-direction: column; min-width: 0; }
+.pb-run-word { font-size: 13px; line-height: 20px; font-weight: 500; }
+.pb-run[data-status="failed"] .pb-run-word { color: var(--clay); }
+.pb-run[data-status="silent"] .pb-run-word, .pb-run[data-status="skipped"] .pb-run-word { color: var(--ink-muted); }
+.pb-run-note { font-size: 12px; line-height: 16px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-run-open { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) 0 var(--space-4) calc(16px + var(--space-3) * 2); }
+.pb-run-full { margin: 0; font-size: 14px; line-height: 22px; color: var(--ink-muted); }
+/* A fresh run's own thread, read-only: the chat's own messages on a raised card. */
+.pb-run-thread { gap: var(--space-4); padding: var(--space-4); background: var(--surface-raised); box-shadow: var(--shadow-raise); border-radius: var(--radius-lg); }
+
+/* One trigger's page: its name, when it runs, a switch and Run now; then runs, address, settings, remove. */
+.pb-trigger-page { display: flex; flex-direction: column; gap: var(--space-6); width: 100%; max-width: 560px; margin: 0 auto; padding: 0 0 var(--space-6); }
+.pb-trigger-top { display: flex; flex-direction: column; gap: var(--space-2); }
+.pb-trigger-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.pb-trigger-head-text { flex: 1 1 240px; min-width: 0; }
+.pb-trigger-head-name { margin: 0; font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.pb-trigger-head-name:focus { outline: none; }
+.pb-trigger-head-when { margin: 0; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-trigger-switch { font-size: 13px; gap: var(--space-2); color: var(--ink-muted); }
+
+/* A message from a trigger: on the left like a message from a bot, a small drawn clock or arrow
+   where a face would be, and the trigger's name, quietly, where a sender would be. */
+.pb-who-mark { border-radius: var(--radius-full); background: var(--fill); color: var(--ink-muted); }
+.pb-msg-head b.pb-msg-trigger-name { color: var(--ink-muted); }
+
+/* "Later today" under the rail's cards: each line opens that trigger. */
+.pb-later-title { padding: 0; }
+button.pb-later-item { width: calc(100% + var(--space-4)); margin: 0 calc(var(--space-2) * -1); padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink-muted); text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+button.pb-later-item:hover { background: var(--fill); color: var(--ink); }
+button.pb-later-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-later-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-trigger, .pb-day, .pb-run-row, .pb-later-item, .pb-rail-grip { transition: none; }
+}
+
+/* ------------------------------------------------------------ Channels (step 2c) */
+
+/* Channel list in the roster: a quiet line per channel with "on" or "off" on the right. The open
+   one is raised like a roster row. The drawn speech mark shows only where the roster shows faces only. */
+.pb-channel-row { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 32px; padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: var(--ink-muted); font: inherit; font-size: 13px; line-height: 20px; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft), box-shadow var(--dur-quick) var(--ease-soft); }
+.pb-channel-row:hover { background: var(--fill); color: var(--ink); }
+.pb-channel-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-channel-row[aria-current="true"] { background: var(--surface-raised); box-shadow: var(--shadow-raise); color: var(--ink); }
+.pb-channel-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-channel-word { flex: none; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); }
+.pb-channel-row:hover .pb-channel-word { color: var(--ink-muted); }
+.pb-channel-mark { display: none; width: 28px; height: 28px; flex: none; place-items: center; border-radius: var(--radius-full); background: var(--fill); color: var(--ink-muted); }
+.pb-channel-row[aria-current="true"] .pb-channel-mark { color: var(--ink); }
+.pb-channel-row[data-off] .pb-channel-mark { background: none; color: var(--ink-faint); }
+
+/* A drawn mark in a disc, at the size of a face in a panel's head. */
+.pb-who-lg { width: 36px; height: 36px; }
+
+/* A channel's page: one calm column like a trigger's page. */
+.pb-channel-page { display: flex; flex-direction: column; gap: var(--space-6); width: 100%; max-width: 560px; margin: 0 auto; padding: var(--space-2) 0 var(--space-6); }
+
+/* A row of a field and a small button that adds what was typed. */
+.pb-add-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); max-width: 480px; }
+.pb-add-input { flex: 1 1 200px; min-width: 0; height: 32px; }
+
+/* Who may write: email addresses as soft rows, each with a quiet Remove. */
+.pb-writers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); max-width: 480px; }
+.pb-writer { display: flex; align-items: center; gap: var(--space-3); min-height: 40px; padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4); background: var(--fill); border-radius: var(--radius-md); }
+.pb-writer-email { flex: 1; min-width: 0; font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+
+/* Tags: each route a soft row: the tag, "reaches", and the bot chosen from a list. */
+.pb-routes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); max-width: 480px; }
+.pb-route { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-height: 44px; padding: var(--space-2) var(--space-1) var(--space-2) var(--space-4); background: var(--fill); border-radius: var(--radius-md); }
+.pb-route-tag { font-size: 14px; line-height: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.pb-route-word { font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-route-remove { margin-left: auto; }
+.pb-tag-input { flex: 0 1 152px; min-width: 96px; height: 32px; }
+
+/* Bot picker: a quiet button with the bot's face and name that opens a short floating list. */
+.pb-pick { position: relative; display: inline-flex; min-width: 0; }
+.pb-pick-btn { background: none; gap: var(--space-2); padding: 0 var(--space-2) 0 var(--space-1); min-width: 0; }
+.pb-pick-btn:hover, .pb-pick-btn[aria-expanded="true"] { background: var(--fill); }
+.pb-pick-btn > svg { flex: none; color: var(--ink-muted); }
+.pb-pick .pb-avatar { --size: 20px; }
+.pb-pick-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-pick-menu { position: absolute; top: calc(100% + var(--space-1)); left: 0; z-index: 5; width: 232px; display: flex; flex-direction: column; gap: 2px; }
+.pb-pick-menu .pb-option[aria-checked="true"] svg { color: var(--accent-text); }
+
+/* An address that is written but never read back: a password-style field and a word that says whether one is set. */
+.pb-reply-state { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: 14px; line-height: 22px; color: var(--ink-muted); }
+.pb-reply-state[data-set] { color: var(--ink); }
+.pb-secret-input { font-family: var(--font-mono); font-size: 13px; -webkit-text-security: disc; }
+
+/* What a flow should send: an example body in a well, folded until asked for. */
+.pb-flow { display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-flow-text { margin: 0; white-space: pre-wrap; word-break: normal; user-select: text; }
+.pb-flow code { font-family: var(--font-mono); font-size: 12px; padding: 0 var(--space-1); border-radius: var(--radius-sm); background: var(--fill); color: var(--ink); }
+
+/* Messages that came in on a channel: a status mark, who wrote and to which bot, the word and the
+   note, when. Every row is two lines whatever its status, so a change of status only changes words. */
+.pb-cmsgs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pb-cmsg-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; width: 100%; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: inherit; font: inherit; text-align: left; }
+.pb-cmsg-row > .pb-mark { justify-self: center; }
+button.pb-cmsg-row { cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+button.pb-cmsg-row:hover, .pb-cmsg-row[aria-expanded="true"] { background: var(--fill); }
+.pb-cmsg-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-cmsg-text { display: flex; flex-direction: column; min-width: 0; }
+.pb-cmsg-top { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; height: 20px; white-space: nowrap; overflow: hidden; }
+.pb-cmsg-who { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; font-size: 13px; line-height: 20px; font-weight: 500; }
+.pb-cmsg-to { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 12px; line-height: 16px; color: var(--ink-faint); }
+button.pb-cmsg-row:hover .pb-cmsg-to, .pb-cmsg-row[aria-expanded="true"] .pb-cmsg-to { color: var(--ink-muted); }
+.pb-cmsg-line { display: flex; gap: var(--space-2); min-width: 0; height: 16px; font-size: 12px; line-height: 16px; white-space: nowrap; overflow: hidden; }
+.pb-cmsg-word { flex: none; font-weight: 500; color: var(--ink); }
+.pb-cmsg-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--ink-muted); }
+.pb-cmsg-note::before { content: "\00b7"; margin-right: var(--space-2); }
+.pb-cmsg[data-status="reply-failed"] .pb-cmsg-word { color: var(--clay); }
+.pb-cmsg[data-status="unanswered"] .pb-cmsg-word, .pb-cmsg[data-status="refused"] .pb-cmsg-word, .pb-cmsg[data-status="ignored"] .pb-cmsg-word { color: var(--ink-muted); }
+
+/* A message from a channel: on the left like other arrivals, a drawn speech mark where a face would
+   be. The messages before it open as a quiet list of writer and text in a well. */
+.pb-msg-channel .pb-msg-head { flex-wrap: wrap; }
+.pb-msg-channel .pb-msg-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pb-context { list-style: none; margin: var(--space-2) 0 0; padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-md); }
+.pb-context-msg { display: flex; flex-direction: column; min-width: 0; }
+.pb-context-head { display: flex; align-items: baseline; gap: var(--space-2); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-context-head b { font-weight: 600; }
+.pb-context-head time { font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); }
+.pb-context-text { font-size: 14px; line-height: 22px; color: var(--ink-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-channel-row, .pb-cmsg-row { transition: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-scrim { animation: none; }
+  .pb-tab, .pb-file, .pb-change, .pb-face-pick, .pb-choice, .pb-saved { transition: none; }
+}
+
+/* ------------------------------------------------------------ Working memory (step 2d) */
+
+/* The fresh start line: where the bot's working session starts over, behind the one chat. A quiet
+   rule across the thread with a few words in the middle, clearer than a notice and quieter than a
+   message. While the bot writes down what matters, the same box holds its small face and "Writing
+   down what matters"; then "Started fresh · 14:52". Both states are one fixed height, so the change
+   only swaps words and nothing in the thread moves. The rule is a 1px fill of `divider`, not a border. */
+.pb-fresh-wrap { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-1) 0; }
+.pb-fresh { display: flex; align-items: center; gap: var(--space-3); height: 28px; }
+.pb-fresh::before, .pb-fresh::after { content: ""; flex: 1 1 0; min-width: var(--space-5); height: 1px; background: var(--divider); }
+.pb-fresh-btn, .pb-fresh-pending { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); height: 28px; max-width: 100%; padding: 0 var(--space-2); font: inherit; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-faint); white-space: nowrap; }
+.pb-fresh-btn { border: 0; background: none; border-radius: var(--radius-sm); cursor: pointer; transition: color var(--dur-quick) var(--ease-soft); }
+.pb-fresh-btn:hover, .pb-fresh-btn[aria-expanded="true"] { color: var(--ink-muted); }
+.pb-fresh-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-fresh-btn time { font-family: var(--font-mono); font-size: 11px; font-weight: 400; }
+.pb-fresh-pending { color: var(--ink-muted); font-weight: 400; letter-spacing: 0; }
+.pb-fresh-pending .pb-avatar { --size: 18px; }
+/* Opened: one sentence on what this is, the bot's note, and the steps it took, in a well. */
+.pb-fresh-body { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-5); background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-lg); animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+.pb-fresh-what { margin: 0; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-fresh-note { font-size: 14px; line-height: 22px; overflow-wrap: anywhere; }
+.pb-fresh-note > * { margin: 0; }
+.pb-fresh-note > * + * { margin-top: var(--space-2); }
+.pb-fresh-note ul, .pb-fresh-note ol { padding-left: var(--space-5); }
+.pb-fresh-steps { display: flex; flex-direction: column; gap: var(--space-1); }
+.pb-fresh-steps .pb-activity { padding-left: 0; }
+/* A bot's own post in a channel: the quiet line "Posted in ..." with "Show the post", the post in a well below it (15 Nov 2026). The line keeps its place. */
+.pb-notice-wrap { display: flex; flex-direction: column; gap: var(--space-2); }
+.pb-notice-btn { flex: none; border: 0; background: none; padding: 0 var(--space-1); font: inherit; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); white-space: nowrap; border-radius: var(--radius-sm); cursor: pointer; transition: color var(--dur-quick) var(--ease-soft); }
+.pb-notice-btn:hover, .pb-notice-btn[aria-expanded="true"] { color: var(--ink-muted); }
+.pb-notice-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-notice-post { margin-left: 40px; padding: var(--space-4) var(--space-5); font-size: 14px; line-height: 22px; overflow-wrap: anywhere; background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-lg); animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+.pb-notice-post > * { margin: 0; }
+.pb-notice-post > * + * { margin-top: var(--space-2); }
+.pb-notice-post ul, .pb-notice-post ol { padding-left: var(--space-5); }
+.pb-notice-post[data-plain] { white-space: pre-wrap; }
+/* A change of words in place fades in, without travel. */
+.pb-fade-in { animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+
+/* Working memory in a bot's settings: one sentence, a plain line of facts, and "Start fresh now". */
+.pb-memory-facts { margin: 0; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-memory-act { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+/* A button that is off for now but keeps its place in the keyboard order, with its reason beside it. */
+.pb-btn[aria-disabled="true"] { opacity: 0.5; cursor: default; }
+.pb-btn[aria-disabled="true"]:hover { background: var(--fill); }
+.pb-btn[aria-disabled="true"]:active { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-fresh-btn, .pb-notice-btn { transition: none; }
+  .pb-fresh-body, .pb-fade-in, .pb-notice-post { animation: pb-fade var(--dur-quick) linear both; }
+}
+
+/* ------------------------------------------------------------ Helpers (step 2e) */
+
+/* A helper's row: one per helper, where the bot started it, indented under the bot like its work.
+   Quieter than a message (no face, small type), clearer than a line of work (a soft fill, a name).
+   One fixed height in every state, with or without its line, so nothing in the chat moves when a
+   helper starts, changes its line or ends. Helpers started together sit as one group of rows. */
+.pb-helper-group { display: flex; flex-direction: column; gap: var(--space-1); padding-left: 40px; }
+.pb-helper { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 16px; align-items: center; column-gap: var(--space-3); box-sizing: border-box; width: 100%; height: 52px; padding: 0 var(--space-3) 0 var(--space-3); border: 0; border-radius: var(--radius-md); background: var(--fill); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-helper:hover { background: var(--fill-strong); }
+.pb-helper:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-helper-mark { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius-full); background: var(--fill); color: var(--ink-muted); }
+.pb-helper-text { display: flex; flex-direction: column; min-width: 0; }
+.pb-helper-title { font-size: 13px; line-height: 20px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The title, and after it the model the bot chose for the helper as a quiet label (step 3a). The
+   line has one height with or without the label; a long title gives way to the label. */
+.pb-helper-head { display: flex; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+.pb-helper-head .pb-helper-title { flex: 0 1 auto; min-width: 0; }
+.pb-helper-model { flex: none; max-width: 60%; font-size: 12px; line-height: 20px; font-weight: 500; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* On a fill, the quiet words are ink-muted, never ink-faint. */
+.pb-helper-last { font-size: 12px; line-height: 16px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-helper-state { display: inline-flex; align-items: center; gap: var(--space-1); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-muted); white-space: nowrap; }
+.pb-helper-state .pb-mark-thinking { margin-right: var(--space-1); }
+.pb-helper .pb-time, .pb-helper-dot { color: var(--ink-muted); }
+.pb-helper[data-status="failed"] .pb-helper-word { color: var(--clay); }
+.pb-helper-go { display: grid; place-items: center; color: var(--ink-muted); }
+.pb-helper:hover .pb-helper-go { color: var(--ink); }
+
+/* A helper's thread, in the place of the bot's chat: one calm line above it that says where you
+   are and takes you back, aligned with the thread. */
+.pb-helper-bar { display: flex; align-items: center; gap: var(--space-1); box-sizing: border-box; width: 100%; max-width: calc(680px + var(--space-5) * 2); height: 40px; flex: none; margin: 0 auto; padding: var(--space-1) var(--space-5) 0; }
+.pb-helper-back { display: inline-flex; align-items: center; gap: var(--space-1); flex: 0 0 auto; min-width: 0; max-width: 40%; height: 28px; padding: 0 var(--space-2) 0 var(--space-1); margin-left: calc(var(--space-1) * -1); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); font: inherit; font-size: 13px; line-height: 20px; font-weight: 500; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-helper-back svg { flex: none; }
+.pb-helper-back:hover { background: var(--fill); color: var(--ink); }
+.pb-helper-back:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-helper-back-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-helper-bar-sep { display: grid; place-items: center; flex: none; color: var(--ink-faint); }
+.pb-helper-bar-title { flex: 0 1 auto; min-width: 0; margin: 0 0 0 var(--space-1); font-size: 13px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-helper-bar-model { margin-left: var(--space-1); line-height: 16px; }
+.pb-helper-bar-state { display: inline-flex; align-items: center; gap: var(--space-2); flex: none; margin-left: auto; padding-left: var(--space-2); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-muted); }
+.pb-helper-bar-state[data-status="failed"] { color: var(--clay); }
+
+/* The task the bot gave: a few lines, the rest on request. Only a text known to be long is cut, so a
+   short one is never cut on a narrow phone without "Show all" (it shows in full there instead). */
+.pb-task-body[data-long]:not([data-open]) { max-height: calc(var(--task-lines, 4) * 1lh); overflow: hidden; }
+/* Cut off, its last line fades out, so a line cut in half does not read as text. The mask only uses the alpha of the colour. */
+.pb-task-body[data-long]:not([data-open]) { mask-image: linear-gradient(to bottom, var(--ink) calc(100% - 1lh), transparent); }
+.pb-task-more { display: block; margin-top: var(--space-1); padding: 0; border: 0; background: none; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink-muted); text-align: left; cursor: pointer; transition: color var(--dur-quick) var(--ease-soft); }
+.pb-task-more:hover { color: var(--ink); }
+.pb-task-more:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* Where the message box would be: one quiet sentence, and "Stop helper" beside it while it works.
+   The button keeps its room when it goes, so the foot does not change height. */
+.pb-helper-foot { display: flex; align-items: center; gap: var(--space-3); min-height: 28px; padding: var(--space-2) var(--space-4); }
+.pb-helper-note { flex: 1 1 0; min-width: 0; margin: 0; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-helper-foot .pb-btn { flex: none; }
+.pb-helper-foot .pb-btn[data-gone] { visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-helper, .pb-helper-back { transition: none; }
+  .pb-model-note-line[data-show] { animation: pb-fade var(--dur-quick) linear both; }
+}
+
+/* ------------------------------------------------------------ A turn in order (step 2e)
+
+   A bot's answer is one message: its face and name once, then its words, its lines of work and
+   its helper rows in the order they came (`pb-answer-flow`). New things only ever come at the end.
+   The space above a piece depends on what stands before it, never on what it is, so the thinking
+   line and whatever takes its place share their top edge. */
+.pb-answer-col { display: flex; flex-direction: column; min-width: 0; }
+/* A turn no message started (engine 0.31.2): one quiet line under the name says what woke the bot. */
+.pb-woke { margin: 0 0 var(--space-1); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-faint); }
+.pb-answer-flow, .pb-work { display: flex; flex-direction: column; min-width: 0; }
+.pb-answer-flow > * + *, .pb-work > * + * { margin-top: var(--space-3); }
+.pb-answer-flow > :is(.pb-step, .pb-worked) + *, .pb-work > .pb-step + * { margin-top: var(--space-2); }
+.pb-answer .pb-activity, .pb-answer .pb-helper-group { padding-left: 0; }
+.pb-answer .app-activity-detail { margin-left: 0; }
+/* Inside an answer a new piece fades in where it stands, without travel: it takes the place of the
+   thinking line, and nothing moves. */
+.pb-answer .pb-arrive { animation: pb-fade var(--dur-calm) var(--ease-out) both; }
+
+/* A finished turn: the work before the answer folds into one quiet line that opens it in place. */
+.pb-worked { display: inline-flex; align-self: flex-start; align-items: center; gap: var(--space-2); height: 20px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink-muted); text-align: left; cursor: pointer; transition: color var(--dur-quick) var(--ease-soft); }
+.pb-worked:hover, .pb-worked[aria-expanded="true"] { color: var(--ink); }
+.pb-worked:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.pb-worked svg { flex: none; transform: rotate(-90deg); transition: transform var(--dur-quick) var(--ease-soft); }
+.pb-worked[aria-expanded="true"] svg { transform: none; }
+.pb-worked .pb-time { margin-left: var(--space-1); }
+.pb-work { animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-answer .pb-arrive, .pb-work { animation: pb-fade var(--dur-quick) linear both; }
+  .pb-worked, .pb-worked svg { transition: none; }
+}
+
+/* ------------------------------------------------------------ Artifacts (step 2f)
+
+   An artifact is a page a bot made for the person to look at or use. In the chat it is one row at
+   its place in the answer: in the family of the helper row (one fixed height, a drawn mark on a soft
+   disc, a name, one muted line), but raised like a card and no wider than a card, with a mark at the
+   right for where it opens. A helper is work; an artifact is a thing to open. */
+.pb-artifact { display: grid; grid-template-columns: 28px minmax(0, 1fr) 16px; align-items: center; column-gap: var(--space-3); box-sizing: border-box; width: 100%; max-width: 440px; height: 52px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-md); background: var(--surface-raised); box-shadow: var(--shadow-raise); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-artifact:hover { background: var(--surface-overlay); }
+.pb-artifact:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-artifact-mark { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius-full); background: var(--fill); color: var(--ink-muted); transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-artifact-text { display: flex; flex-direction: column; min-width: 0; }
+.pb-artifact-title { font-size: 13px; line-height: 20px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-artifact-line { font-size: 12px; line-height: 16px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-artifact-go { display: grid; place-items: center; color: var(--ink-muted); }
+.pb-artifact:hover .pb-artifact-go { color: var(--ink); }
+/* Open beside the chat: the mark takes the accent, the one small sign of where it is. */
+.pb-artifact[data-open] .pb-artifact-mark { background: var(--accent-soft); color: var(--accent-text); }
+/* Cannot be opened (the file is gone, or it was taken off the list): quiet, and nothing answers the pointer. */
+.pb-artifact[aria-disabled="true"] { cursor: default; }
+.pb-artifact[aria-disabled="true"]:hover { background: var(--surface-raised); }
+.pb-artifact[aria-disabled="true"] .pb-artifact-title { color: var(--ink-muted); }
+
+/* The panel: beside the chat in the place of the "Needs you" rail, a reading panel of its own with
+   a calm top line and the artifact's page filling the rest. The line between chat and panel can be
+   dragged; its grip shows on hover and focus only. */
+.pb-artifact-pane { display: flex; min-width: 0; min-height: 0; padding-right: var(--space-2); animation: pb-fade var(--dur-calm) var(--ease-out) both; }
+.pb-artifact-divider { flex: none; width: var(--space-3); display: grid; place-items: center; cursor: col-resize; touch-action: none; border-radius: var(--radius-sm); }
+.pb-artifact-divider:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-artifact-grip { width: 4px; height: var(--space-7); border-radius: var(--radius-full); background: var(--fill-strong); opacity: 0; transition: opacity var(--dur-quick) var(--ease-soft); }
+.pb-artifact-divider:hover .pb-artifact-grip, .pb-artifact-divider:focus-visible .pb-artifact-grip, [data-dragging="artifact"] .pb-artifact-grip { opacity: 1; }
+[data-dragging="artifact"], [data-dragging="artifact"] * { cursor: col-resize; user-select: none; }
+.pb-artifact-panel { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-panel); overflow: hidden; container: artifact-panel / inline-size; }
+.pb-artifact-bar { display: flex; align-items: center; gap: var(--space-2); box-sizing: border-box; height: 56px; flex: none; padding: 0 var(--space-2) 0 var(--space-4); }
+.pb-artifact-bar .pb-artifact-back { flex: none; max-width: 30%; margin-left: calc(var(--space-2) * -1); }
+/* The title over one muted line, like a row: "Updated 14:10", which fades in anew when the page changes. */
+.pb-artifact-bar-text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: var(--space-7); }
+.pb-artifact-bar-title { margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-artifact-when { font-size: 12px; line-height: 16px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-artifact-needs { display: inline-flex; align-items: center; gap: var(--space-2); flex: none; height: 28px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); font: inherit; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-artifact-needs:hover { background: var(--fill); color: var(--ink); }
+.pb-artifact-needs:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-artifact-needs-n { font-family: var(--font-mono); font-size: 11px; color: var(--ink); }
+.pb-artifact-tools { display: flex; align-items: center; gap: 2px; flex: none; margin-left: auto; }
+.pb-tool { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-tool:hover { background: var(--fill); color: var(--ink); }
+.pb-tool:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-tool:disabled, .pb-tool[aria-disabled="true"] { color: var(--ink-faint); background: none; cursor: default; }
+@container artifact-panel (max-width: 420px) {
+  .pb-tool-width { display: none; }
+}
+
+/* The page itself, in a sealed frame on a plain light ground, so a dark page never shows light text
+   on nothing while it loads. A new version loads out of sight under the one shown and takes its place
+   once it has loaded: the panel is never empty. */
+.pb-artifact-body { position: relative; flex: 1; min-height: 0; overflow: hidden; border-radius: 0 0 var(--radius-xl) var(--radius-xl); }
+/* The frame carries the panel's lower corners itself: a frame's own ground is not always clipped by its parent's. */
+.pb-artifact-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: inherit; background: var(--frame-ground); }
+.pb-artifact-frame[data-state="loading"] { visibility: hidden; }
+[data-dragging="artifact"] .pb-artifact-frame { pointer-events: none; }
+.pb-artifact-status { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); margin: 0; padding: var(--space-5); font-size: 13px; line-height: 20px; color: var(--ink-muted); text-align: center; }
+.pb-artifact-status p { margin: 0; }
+/* The loading line waits a moment, so a page that loads at once never flashes it. */
+.pb-artifact-status[data-wait] { animation: pb-fade var(--dur-quick) var(--ease-soft) var(--dur-slow) both; }
+
+/* The Artifacts tab: one line per artifact, newest change first. */
+.pb-artifact-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pb-artifact-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); padding-right: var(--space-2); border-radius: var(--radius-md); transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-artifact-item:hover { background: var(--fill); }
+.pb-artifact-open { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; column-gap: var(--space-3); min-width: 0; width: 100%; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.pb-artifact-open:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-artifact-open .pb-artifact-title { font-size: 14px; }
+.pb-artifact-item[data-open] .pb-artifact-mark { background: var(--accent-soft); color: var(--accent-text); }
+.pb-artifact-item[data-state="gone"] .pb-artifact-open { cursor: default; }
+.pb-artifact-item[data-state="gone"] .pb-artifact-title { color: var(--ink-muted); }
+.pb-artifact-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; }
+.pb-artifacts-empty { max-width: 480px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-artifact, .pb-artifact-mark, .pb-artifact-grip, .pb-artifact-needs, .pb-tool, .pb-artifact-item { transition: none; }
+  .pb-artifact-pane, .pb-artifact-status[data-wait] { animation: pb-fade var(--dur-quick) linear both; }
+}
+
+/* ------------------------------------------------------------ Browser (step 2g)
+
+   The bots work in a browser on the Mac. Pobots shows it live in the same panel an artifact opens
+   in. In the chat, where a bot worked in it, one row in the family of the helper row: flat, as wide
+   as the answer, one fixed height, a drawn window on a soft disc, the workspace's name, one muted
+   line with the page in front, and "Open" or "Closed" at the right. It is work. */
+.pb-browser { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 16px; align-items: center; column-gap: var(--space-3); box-sizing: border-box; width: 100%; height: 52px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-md); background: var(--fill); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-browser:hover { background: var(--fill-strong); }
+.pb-browser:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-browser-mark { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius-full); background: var(--fill); color: var(--ink-muted); transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-browser-text { display: flex; flex-direction: column; min-width: 0; }
+.pb-browser-name { font-size: 13px; line-height: 20px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-browser-last { font-size: 12px; line-height: 16px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-browser-state { display: inline-flex; align-items: center; gap: var(--space-1); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-muted); white-space: nowrap; }
+.pb-browser-state .pb-mark-thinking { margin-right: var(--space-1); }
+.pb-browser .pb-time, .pb-browser-dot { color: var(--ink-muted); }
+.pb-browser-go { display: grid; place-items: center; color: var(--ink-muted); }
+.pb-browser:hover .pb-browser-go { color: var(--ink); }
+/* Open beside the chat: the mark takes the accent, as an open artifact's row does. */
+.pb-browser[data-open] .pb-browser-mark { background: var(--accent-soft); color: var(--accent-text); }
+/* Closed: quiet, and nothing answers the pointer. */
+.pb-browser[aria-disabled="true"] { cursor: default; }
+.pb-browser[aria-disabled="true"]:hover { background: var(--fill); }
+.pb-browser[aria-disabled="true"] .pb-browser-name { color: var(--ink-muted); }
+
+/* The panel: the artifact panel's own place, width, divider and top line (pb-artifact-bar), with the
+   browser's controls. In the person's own page the muted line is an address line to type in. */
+.pb-browser-bar .pb-artifact-bar-text { gap: 2px; }
+.pb-browser-address { box-sizing: border-box; width: 100%; height: 22px; margin: 0 0 0 calc(var(--space-1) * -1); padding: 0 var(--space-1); border: 0; border-radius: var(--radius-sm); background: var(--surface-sunken); box-shadow: var(--shadow-well); color: var(--ink-muted); font: inherit; font-family: var(--font-mono); font-size: 11px; line-height: 16px; }
+.pb-browser-address:focus { color: var(--ink); }
+.pb-browser-address:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pb-browser-address::placeholder { color: var(--ink-faint); }
+/* "Take control" is a word, and "Hand back" while in control: a state the person must see. */
+.pb-browser-take { flex: none; }
+.pb-browser-take[data-controlled] { background: var(--accent-soft); color: var(--accent-text); }
+.pb-browser-take[aria-disabled="true"] { color: var(--ink-faint); background: var(--fill); cursor: default; }
+.pb-browser-pick { position: relative; display: inline-flex; }
+.pb-browser-menu { left: auto; right: 0; width: 280px; max-height: 60vh; overflow-y: auto; }
+.pb-browser-menu .pb-avatar { --size: 20px; }
+.pb-browser-menu-mark { width: 20px; height: 20px; flex: none; display: grid; place-items: center; color: var(--ink-muted); }
+.pb-browser-menu-mark svg { width: 14px; height: 14px; }
+.pb-browser-menu-title { padding: var(--space-2) var(--space-3) var(--space-1); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-faint); }
+.pb-browser-menu-rule { height: 1px; margin: var(--space-1) var(--space-2); background: var(--divider); }
+@container artifact-panel (max-width: 600px) {
+  .pb-browser-bar .pb-tool-width { display: none; }
+}
+@container artifact-panel (max-width: 540px) {
+  .pb-browser-bar .pb-artifact-needs-word { display: none; }
+}
+
+/* One quiet line under the top line that keeps its height with or without words: "Po is working
+   here", "You are in control.", "Po closed this", the hint to take control. */
+
+.pb-browser-stateline { display: block; box-sizing: border-box; height: 24px; flex: none; padding: 0 var(--space-4) var(--space-2); overflow: hidden; text-overflow: ellipsis; color: var(--ink-muted); }
+.pb-browser-stateline[data-tone="control"] { color: var(--accent-text); }
+
+/* The row of pages (round three): between the top line and the state line, one place per page of the
+   workspace in the browser's order. Always there, with one page too, at one fixed height, so a page
+   that opens or closes never moves the picture. The page shown is marked as a chosen segment is
+   (fill-strong and weight), no border, no stripe. Many pages shrink to a smallest width, then the
+   row scrolls sideways inside itself; nothing wraps. The page shown is always the page in front in
+   the browser (any look at a page brings it to the front there). A page whose own question waits
+   carries the waiting mark. In your own page a close control shows on hover and focus, and a quiet
+   add control ends the row. */
+.pb-browser-tabs { display: flex; align-items: center; gap: var(--space-1); box-sizing: border-box; height: 36px; flex: none; padding: 0 var(--space-2); }
+.pb-browser-tablist { display: flex; align-items: center; gap: 2px; flex: 0 1 auto; min-width: 0; height: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
+.pb-browser-tablist::-webkit-scrollbar { display: none; }
+.pb-browser-tab { display: flex; align-items: center; gap: var(--space-1); box-sizing: border-box; flex: 0 1 auto; width: 200px; min-width: 96px; height: 28px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); font: inherit; font-size: 12px; line-height: 16px; font-weight: 500; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-browser-tab:hover { background: var(--fill); color: var(--ink); }
+.pb-browser-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-browser-tab[aria-selected="true"] { background: var(--fill-strong); color: var(--ink); font-weight: 600; cursor: default; }
+.pb-browser-tab-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-browser-tab-mark { flex: none; display: inline-flex; margin: 0 3px; }
+.pb-browser-tab-close { flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin-right: calc(var(--space-1) * -1); border-radius: var(--radius-sm); color: var(--ink-muted); opacity: 0; pointer-events: none; transition: opacity var(--dur-quick) var(--ease-soft), background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-browser-tab-close svg { width: 12px; height: 12px; }
+.pb-browser-tab:hover .pb-browser-tab-close, .pb-browser-tab:focus-visible .pb-browser-tab-close { opacity: 1; pointer-events: auto; }
+.pb-browser-tab-close:hover { background: var(--fill-strong); color: var(--ink); }
+.pb-browser-tab-add { flex: none; }
+.pb-browser-tabs[data-off] .pb-browser-tab { color: var(--ink-faint); cursor: default; }
+.pb-browser-tabs[data-off] .pb-browser-tab:hover { background: none; }
+.pb-browser-tabs[data-off] .pb-browser-tab[aria-selected="true"] { background: var(--fill); color: var(--ink-muted); }
+
+/* The live picture: on frame-ground, as large as the panel allows with its proportions kept, never
+   larger than the page's own size, centred at the top. Each picture is drawn once decoded, over the
+   one before: the panel never shows an empty moment. The picture is a focus stop with a ring. */
+.pb-browser-body { display: flex; justify-content: center; align-items: flex-start; }
+.pb-browser-picture { position: relative; flex: none; background: var(--frame-ground); outline: none; }
+.pb-browser-body:not([data-shown]) .pb-browser-picture { width: 100%; height: 100%; background: none; }
+.pb-browser-picture:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-browser-picture[data-controlled]:focus-visible { outline-color: var(--accent-text); }
+.pb-browser-canvas { display: block; width: 100%; height: 100%; }
+.pb-browser-body:not([data-shown]) .pb-browser-canvas { visibility: hidden; }
+[data-dragging="artifact"] .pb-browser-picture { pointer-events: none; }
+.pb-browser-status[data-over] { inset: var(--space-5) var(--space-5) auto; margin: 0 auto; max-width: 360px; background: var(--surface-overlay); border-radius: var(--radius-lg); box-shadow: var(--shadow-float); }
+
+/* What the page shows outside its picture (round two). The browser on the Mac draws a page's own
+   question and an open drop-down list outside the page, so the picture cannot show them: the app
+   draws them over the picture, on a layer exactly over it, clipped by the panel. */
+.pb-browser-over { position: absolute; z-index: 2; display: flex; justify-content: center; align-items: flex-start; pointer-events: none; }
+.pb-browser-over > * { pointer-events: auto; }
+/* The page asks: a small raised card at the top in the middle; the picture under it is dimmed a
+   little, so it reads as waiting. It arrives with the usual calm fade. */
+.pb-browser-ask { box-sizing: border-box; width: min(360px, calc(100% - var(--space-6))); margin-top: var(--space-4); padding: var(--space-4); gap: var(--space-2); box-shadow: var(--shadow-float); }
+.pb-browser-ask-head { margin: 0; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-faint); }
+.pb-browser-ask-message { margin: 0; max-height: 88px; overflow-y: auto; font-size: 14px; line-height: 22px; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; outline: none; }
+.pb-browser-ask-input { width: 100%; box-sizing: border-box; }
+.pb-browser-ask .pb-card-actions { margin-top: var(--space-1); }
+.pb-browser-ask .pb-btn:disabled { opacity: 1; background: var(--fill); color: var(--ink-faint); cursor: default; }
+.pb-browser-ask-foot { margin: 0; }
+.pb-browser-canvas { transition: opacity var(--dur-calm) var(--ease-soft); }
+.pb-browser-panel[data-asked] .pb-browser-canvas { opacity: 0.72; }
+/* Closed while open: the last picture stays, dimmed. */
+.pb-browser-panel[data-ended] .pb-browser-canvas { opacity: 0.45; transition: opacity var(--dur-slow) var(--ease-soft); }
+/* The choices of a drop-down list: one of the app's own menus, under the list's box (above it when
+   there is more room there), never outside the panel, scrolling inside when long. */
+.pb-browser-choices { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-y: auto; overscroll-behavior: contain; }
+.pb-browser-choices .pb-browser-menu-title { flex: none; }
+.pb-browser-choice { flex: none; }
+.pb-browser-choice[data-grouped] { padding-left: var(--space-5); }
+.pb-browser-choice[aria-selected="true"] { background: none; }
+.pb-browser-choice[aria-selected="true"] svg { color: var(--accent-text); }
+.pb-browser-choice:focus { background: var(--fill); outline: none; }
+.pb-browser-choice:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-browser-choice[aria-disabled="true"] { color: var(--ink-faint); cursor: default; }
+.pb-browser-choice[aria-disabled="true"]:hover { background: none; }
+.pb-browser-choices[aria-disabled="true"] .pb-browser-choice { color: var(--ink-muted); }
+
+/* The roster's way in, at the bottom with the machines: "Browser" and how much is open. */
+.pb-browser-line { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 32px; padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: var(--ink-muted); font: inherit; font-size: 13px; line-height: 20px; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft), box-shadow var(--dur-quick) var(--ease-soft); }
+.pb-browser-line:hover { background: var(--fill); color: var(--ink); }
+.pb-browser-line:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-browser-line[aria-current="true"] { background: var(--surface-raised); box-shadow: var(--shadow-raise); color: var(--ink); }
+.pb-browser-line-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-browser-line-word { flex: none; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); }
+.pb-browser-line:hover .pb-browser-line-word { color: var(--ink-muted); }
+.pb-browser-line-mark { display: none; width: 28px; height: 28px; flex: none; place-items: center; border-radius: var(--radius-full); background: var(--fill); color: var(--ink-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-browser, .pb-browser-mark, .pb-browser-line, .pb-browser-canvas, .pb-browser-panel[data-ended] .pb-browser-canvas, .pb-browser-tab, .pb-browser-tab-close { transition: none; }
+}
+
+/* ------------------------------------------------------------ Pictures and files (step: files) */
+
+/* The add button opens the picker of files; the input itself is never seen. */
+.pb-attach-input { display: none; }
+/* Send pressed while a file still uploads: the button waits, the same size, a little quieter. */
+.pb-send[data-waiting] { opacity: 0.6; cursor: progress; transition: opacity var(--dur-quick) var(--ease-soft); }
+
+/* The tray above the text: one row of chips at a fixed height, which scrolls sideways when full
+   (with room for a thin scrollbar), and one quiet line under it. Neither ever changes height. */
+.pb-tray { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.pb-tray-chips { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-start; gap: var(--space-2); height: 60px; box-sizing: border-box; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; }
+.pb-tray-chips > li { flex: none; display: flex; }
+/* More chips than the row shows: its edge fades softly on the side where more are. A mask only, so
+   nothing moves; the line under the chips says how many there are. */
+.pb-tray-chips[data-more-end] { -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - var(--space-7)), transparent); mask-image: linear-gradient(to right, var(--ink) calc(100% - var(--space-7)), transparent); }
+.pb-tray-chips[data-more-start] { -webkit-mask-image: linear-gradient(to left, var(--ink) calc(100% - var(--space-7)), transparent); mask-image: linear-gradient(to left, var(--ink) calc(100% - var(--space-7)), transparent); }
+.pb-tray-chips[data-more-start][data-more-end] { -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) var(--space-7), var(--ink) calc(100% - var(--space-7)), transparent); mask-image: linear-gradient(to right, transparent, var(--ink) var(--space-7), var(--ink) calc(100% - var(--space-7)), transparent); }
+.pb-tray-line { margin: 0; height: 16px; padding: 0 var(--space-1); font-size: 12px; line-height: 16px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-tray-line[data-problem] { color: var(--clay); }
+
+/* A chip: a soft square with the picture's thumbnail or the file's sheet, the name, one quiet line
+   (size, "Uploading", the reason, or "Try again") and the remove control. Always 48px tall. */
+.pb-chip-file { position: relative; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); height: 48px; max-width: 264px; min-width: 0; padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1); border-radius: var(--radius-md); background: var(--fill); color: var(--ink); overflow: hidden; text-decoration: none; }
+.pb-chip-thumb { flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm); background: var(--fill-strong); color: var(--ink-muted); display: grid; place-items: center; overflow: hidden; transition: opacity var(--dur-quick) var(--ease-soft); }
+.pb-chip-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pb-chip-text { display: flex; flex-direction: column; align-items: flex-start; flex: 1 1 auto; min-width: 0; }
+.pb-chip-name { max-width: 168px; font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-chip-meta { max-width: 100%; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-chip-file[data-status="refused"] .pb-chip-meta { color: var(--clay); }
+.pb-chip-file[data-status="refused"] .pb-chip-thumb, .pb-chip-file[data-status="failed"] .pb-chip-thumb { opacity: 0.5; }
+.pb-chip-retry { height: 16px; padding: 0; border: 0; border-radius: var(--radius-sm); background: none; color: var(--accent-text); font: inherit; font-size: 12px; line-height: 16px; font-weight: 500; cursor: pointer; }
+.pb-chip-retry:hover { color: var(--ink); }
+.pb-chip-retry:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pb-chip-remove { flex: none; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-full); background: none; color: var(--ink-muted); display: grid; place-items: center; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-chip-remove svg { width: 14px; height: 14px; }
+.pb-chip-remove:hover { background: var(--fill); color: var(--ink); }
+.pb-chip-remove:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+/* How far an upload is: a 2px line along the chip's foot that only grows, then fades. */
+.pb-chip-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent-text); transform-origin: left center; opacity: 0; transition: transform var(--dur-calm) var(--ease-out), opacity var(--dur-quick) var(--ease-soft); pointer-events: none; }
+.pb-chip-progress[data-on] { opacity: 1; }
+
+/* In a message: pictures stand above the text, each in a box of its final size (from the stored
+   width and height, longest side at most 320px), filled softly until the picture is there. */
+.pb-msg-pictures, .pb-msg-files { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); max-width: 78%; }
+.pb-picture { display: block; flex: 0 1 auto; box-sizing: border-box; min-width: 0; max-width: 100%; height: auto; padding: 0; border: 0; border-radius: var(--radius-lg); background: var(--fill); overflow: hidden; cursor: zoom-in; }
+.pb-picture img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--dur-quick) var(--ease-soft); }
+.pb-picture[data-shown] img { opacity: 1; }
+.pb-picture[data-fit="contain"] img { object-fit: contain; }
+.pb-picture:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* A file in a message: the chip, which downloads on a press. A file that is gone says so, quietly. */
+.pb-msg-file { max-width: 320px; padding-right: var(--space-3); transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-msg-file .pb-chip-name { max-width: 240px; }
+a.pb-msg-file { cursor: pointer; }
+a.pb-msg-file:hover { background: var(--fill-strong); }
+a.pb-msg-file:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-msg-file[data-missing] { color: var(--ink-muted); }
+.pb-msg-file[data-missing] .pb-chip-meta { font-family: var(--font-sans); font-size: 12px; color: var(--ink-faint); }
+
+/* The large view: a dialog card over the chat on the dimmed layer, the name and close on top, the
+   picture as large as the window allows. The preview stands in at the final size until the full
+   picture has loaded over it. */
+.pb-picture-scrim { z-index: 30; padding: var(--space-5); }
+.pb-picture-view { display: flex; flex-direction: column; gap: var(--space-2); max-width: 100%; padding: var(--space-3); background: var(--surface-overlay); box-shadow: var(--shadow-float); border-radius: var(--radius-xl); }
+.pb-picture-view-head { display: flex; align-items: center; gap: var(--space-2); height: 32px; min-width: 0; padding-left: var(--space-2); }
+.pb-picture-view-name { flex: 1; min-width: 0; font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-picture-view-close { flex: none; }
+.pb-picture-large { position: relative; flex: none; border-radius: var(--radius-lg); background: var(--fill); overflow: hidden; }
+.pb-picture-large img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
+.pb-picture-large-full { opacity: 0; transition: opacity var(--dur-quick) var(--ease-soft); }
+.pb-picture-large[data-full] .pb-picture-large-full { opacity: 1; }
+
+/* Files dragged over a bot's chat: a calm outline inside the panel and one line in the middle. It
+   lies over the chat and changes no layout. */
+.pb-main[data-drop] { position: relative; outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-drop { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: var(--space-5); background: var(--fill); border-radius: inherit; pointer-events: none; animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+.pb-drop-note { padding: var(--space-2) var(--space-4); background: var(--surface-overlay); box-shadow: var(--shadow-float); border-radius: var(--radius-lg); font-size: 13px; line-height: 20px; font-weight: 500; color: var(--ink); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-chip-progress, .pb-picture img, .pb-picture-large-full, .pb-chip-thumb, .pb-send[data-waiting], .pb-msg-file { transition: none; }
+  .pb-drop { animation: none; }
+}
+
+/* ------------------------------------------------------------ Pobots settings and the backup (job 5) */
+/* The way in at the very foot of the roster: "Pobots settings", a quiet line like the Browser line.
+   While no backup key is saved a small dot stands at its end: quiet, not an alarm, no colour. */
+.pb-settings-line { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 32px; padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: var(--ink-muted); font: inherit; font-size: 13px; line-height: 20px; text-align: left; cursor: pointer; position: relative; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft), box-shadow var(--dur-quick) var(--ease-soft); }
+.pb-settings-line:hover { background: var(--fill); color: var(--ink); }
+.pb-settings-line:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-settings-line[aria-current="page"] { background: var(--surface-raised); box-shadow: var(--shadow-raise); color: var(--ink); }
+.pb-settings-line-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-settings-line-note { width: 6px; height: 6px; flex: none; margin-right: var(--space-1); border-radius: var(--radius-full); background: var(--ink-muted); opacity: 0; transition: opacity var(--dur-calm) var(--ease-soft); }
+.pb-settings-line-note[data-show] { opacity: 1; }
+.pb-settings-line-mark { display: none; width: 28px; height: 28px; flex: none; place-items: center; border-radius: var(--radius-full); background: var(--fill); color: var(--ink-muted); }
+
+/* Pobots' own mark, where a face would be on a card from Pobots itself: the first letter of the name,
+   set like the wordmark, in a soft round disc. Never the pebble: that shape belongs to bots alone. */
+.pb-pobots-mark { width: 28px; height: 28px; flex: none; display: inline-grid; place-items: center; border-radius: var(--radius-full); background: var(--fill); color: var(--ink-muted); font-size: 13px; line-height: 1; font-weight: 600; letter-spacing: -0.01em; }
+.pb-pobots-mark-lg { width: 36px; height: 36px; font-size: 15px; }
+/* A card from Pobots: the news fades in where an older card on the same topic stood. */
+.pb-card-system-body { display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* Words that take turns in one place: all are laid out in the same cell, only the shown one is seen and
+   read out, so the box keeps the size of the longest and nothing around it moves. The new words fade in. */
+.pb-swap { display: inline-grid; }
+.pb-swap-line { grid-area: 1 / 1; visibility: hidden; }
+.pb-swap-line[data-show] { visibility: visible; animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+/* Words that are read and compared, such as the key's fingerprint: they change in place, never fade. */
+.pb-swap-line.pb-swap-still[data-show] { animation: none; }
+
+/* The settings page for Pobots as a whole: the head of a bot's page with a drawn mark, the title and a
+   quiet way back; then sections like a bot's Settings tab. */
+.pb-appsettings-title:focus { outline: none; }
+.pb-appsettings-back { margin-left: auto; max-width: 50%; flex: none; }
+.pb-appsettings-back-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* The backup section. The state at the top in one line with its mark; the next run and "Back up now"
+   under it, in line with the words. Every line keeps its box when the state changes. */
+.pb-backup-state { display: flex; flex-direction: column; gap: var(--space-2); }
+.pb-backup-line { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: var(--space-2); align-items: start; margin: 0; font-size: 15px; line-height: 24px; color: var(--ink); }
+.pb-backup-line > .pb-mark { justify-self: center; margin-top: 7px; }
+.pb-backup-line .pb-swap, .pb-backup-next .pb-swap, .pb-backup-key-text .pb-swap, .pb-backup-note .pb-swap { display: grid; }
+.pb-backup-next { margin: 0 0 0 calc(16px + var(--space-2)); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-backup-act { display: flex; align-items: center; gap: var(--space-3); min-height: 36px; margin-left: calc(16px + var(--space-2)); }
+.pb-backup-act-error { display: grid; min-width: 0; }
+.pb-backup-act-error .pb-swap, .pb-backup-folder-problem .pb-swap, .pb-backup-print-old { display: grid; }
+.pb-backup-part { display: flex; flex-direction: column; gap: var(--space-2); }
+.pb-backup-part-title { margin: 0; font-size: 13px; line-height: 20px; font-weight: 600; }
+.pb-backup-key-text { max-width: none; }
+/* The saved key's fingerprint, in mono in a well, to compare with the one 1Password shows. Before a key
+   is saved the well keeps the room the fingerprint will take. */
+.pb-backup-print { display: grid; gap: 2px; padding: var(--space-3) var(--space-4); background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-md); }
+.pb-backup-print-label { font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-muted); }
+.pb-backup-print-text { display: grid; font-family: var(--font-mono); font-size: 13px; line-height: 20px; color: var(--ink); overflow-wrap: anywhere; word-break: break-all; }
+.pb-backup-print[data-set] .pb-backup-print-text { user-select: all; }
+.pb-backup-print:not([data-set]) .pb-backup-print-text { font-family: var(--font-sans); font-size: 14px; color: var(--ink-muted); }
+.pb-backup-print:not([data-set]) .pb-swap-room { font-family: var(--font-mono); font-size: 13px; }
+.pb-backup-print-facts { display: grid; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+/* Under the facts, a quiet line when older backups were locked to an earlier key. Its room is kept. */
+.pb-backup-print-old { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+/* The field to paste a public key, with Save beside it, and one line under it that keeps two lines of
+   room: what to paste, or the engine's plain refusal in its place. */
+.pb-backup-paste { display: flex; align-items: flex-end; gap: var(--space-2); }
+.pb-backup-input { flex: 1; min-width: 0; min-height: 0; height: calc(18px * 3 + var(--space-2) * 2); resize: none; font-family: var(--font-mono); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; word-break: break-all; }
+.pb-backup-note { display: grid; min-height: 32px; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+/* The folder as a person says it ("OneDrive, folder Pobot"); the full path is the tooltip. The line for a
+   folder problem under it keeps its room in every state. */
+.pb-backup-folder { margin: 0; font-size: 14px; line-height: 22px; color: var(--ink-muted); overflow-wrap: anywhere; }
+.pb-backup-folder-problem { margin: 0; }
+/* "How to make a key", last in the key part: the steps open below it, so nothing above moves. */
+.pb-backup-how { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+.pb-backup-how-steps { display: flex; flex-direction: column; gap: var(--space-2); }
+.pb-backup-how-list { margin: 0; padding-left: var(--space-5); max-width: 480px; font-size: 14px; line-height: 22px; color: var(--ink-muted); }
+/* Recent backups: quiet lines, oldest first and the newest at the bottom, like the chat, and the last
+   thing on the page: a new run is added below everything. A failed one shows its whole reason. */
+.pb-backup-runs .pb-run-row { padding-left: 0; padding-right: 0; }
+.pb-run-note-full { white-space: normal; overflow: visible; }
+
+/* The notifications section (job 4), first on the page. "This device": the status in one line with
+   its mark, one row of actions in line with the words, and one line under them that keeps the room of
+   the longest it says. Every line keeps its box when the state changes; the steps open below. */
+.pb-notify-line { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: var(--space-2); align-items: start; margin: 0; font-size: 15px; line-height: 24px; color: var(--ink); }
+.pb-notify-line > .pb-mark { justify-self: center; margin-top: 7px; }
+.pb-notify-line .pb-swap, .pb-notify-note .pb-swap, .pb-notify-kinds-problem .pb-swap { display: grid; }
+.pb-notify-act { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-height: 36px; margin-left: calc(16px + var(--space-2)); }
+.pb-notify-note { display: grid; margin: 0 0 0 calc(16px + var(--space-2)); font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-notify-steps { display: flex; flex-direction: column; gap: var(--space-1); margin: 0 0 0 calc(16px + var(--space-2)); padding-left: var(--space-5); max-width: 480px; font-size: 14px; line-height: 22px; color: var(--ink-muted); }
+.pb-notify-allow { list-style: disc; }
+/* "What to tell you": three rows, the words at the left and the switch at the right. */
+.pb-notify-kinds-note { margin: calc(var(--space-2) * -1) 0 0; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-notify-kinds { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-notify-kind { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); cursor: pointer; }
+.pb-notify-kind-text { display: flex; flex-direction: column; min-width: 0; }
+.pb-notify-kind-name { font-size: 14px; line-height: 20px; }
+.pb-notify-kinds-problem { display: grid; margin: 0; }
+/* "When a bot is working" (steering): Steer or Queue as a choice list, the way to do the other for one
+   message under it, and a line for a choice that could not be saved, which keeps its room. */
+.pb-followup-other { margin: 0; max-width: 480px; }
+.pb-followup-problem { display: grid; margin: 0; }
+.pb-followup-problem .pb-swap { display: grid; }
+/* "Your devices": oldest first, a new one at the bottom. The name, "This device" beside it, one line
+   under it, and a quiet Forget at the right. */
+.pb-notify-devices { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.pb-notify-device { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name forget" "line forget"; column-gap: var(--space-3); align-items: center; padding: var(--space-1) 0; }
+.pb-notify-device-name { grid-area: name; display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; font-size: 13px; line-height: 20px; font-weight: 500; }
+.pb-notify-device-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-notify-device-here { flex: none; padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--fill); color: var(--ink-muted); font-size: 11px; line-height: 16px; font-weight: 500; }
+.pb-notify-device-line { grid-area: line; min-width: 0; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-notify-device[data-gone] .pb-notify-device-line, .pb-notify-device[data-problem] .pb-notify-device-line { color: var(--clay); }
+.pb-notify-forget { grid-area: forget; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-settings-line, .pb-settings-line-note { transition: none; }
+  .pb-swap-line[data-show] { animation: pb-fade var(--dur-quick) linear both; }
+}
+
+/* ------------------------------------------------------------ step 7b: the icon row, the settings window, usage
+   The icon row at the foot of the left side (T3 Code's sidebar foot): the gear and the bars at the
+   left, the round update arrow at the right. The arrow keeps its place when it is not there, so the
+   row never moves when an update comes. */
+.pb-foot-icons { display: flex; align-items: center; gap: 2px; height: 36px; padding: 0 var(--space-1); }
+.pb-foot-icon, .pb-foot-update { position: relative; width: 34px; height: 34px; padding: 0; border: 0; border-radius: var(--radius-md); background: none; color: var(--ink-muted); display: inline-grid; place-items: center; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft), box-shadow var(--dur-quick) var(--ease-soft); }
+.pb-foot-icon:hover, .pb-foot-update:hover { background: var(--fill); color: var(--ink); }
+.pb-foot-icon:focus-visible, .pb-foot-update:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-foot-icon[aria-current="page"] { background: var(--surface-raised); box-shadow: var(--shadow-raise); color: var(--ink); }
+.pb-foot-dot { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--ink-muted); opacity: 0; transition: opacity var(--dur-calm) var(--ease-soft); }
+.pb-foot-dot[data-show] { opacity: 1; }
+.pb-foot-space { flex: 1; }
+/* The update arrow: a soft raised disc, only while there is an update. Never a badge, never a colour that shouts. */
+.pb-foot-update { border-radius: var(--radius-full); visibility: hidden; opacity: 0; transition: opacity var(--dur-calm) var(--ease-soft), background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-foot-update[data-show] { visibility: visible; opacity: 1; background: var(--surface-raised); box-shadow: var(--shadow-raise); color: var(--ink); }
+.pb-foot-update[data-running] { color: var(--ink-muted); }
+
+/* The settings window: a window over the app, the sections on the left, one calm column on the right.
+   Its size is fixed by the window, never by what a section holds, so changing sections moves nothing. */
+.pb-setwin-scrim { z-index: 15; }
+.pb-setwin { width: min(920px, calc(100vw - var(--space-6))); height: min(720px, calc(100vh - var(--space-6))); display: flex; flex-direction: column; background: var(--surface-overlay); box-shadow: var(--shadow-float); border-radius: var(--radius-xl); overflow: hidden; animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+.pb-setwin > .pb-appsettings-head { flex: none; }
+.pb-setwin-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 184px minmax(0, 1fr); }
+.pb-setwin-nav { padding: var(--space-2) var(--space-3) var(--space-4); }
+.pb-setwin-tabs { display: flex; flex-direction: column; gap: 2px; }
+.pb-setwin-tab { display: flex; align-items: center; min-height: 32px; padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: var(--ink-muted); font: inherit; font-size: 14px; line-height: 20px; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-setwin-tab:hover { background: var(--fill); color: var(--ink); }
+.pb-setwin-tab[aria-selected="true"] { background: var(--fill-strong); color: var(--ink); font-weight: 500; }
+.pb-setwin-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-setwin .app-appsettings-scroll { min-height: 0; overflow-y: auto; padding: 0 var(--space-6) 0 var(--space-3); }
+.pb-setwin .pb-appsettings-back { margin-left: auto; }
+
+/* A setting with a number: words at the left, the field and its unit at the right, the default and
+   Reset under it, and a line for a refusal that keeps its room. */
+.pb-set7-which { margin: var(--space-1) 0; }
+.pb-set7-which button[aria-checked="true"] { background: var(--fill-strong); color: var(--ink); }
+.pb-set7-rows { display: flex; flex-direction: column; gap: var(--space-4); transition: opacity var(--dur-quick) var(--ease-soft); }
+.pb-set7-rows[data-off] { opacity: 0.55; }
+.pb-set7-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "text control" "reset reset" "problem problem"; column-gap: var(--space-4); row-gap: 2px; align-items: center; }
+.pb-set7-row-text { grid-area: text; display: flex; flex-direction: column; min-width: 0; }
+.pb-set7-row-label { font-size: 14px; line-height: 20px; font-weight: 500; }
+.pb-set7-row-hint { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-set7-row-control { grid-area: control; display: flex; align-items: center; gap: var(--space-2); }
+.pb-set7-input { width: 104px; text-align: right; font-variant-numeric: tabular-nums; }
+.pb-set7-input:disabled { opacity: 0.5; }
+.pb-set7-unit { width: 52px; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-set7-reset { grid-area: reset; display: flex; align-items: center; gap: var(--space-2); min-height: 28px; }
+.pb-set7-default { font-size: 12px; line-height: 16px; color: var(--ink-faint); }
+.pb-set7-reset-btn[data-hide] { visibility: hidden; }
+.pb-set7-problem { grid-area: problem; margin: 0; min-height: 16px; }
+.pb-set7-row[data-na] .pb-set7-row-label { color: var(--ink-muted); }
+.pb-set7-enabled { padding-bottom: var(--space-2); }
+.pb-set7-select { max-width: 240px; }
+
+/* Providers: one card each, its state in one line, the newest version and Update in the next. */
+.pb-set7-checked { display: flex; align-items: center; gap: var(--space-3); min-height: 32px; }
+.pb-set7-checked-text { flex: 1; min-width: 0; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-set7-provider-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-set7-provider { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); background: var(--fill); border-radius: var(--radius-lg); }
+.pb-set7-provider-head { display: flex; align-items: center; gap: var(--space-2); min-height: 28px; }
+.pb-set7-provider-name { flex: 1; font-size: 15px; line-height: 22px; font-weight: 600; }
+.pb-set7-provider-facts { margin: 0; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-set7-provider-problem { margin: 0; font-size: 13px; line-height: 20px; color: var(--clay); }
+.pb-set7-provider-update { display: flex; align-items: center; gap: var(--space-3); min-height: 32px; }
+.pb-set7-provider-latest { flex: 1; font-size: 13px; line-height: 20px; }
+.pb-set7-update[data-hide] { visibility: hidden; }
+.pb-set7-provider-path { margin: 0; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-set7-provider:not([data-on]) .pb-set7-provider-facts { opacity: 0.7; }
+.pb-set7-run { display: flex; align-items: flex-start; gap: var(--space-2); margin: 0; font-size: 13px; line-height: 20px; }
+.pb-set7-run > .pb-mark { margin-top: 4px; }
+.pb-set7-update-text { display: flex; flex-direction: column; gap: var(--space-2); min-height: 44px; }
+.pb-set7-update-what { color: var(--ink); font-weight: 500; }
+
+/* Usage hubs. */
+.pb-set7-hub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.pb-set7-hub { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--fill); border-radius: var(--radius-md); }
+.pb-set7-hub-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pb-set7-hub-url { font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+.pb-set7-hub-line { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-set7-hub-form { display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-set7-hub-form .pb-field { max-width: 420px; }
+.pb-set7-hub-act { display: flex; }
+
+/* Usage: per provider and window, what is left in big, a bar per account, the reset time (T3 Code). */
+.pb-set7-meters { display: flex; flex-direction: column; gap: var(--space-5); }
+.pb-set7-meter-group { display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-set7-meter-title { margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; }
+.pb-set7-meter { display: grid; grid-template-columns: 132px minmax(0, 1fr); column-gap: var(--space-4); align-items: start; }
+.pb-set7-meter-head { display: flex; flex-direction: column; }
+.pb-set7-meter-label { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-set7-meter-left { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-set7-meter-pct { font-size: 22px; line-height: 28px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.pb-set7-bars { display: flex; flex-direction: column; gap: var(--space-1); padding-top: 4px; }
+.pb-set7-bar { display: grid; grid-template-columns: minmax(0, 1fr) 40px 132px; align-items: center; column-gap: var(--space-2); min-height: 24px; }
+.pb-set7-bars[data-several] .pb-set7-bar { grid-template-columns: 22px minmax(0, 1fr) 40px 132px; }
+.pb-set7-chip { width: 22px; height: 22px; border-radius: var(--radius-full); background: var(--fill-strong); color: var(--ink-muted); font-size: 10px; line-height: 22px; font-weight: 600; text-align: center; }
+.pb-set7-bar-track { height: 8px; border-radius: var(--radius-full); background: var(--fill); overflow: hidden; }
+.pb-set7-bar-fill { display: block; height: 100%; border-radius: var(--radius-full); background: var(--ink-muted); transition: width var(--dur-calm) var(--ease-soft); }
+.pb-set7-bar[data-low] .pb-set7-bar-fill { background: var(--clay); }
+.pb-set7-bar-pct { font-size: 12px; line-height: 16px; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.pb-set7-bar-reset { font-size: 12px; line-height: 16px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-set7-usage[data-reading] .pb-set7-meters { opacity: 0.6; transition: opacity var(--dur-quick) var(--ease-soft); }
+.pb-set7-meter-problem { margin: 0; }
+
+/* The History tab: earlier chats by their titles. */
+.pb-history-title { margin: var(--space-2) 0 var(--space-1); }
+.pb-history-chats { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-4); }
+.pb-chat-titles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pb-chat-title { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-3); min-height: 36px; padding: var(--space-1) var(--space-3); border-radius: var(--radius-md); }
+.pb-chat-title:nth-child(odd) { background: var(--fill); }
+.pb-chat-title-kind { font-size: 12px; line-height: 16px; color: var(--ink-faint); }
+.pb-chat-title-text { font-size: 14px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-chat-titles-more { align-self: flex-start; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-foot-icon, .pb-foot-update, .pb-foot-dot, .pb-setwin, .pb-setwin-tab, .pb-set7-bar-fill, .pb-set7-rows { transition: none; animation: none; }
+}
+.pb-setwin .pb-settings { margin: 0; max-width: 600px; }
+/* ------------------------------------------------------------------------------------------------
+   Step 7a, the chat (14 Nov 2026): a colour per bot, the work line, the provider's mark on a
+   helper's row, waiting messages above the message box, and the bot's own to-do list.
+   ------------------------------------------------------------------------------------------------ */
+
+/* A colour per bot: the pebble takes the colour's token; the eyes stay ink. Grey is the plain pebble. */
+.pb-avatar[data-color="sky"] { --pebble: var(--pebble-sky); }
+.pb-avatar[data-color="teal"] { --pebble: var(--pebble-teal); }
+.pb-avatar[data-color="moss"] { --pebble: var(--pebble-moss); }
+.pb-avatar[data-color="sand"] { --pebble: var(--pebble-sand); }
+.pb-avatar[data-color="copper"] { --pebble: var(--pebble-copper); }
+.pb-avatar[data-color="rose"] { --pebble: var(--pebble-rose); }
+.pb-avatar[data-color="lilac"] { --pebble: var(--pebble-lilac); }
+.pb-colors { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pb-color-pick { width: 40px; height: 40px; }
+.pb-color-pick .pb-avatar { --size: 28px; }
+/* On a label's line ("Add a bot", beside Name): small faces, a row no taller than the line. */
+.pb-colors-sm { gap: 2px; margin-left: auto; }
+.pb-colors-sm .pb-color-pick { width: 24px; height: 24px; border-radius: var(--radius-sm); }
+.pb-colors-sm .pb-color-pick .pb-avatar { --size: 18px; }
+
+
+/* The work line: lines of work and thinking summaries between two texts, as one line of one height.
+   The icon of the kind of work, the words cut at the end of the line, the time it took. */
+.pb-workline { min-width: 0; max-width: 100%; height: 20px; }
+.pb-workline .pb-work-icon { flex: none; display: grid; place-items: center; width: 16px; height: 16px; color: var(--ink-faint); }
+.pb-workline .pb-work-icon svg { width: 14px; height: 14px; }
+.pb-workline-words { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-workline .pb-time, .pb-workline .app-activity-failed { flex: none; }
+button.pb-workline { display: flex; padding: 0; }
+.pb-workgroup[data-live] .pb-work-icon { color: var(--accent-text); }
+/* While the bot works in it: one slow sweep of light over the words, again and again. */
+.pb-workline-words[data-shine] {
+  background: linear-gradient(90deg, var(--ink-muted) 0%, var(--ink-muted) 35%, var(--ink) 50%, var(--ink-muted) 65%, var(--ink-muted) 100%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: pb-shine var(--dur-shine) linear infinite;
+}
+@keyframes pb-shine { from { background-position: 100% 0; } to { background-position: 0 0; } }
+/* The open list: each step a line, in order, each opening to its detail. */
+.pb-work-list { display: flex; flex-direction: column; gap: var(--space-1); margin: var(--space-2) 0 0 var(--space-1); padding-left: var(--space-3); box-shadow: inset 1px 0 0 var(--divider); animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+.pb-work-row { display: flex; flex-direction: column; min-width: 0; }
+.pb-work-row .app-activity-detail, .pb-workgroup > .app-activity-detail { margin-left: calc(16px + var(--space-2)); }
+.app-activity-detail.pb-thought { font-family: inherit; font-size: 13px; }
+
+/* A helper's provider: its mark on the disc where the plain arrow stood. Claude's in its own colour. */
+.pb-helper-mark[data-provider] svg { width: 15px; height: 15px; }
+.pb-helper-mark[data-provider="claude"] { color: var(--provider-claude); }
+.pb-helper-mark[data-provider="codex"] { color: var(--ink); }
+
+/* Waiting messages: a stack right above the message box, oldest first, at the right like the
+   person's own messages, their words muted: not read yet. Long text is cut to three lines. */
+.pb-queue { display: flex; flex-direction: column; gap: var(--space-2); }
+.pb-queue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); max-height: 40vh; overflow-y: auto; }
+.pb-queued { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); max-width: 78%; min-width: 0; }
+.pb-queued-from { padding: 0 var(--space-2); font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); }
+.pb-queued-bubble { display: block; min-width: 0; margin: 0; padding: var(--space-2) var(--space-4); border: 0; border-radius: var(--radius-lg); background: var(--fill); color: var(--ink-muted); font: inherit; font-size: 15px; line-height: 24px; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pb-queued-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+button.pb-queued-bubble { cursor: pointer; }
+button.pb-queued-bubble:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-queued-bubble[data-open] .pb-queued-text { -webkit-line-clamp: unset; display: block; }
+.pb-queued-actions { display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); }
+.pb-queued-remove { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-faint); cursor: pointer; transition: color var(--dur-quick) var(--ease-soft), background-color var(--dur-quick) var(--ease-soft); }
+.pb-queued-remove:hover { color: var(--ink); background: var(--fill); }
+.pb-queued-remove:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-queued-remove svg { width: 12px; height: 12px; }
+.pb-queued-error { color: var(--clay); }
+.pb-queue-more { align-self: flex-end; padding: 0 var(--space-2); font-size: 12px; line-height: 16px; }
+.pb-queue-line { justify-content: flex-start; }
+
+/* The bot's own to-do list. Floating at the top right of the chat where there is room beside its
+   text; a quiet raised card that never moves the chat. Otherwise one line above the chat. */
+.pb-plan-anchor { position: relative; flex: none; z-index: 2; }
+.pb-plan-anchor[data-mode="float"] { height: 0; }
+.pb-plan-anchor[data-mode="float"] .pb-plan { position: absolute; top: var(--space-3); right: var(--space-5); width: var(--plan-w, 248px); }
+.pb-plan { display: flex; flex-direction: column; max-height: min(60vh, 520px); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-raise); overflow: hidden; }
+.pb-plan-head { display: flex; align-items: center; gap: var(--space-2); width: 100%; height: 40px; padding: 0 var(--space-4); border: 0; background: none; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink); text-align: left; cursor: pointer; }
+.pb-plan-head:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--radius-lg); }
+.pb-plan-title { font-weight: 600; }
+.pb-plan-count { flex: none; white-space: nowrap; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-muted); }
+.pb-plan-head svg, .pb-plan-chip svg { flex: none; margin-left: auto; color: var(--ink-faint); transition: transform var(--dur-quick) var(--ease-soft); }
+.pb-plan-head[aria-expanded="false"] svg, .pb-plan-chip[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.pb-plan-body { min-height: 0; overflow-y: auto; padding: 0 var(--space-4) var(--space-3); }
+.pb-plan-why { margin: 0 0 var(--space-2); font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-plan-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.pb-plan-step { display: flex; align-items: flex-start; gap: var(--space-2); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-plan-text { min-width: 0; overflow-wrap: anywhere; }
+.pb-plan-mark { flex: none; display: grid; place-items: center; width: 14px; height: 14px; margin-top: 3px; border-radius: var(--radius-full); box-shadow: inset 0 0 0 1.5px var(--track); color: var(--ink-faint); }
+.pb-plan-mark svg { width: 10px; height: 10px; }
+.pb-plan-step[data-status="completed"] { color: var(--ink-faint); }
+.pb-plan-step[data-status="completed"] .pb-plan-mark { box-shadow: none; background: var(--fill); }
+.pb-plan-step[data-status="inProgress"] { color: var(--ink); }
+.pb-plan-step[data-status="inProgress"] .pb-plan-mark { box-shadow: inset 0 0 0 1.5px var(--accent-text); }
+.pb-plan-step[data-status="inProgress"] .pb-plan-mark::after { content: ""; width: 6px; height: 6px; border-radius: var(--radius-full); background: var(--accent-text); animation: pb-breath var(--dur-breath) var(--ease-breath) infinite; }
+/* The one line above the chat, and the list it opens over the chat. */
+.pb-plan-anchor[data-mode="chip"] { padding: 0 var(--space-5); }
+.pb-plan-chip-row { position: relative; display: flex; justify-content: flex-end; max-width: 680px; margin: 0 auto; height: 32px; align-items: center; }
+.pb-plan-chip { display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; height: 28px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-full); background: var(--fill); font: inherit; font-size: 13px; line-height: 20px; color: var(--ink-muted); cursor: pointer; }
+.pb-plan-chip:hover { color: var(--ink); }
+.pb-plan-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-plan-chip-now { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-plan-drop { position: absolute; top: 34px; right: 0; width: min(320px, 100%); padding: var(--space-3) var(--space-4); background: var(--surface-overlay); box-shadow: var(--shadow-float); overflow-y: auto; animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-workline-words[data-shine] { animation: none; background: none; color: var(--ink-muted); }
+  .pb-work-list, .pb-plan-drop { animation: pb-fade var(--dur-quick) linear both; }
+  .pb-plan-step[data-status="inProgress"] .pb-plan-mark::after { animation: none; opacity: 0.8; }
+  .pb-plan-head svg, .pb-plan-chip svg, .pb-queued-remove { transition: none; }
+}
+
+/* ------------------------------------------------------------ step 7c (14 Nov 2026)
+   A card a helper raised names the helper, quietly, under the head, in line with the bot's name. */
+.pb-card-helper { margin-top: calc(var(--space-3) * -1 + var(--space-1)); padding-left: calc(28px + var(--space-2)); font-size: 12px; line-height: 16px; color: var(--ink-faint); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* "Your to-do" (component Todo): the person's list at the bottom of the rail, under Needs you and
+   Later today. It stands at the foot of the rail and stays in sight there however many cards wait:
+   the cards scroll under it, behind a soft fade of the ground (no line). Its own list scrolls inside
+   it past about seven lines. One quiet line per to-do: the bot's small face, the title cut with an
+   ellipsis, and its age or "by" day in mono at the right; a day that has passed in clay. A line
+   that is added arrives calmly; a new card never moves the list. */
+/* --todo-under: the rail's own padding at its foot, which the list covers so nothing shows under it. */
+.pb-todo { --todo-under: var(--space-2); position: sticky; bottom: calc(var(--todo-under) * -1); z-index: 1; display: flex; flex-direction: column; gap: var(--space-1); margin-top: auto; margin-bottom: calc(var(--todo-under) * -1); padding: var(--space-3) 0 calc(var(--space-1) + var(--todo-under)); background: var(--ground); }
+.pb-todo::before { content: ""; position: absolute; left: 0; right: 0; top: calc(var(--space-4) * -1); height: var(--space-4); background: linear-gradient(to bottom, transparent, var(--ground)); pointer-events: none; }
+.pb-todo-title { display: flex; align-items: baseline; justify-content: space-between; padding: 0; }
+.pb-todo-count { font-weight: 500; color: var(--ink-faint); }
+.pb-todo-list { list-style: none; margin: 0; padding: 0 var(--space-2); margin-inline: calc(var(--space-2) * -1); display: flex; flex-direction: column; gap: 2px; max-height: min(40vh, 240px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.pb-todo-item { box-sizing: border-box; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-2); width: calc(100% + var(--space-4)); min-height: 32px; margin: 0 calc(var(--space-2) * -1); padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink); text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-todo-item:hover { background: var(--fill); }
+.pb-todo-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-todo-item .pb-avatar, .pb-todo-from .pb-avatar { --size: 20px; }
+.pb-todo-noface { width: 20px; height: 20px; border-radius: var(--radius-pebble); background: var(--pebble); }
+.pb-todo-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-todo-when { font-family: var(--font-mono); font-size: 11px; line-height: 20px; color: var(--ink-faint); white-space: nowrap; }
+.pb-todo-when[data-late], .pb-todo-from [data-late] { color: var(--clay); }
+
+/* The to-do's window: a Dialog sheet. Under the title and the bot's one line on why, who it is from
+   and when; then the bot's blocks, top to bottom; a line for a refusal that keeps its room; and the
+   actions: Dismiss and Mark done (always there), then the bot's buttons, its primary one last. */
+.pb-todo-from { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-2); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-todo-from b { color: var(--ink); font-weight: 600; }
+.pb-todo-from:focus { outline: none; }
+.pb-todo-answered { margin: 0; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.pb-todo-blocks { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.pb-todo-text { font-size: 15px; line-height: 24px; }
+.pb-todo-text > * + * { margin-top: var(--space-3); }
+.pb-todo-facts { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: var(--space-4); row-gap: var(--space-1); font-size: 14px; line-height: 22px; }
+.pb-todo-fact { display: contents; }
+.pb-todo-fact dt { color: var(--ink-muted); }
+.pb-todo-fact dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.pb-todo-link { align-self: flex-start; font-size: 14px; line-height: 22px; color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.pb-todo-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.pb-todo-copy { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.pb-todo-copy-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.pb-todo-copy-label { font-size: 13px; line-height: 20px; font-weight: 500; }
+.pb-todo-copy-text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; }
+.pb-todo-copy-text:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+/* A picture stands in a box of fixed height, drawn whole inside it, so nothing moves when it loads. */
+.pb-todo-picture { display: block; height: 200px; border-radius: var(--radius-md); background: var(--surface-sunken); box-shadow: var(--shadow-well); overflow: hidden; }
+.pb-todo-picture img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.pb-todo-picture:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-todo-file { align-self: flex-start; max-width: 320px; padding-right: var(--space-3); }
+.pb-todo-file .pb-chip-name { max-width: 240px; }
+.pb-todo-file[data-missing] .pb-chip-thumb { opacity: 0.5; }
+.pb-todo-page { align-self: stretch; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: var(--space-3) var(--space-4); border: 0; border-radius: var(--radius-md); background: var(--fill); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-todo-page:hover:not(:disabled) { background: var(--fill-strong); }
+.pb-todo-page:disabled { cursor: default; color: var(--ink-muted); }
+.pb-todo-page:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pb-todo-page-title { font-size: 14px; line-height: 20px; font-weight: 600; }
+.pb-todo-page-line { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.pb-todo-error { min-height: 20px; margin: 0; }
+.pb-todo-actions { margin-top: 0; }
+/* Follow-up questions (protocol 23): at the foot of a to-do's window and of a bot's question card.
+   His questions stand right, as in the chat; the bot's answer under each, in the card's own type.
+   A waiting line keeps one line's height while the answer is on its way. The thread scrolls inside a
+   box of its own, so a long one never pushes the card's buttons away. The box is one line: Enter
+   sends, Shift+Enter makes a new line inside it, and it never grows. */
+.pb-cq { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.pb-cq[data-place="card"] { padding-top: var(--space-1); }
+/* In the to-do's window it stands under the buttons, and the window keeps its top where it opened:
+   a new question and its answer make it longer downward, so nothing above moves. */
+.pb-scrim:has(.pb-cq[data-place="todo"]) { --sheet-top: max(var(--space-4), 8vh); place-items: start center; padding-top: var(--sheet-top); }
+.pb-scrim:has(.pb-cq[data-place="todo"]) > .pb-dialog { max-height: calc(100vh - var(--sheet-top) - var(--space-4)); }
+.pb-cq[data-place="todo"] { padding-top: var(--space-2); }
+.pb-cq-thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); max-height: 260px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.pb-cq[data-place="card"] .pb-cq-thread { max-height: 200px; }
+.pb-cq-item { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.pb-cq-question { align-self: flex-end; max-width: 85%; margin: 0; padding: var(--space-1) var(--space-3); border-radius: var(--radius-md); background: var(--fill); font-size: 13px; line-height: 20px; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pb-cq-answer { min-width: 0; font-size: 13px; line-height: 20px; color: var(--ink); overflow-wrap: anywhere; }
+.pb-cq-answer > * { margin: 0; }
+.pb-cq-answer > * + * { margin-top: var(--space-2); }
+.pb-cq-wait { min-height: 20px; margin: 0; font-size: 12px; line-height: 20px; color: var(--ink-faint); }
+.pb-cq-form { display: flex; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+.pb-cq-input { flex: 1; min-width: 0; width: 0; height: 32px; padding: 5px var(--space-3); line-height: 22px; resize: none; overflow-y: auto; }
+.pb-cq-input::placeholder { color: var(--ink-faint); }
+.pb-cq-form .pb-btn { flex: none; }
+.pb-cq[data-place="todo"] .pb-cq-input { height: 36px; padding-block: 7px; }
+.pb-cq[data-place="todo"] .pb-cq-form .pb-btn { height: 36px; }
+.pb-cq-error { margin: 0; font-size: 12px; line-height: 16px; color: var(--clay); }
+/* His answer in the chat says, quietly above the bubble, which to-do it answers. */
+.pb-from-todo { align-self: flex-end; max-width: 78%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-todo-item, .pb-todo-page { transition: none; }
+}
+
+/* ------------------------------------------------------------ helpers at work (16 Nov 2026)
+   "Helpers at work" (component HelpersAtWork): every helper that works now, across the bots, oldest
+   first, in the rail's foot with "Your to-do". The foot stays in sight and grows upward, so the cards
+   never move when a helper starts or ends; they scroll under it, behind a soft fade of the ground. */
+.pb-rail-foot { --todo-under: var(--space-2); position: sticky; bottom: calc(var(--todo-under) * -1); z-index: 1; display: flex; flex-direction: column; margin-top: auto; margin-bottom: calc(var(--todo-under) * -1); background: var(--ground); }
+.pb-rail-foot:empty { display: none; }
+.pb-rail-foot::before { content: ""; position: absolute; left: 0; right: 0; top: calc(var(--space-4) * -1); height: var(--space-4); background: linear-gradient(to bottom, transparent, var(--ground)); pointer-events: none; }
+.pb-rail-foot > .pb-todo { position: static; margin: 0; }
+.pb-rail-foot > .pb-todo::before { content: none; }
+.pb-atwork { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) 0 var(--space-1); }
+.pb-atwork:last-child { padding-bottom: calc(var(--space-1) + var(--todo-under)); }
+.pb-atwork-title { display: flex; align-items: baseline; justify-content: space-between; padding: 0; }
+.pb-atwork-count { font-weight: 500; color: var(--ink-faint); }
+.pb-atwork-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.pb-atwork-slot { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--dur-calm) var(--ease-soft), opacity var(--dur-quick) var(--ease-soft); }
+.pb-atwork-slot[data-leaving] { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
+.pb-atwork-slot[data-leaving] > .pb-atwork-item { min-height: 0; }
+.pb-atwork-slot > * { min-height: 0; overflow: hidden; }
+.pb-atwork-item { box-sizing: border-box; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-2); width: calc(100% + var(--space-4)); min-height: 44px; margin: 0 calc(var(--space-2) * -1); padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; text-align: left; color: var(--ink); cursor: pointer; transition: background-color var(--dur-slow) var(--ease-soft); }
+.pb-atwork-item:hover { background: var(--fill); transition-duration: var(--dur-quick); }
+.pb-atwork-item[data-marked] { background: var(--accent-soft); transition-duration: var(--dur-quick); }
+.pb-atwork-item .pb-avatar { --size: 20px; }
+.pb-atwork-text { display: flex; flex-direction: column; min-width: 0; }
+.pb-atwork-name { font-size: 13px; line-height: 20px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-atwork-whose { font-size: 12px; line-height: 16px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-atwork-side { display: inline-flex; align-items: center; gap: var(--space-2); }
+.pb-atwork-mark { display: grid; place-items: center; color: var(--ink-muted); }
+.pb-atwork-mark svg { width: 13px; height: 13px; }
+.pb-atwork-mark[data-provider="claude"] { color: var(--provider-claude); }
+.pb-atwork-mark[data-provider="codex"] { color: var(--ink); }
+.pb-atwork-when { min-width: 40px; font-family: var(--font-mono); font-size: 11px; line-height: 20px; color: var(--ink-faint); text-align: right; white-space: nowrap; }
+.pb-atwork-more { align-self: flex-start; margin-left: calc(var(--space-2) * -1); padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-muted); cursor: pointer; transition: color var(--dur-quick) var(--ease-soft); }
+.pb-atwork-more:hover, .pb-atwork-item:focus-visible, .pb-atwork-more:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+/* The waiting line, when the bot waits for helpers: a quiet button in the same box that leads to them. */
+.pb-pending-go { height: 20px; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink-muted); cursor: pointer; transition: color var(--dur-quick) var(--ease-soft); }
+.pb-pending-go .pb-pending-words { text-decoration: underline; text-decoration-color: var(--divider); text-underline-offset: 3px; transition: text-decoration-color var(--dur-quick) var(--ease-soft); }
+.pb-pending-go:hover .pb-pending-words { text-decoration-color: var(--ink-faint); }
+.pb-pending-go:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.pb-helper { transition: background-color var(--dur-slow) var(--ease-soft); }
+.pb-helper:hover { transition-duration: var(--dur-quick); }
+.pb-helper[data-marked] { background: var(--accent-soft); transition-duration: var(--dur-quick); }
+
+/* "Task managers" (component TaskManagers, protocol 21): a bot's task managers, just above Helpers at
+   work in the rail and on the phone's Needs you screen. The rows are Helpers at work's rows; the
+   second line says what it does now. Its thread has one quiet line of its settings under the head,
+   a message box and "Stop" and "End task manager" at its foot. */
+.pb-tms + .pb-atwork { padding-top: var(--space-2); }
+.pb-tms-item[data-state="waiting"] .pb-atwork-whose { color: var(--ink); }
+.pb-tm-settings { box-sizing: border-box; width: 100%; max-width: calc(680px + var(--space-5) * 2); flex: none; margin: 0 auto; padding: 0 var(--space-5) var(--space-1); font-size: 12px; line-height: 16px; color: var(--ink-faint); }
+.pb-tm-clip { display: block; overflow: hidden; }
+.pb-tm-list { display: flex; flex-wrap: wrap; margin-left: calc(var(--space-4) * -1); }
+.pb-tm-list > span { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-tm-list > span::before { content: "·"; display: inline-block; width: var(--space-4); text-align: center; }
+.pb-tm-list > .pb-tm-model { display: none; }
+.pb-tm-folder { max-width: 100%; font-family: var(--font-mono); font-size: 11px; }
+.pb-tm-composer { margin-bottom: var(--space-1); }
+.pb-tm-foot { padding-top: var(--space-1); }
+.pb-tm-foot .pb-helper-note [role="alert"] { color: var(--clay); }
+.pb-card-head-who, .pb-todo-from-tm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-todo-from-tm b { color: var(--ink); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-atwork-slot { transition: opacity var(--dur-quick) linear; }
+  .pb-atwork-item, .pb-atwork-more, .pb-pending-go, .pb-pending-go .pb-pending-words, .pb-helper { transition: none; }
+}

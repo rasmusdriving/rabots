@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- connect-src: 'self' is the page's own socket and its uploads of pictures and files when the engine
+     serves it (ws: or wss:, also over Tailscale); the 127.0.0.1 and localhost entries are for the
+     desktop shell's file page: its socket, and its uploads over http with the token.
+     frame-src: an artifact's page, sealed by the engine and by the frame's sandbox. On a page the
+     engine serves it is on the page's own origin ('self'); the desktop shell's file page gets a full
+     address on 127.0.0.1. blob: is the mock's own pages (?mock=1); only this page's own code can make one.
+     img-src: pictures attached to messages come from the engine, on the page's own origin ('self'), or
+     on 127.0.0.1 for the desktop shell's file page; blob: is the thumbnail of a picture in the message
+     box, made in the page from the file the person picked; data: is the mock's pictures.
+     The http://127.0.0.1 entries are for the desktop shell alone (it always gets 127.0.0.1, never
+     localhost). A page the engine serves gets a narrower policy on top in a header (engine/server.ts,
+     PAGE_CSP_NARROWER: img-src 'self' data: blob:; connect-src 'self'), and the browser keeps to both.
+     worker-src: the service worker for notifications (/sw.js, ui/sw.ts), from the page's own origin
+     only. Written down although a worker would fall back to script-src. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: http://127.0.0.1:*; manifest-src 'self'; connect-src 'self' ws://127.0.0.1:* ws://localhost:* http://127.0.0.1:*; frame-src 'self' http://127.0.0.1:* http://localhost:* blob:; worker-src 'self'">
+<!-- viewport-fit=cover lets a phone's page run under the notch and the home bar (it pads itself with
+     the safe areas); interactive-widget=resizes-content makes Chrome for Android shrink the page above
+     the on-screen keyboard. Desktop browsers and Electron ignore both. Zoom is never blocked. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<!-- {{ground-dark}} and {{ground-light}} are filled in from the design tokens by scripts/build.mjs.
+     The light colour is for a phone in the light theme only (the same query as ui/lib/phone.ts), so a
+     window on the laptop keeps the dark one as before. The first tag that matches wins. -->
+<meta name="theme-color" content="{{ground-light}}" media="(prefers-color-scheme: light) and (max-width: 699.98px), (prefers-color-scheme: light) and (pointer: coarse) and (max-height: 499.98px)">
+<meta name="theme-color" content="{{ground-dark}}">
+<title>Pobots</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<!-- A phone's home screen: the face on the ground, 180 px, no see-through corners (iOS rounds them). -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+<meta name="apple-mobile-web-app-title" content="Pobots">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="bundle.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+</body>
+</html>

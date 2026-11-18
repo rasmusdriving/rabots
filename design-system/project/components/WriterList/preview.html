@@ -1,0 +1,26 @@
+<!-- @dsCard group="Channels" height=440 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WriterList</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 560px; display: flex; flex-direction: column; gap: var(--space-6); }</style>
+</head>
+<body>
+<div class="demo">
+  <section class="pb-section">
+    <div class="pb-section-head"><h2 class="pb-section-title">Who may write here</h2><span class="pb-saved" data-show>Saved</span></div>
+    <p class="pb-section-text">A message from anyone else is refused and reaches no bot.</p>
+    <ul class="pb-writers"><li class="pb-writer"><span class="pb-writer-email">ada@example.com</span><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button" aria-label="Remove ada@example.com">Remove</button></li><li class="pb-writer"><span class="pb-writer-email">bo@example.com</span><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button" aria-label="Remove bo@example.com">Remove</button></li></ul>
+    <form class="pb-add-row"><input class="pb-input pb-add-input" type="text" value="ada@example" aria-label="Email address of someone who may write here"><button class="pb-btn pb-btn-sm" type="button">Add</button></form>
+    <p class="pb-hint" style="color: var(--clay)" role="alert">Write an email address, like name@example.com.</p>
+  </section>
+  <section class="pb-section">
+    <h2 class="pb-section-title">Who may write here, nobody yet</h2>
+    <p class="pb-section-text">Nobody can write to bots here yet. Add the email address of each person who may.</p>
+    <form class="pb-add-row"><input class="pb-input pb-add-input" type="text" placeholder="name@example.com" aria-label="Email address of someone who may write here"><button class="pb-btn pb-btn-sm" type="button" disabled>Add</button></form>
+  </section>
+</div>
+</body>
+</html>

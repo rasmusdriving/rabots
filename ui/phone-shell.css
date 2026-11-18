@@ -1,0 +1,217 @@
+/* The phone layout, the shell and getting around (docs/build/step-phone.md, builder A).
+   Every rule in this file stands inside the one phone query below, the same words as PHONE_QUERY in
+   ui/lib/phone.ts. Nothing here may apply to a window 700 px or wider with a fine pointer. Most rules
+   also ask for [data-phone] on the shell, which App.tsx sets only while usePhone() is true. */
+@media (max-width: 699.98px), (pointer: coarse) and (max-height: 499.98px) {
+  /* ------------------------------------------------------------ the shell
+     One column, one cell: every part (the roster, the reading panel, the rail, the panel, Pobots
+     settings) stands in it, laid out; only the one on screen is shown, the others are out of sight and
+     inert, so each keeps its place and its scroll. The shell is as tall as the visible part above the
+     on-screen keyboard (--vvh, ui/lib/phone.ts) and moves with iOS's pan (--vvtop), so the head stays
+     at the top and the message box above the keyboard. The notch of a phone on its side stays clear. */
+  .app-first { height: var(--vvh, 100dvh); }
+  .pb-shell.app-shell[data-phone] {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--vvh, 100dvh);
+    transform: translateY(var(--vvtop, 0px));
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+    overflow: hidden;
+  }
+  .pb-shell.app-shell[data-phone] > * { grid-row: 1; grid-column: 1; min-width: 0; min-height: 0; }
+
+  /* Which part shows: the screen in history, and the sheet over it. */
+  .pb-shell.app-shell[data-phone] > :is(.app-side, .app-main, .app-rail) { visibility: hidden; }
+  .pb-shell.app-shell[data-phone][data-phone-screen="bots"]:not([data-phone-sheet]) > .app-side,
+  .pb-shell.app-shell[data-phone][data-phone-screen="bot"]:not([data-phone-sheet]) > .app-main:not(.app-appsettings),
+  .pb-shell.app-shell[data-phone][data-phone-screen="bot"][data-phone-sheet="page"] > .app-main:not(.app-appsettings),
+  .pb-shell.app-shell[data-phone][data-phone-screen="needs"]:not([data-phone-sheet]) > .app-rail,
+  .pb-shell.app-shell[data-phone][data-phone-sheet="settings"] > .app-appsettings { visibility: visible; }
+  /* Out of sight means all of it: a line inside that shows itself (a hint in the message box) stays hidden too. */
+  .pb-shell.app-shell[data-phone] > [inert] * { visibility: hidden !important; }
+
+  /* The reading panel, the panel and the settings page fill the screen: no gaps, no corners. */
+  .pb-shell.app-shell[data-phone] > .app-main { border-radius: 0; box-shadow: none; }
+
+  /* ------------------------------------------------------------ the way back
+     A chevron and where it leads, 44 px to tap, at the start of each screen's head. */
+  .pb-shell[data-phone] .pb-helper-back { height: 44px; max-width: 45%; padding: 0 var(--space-3) 0 var(--space-2); margin-left: 0; font-size: 15px; line-height: 20px; border-radius: var(--radius-md); }
+  .pb-shell[data-phone] .pb-helper-back svg { width: 20px; height: 20px; }
+  .app-phone-back[data-gone] { visibility: hidden; }
+  .app-phone-bar { display: flex; align-items: center; min-height: 44px; flex: none; }
+
+  /* ------------------------------------------------------------ Bots, the first screen
+     The roster at the full width, as on a wide laptop: names, the one line, the mark. The whole screen
+     scrolls as one, the channels, the browser and Pobots settings at its foot. Undoes the faces-only
+     roster of windows under 900 px. */
+  .pb-shell[data-phone] > .app-side {
+    overflow-y: auto; overscroll-behavior: contain;
+    gap: var(--space-4);
+    padding: max(var(--space-2), env(safe-area-inset-top)) var(--space-3) max(var(--space-4), env(safe-area-inset-bottom));
+  }
+  .pb-shell[data-phone] .app-side .app-scroll { overflow: visible; flex: none; }
+  .pb-shell[data-phone] .app-side .pb-wordmark { display: block; padding: var(--space-2) var(--space-3); }
+  .pb-shell[data-phone] .app-side .pb-side-title { display: block; }
+  .pb-shell[data-phone] .app-side .app-machines { display: flex; }
+  .pb-shell[data-phone] .app-side .pb-side-head { justify-content: space-between; padding-bottom: 0; }
+  .pb-shell[data-phone] .app-side .pb-icon-btn { width: 44px; height: 44px; }
+  .pb-shell[data-phone] .app-side .app-row { grid-template-columns: auto minmax(0, 1fr) auto; justify-items: normal; min-height: 56px; }
+  .pb-shell[data-phone] .app-side .app-row .pb-row-text { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
+  .pb-shell[data-phone] .app-side .app-row > .pb-mark { position: relative; width: 10px; height: 10px; overflow: visible; clip-path: none; }
+  .pb-shell[data-phone] .app-side .app-row .pb-row-name { font-size: 15px; line-height: 22px; }
+  .pb-shell[data-phone] .app-side :is(.pb-channel-row, .pb-browser-line, .pb-settings-line) { justify-content: flex-start; min-height: 44px; padding: var(--space-1) var(--space-3); font-size: 14px; }
+  .pb-shell[data-phone] .app-side :is(.pb-channel-mark, .pb-browser-line-mark, .pb-settings-line-mark) { display: none; }
+  .pb-shell[data-phone] .app-side :is(.pb-channel-name, .pb-browser-line-name, .pb-settings-line-name) { position: static; width: auto; height: auto; flex: 1; min-width: 0; overflow: hidden; clip-path: none; white-space: nowrap; text-overflow: ellipsis; }
+  .pb-shell[data-phone] .app-side :is(.pb-channel-word, .pb-browser-line-word) { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .pb-shell[data-phone] .app-side .pb-settings-line-note { position: static; margin: 0 var(--space-1) 0 0; }
+  .pb-shell[data-phone] .app-side .pb-side-line { min-height: 28px; align-items: center; }
+
+  /* "Two things need you": one raised row under the name while cards wait. Its count changes in place. */
+  .app-needs-row {
+    display: flex; align-items: center; gap: var(--space-3); flex: none;
+    width: 100%; min-height: 56px; padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+    border: 0; border-radius: var(--radius-md); background: var(--surface-raised); box-shadow: var(--shadow-raise);
+    color: var(--ink); font: inherit; font-size: 15px; line-height: 22px; font-weight: 500; text-align: left; cursor: pointer;
+  }
+  .app-needs-row:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .app-needs-row-words { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-needs-row-go { display: grid; place-items: center; color: var(--ink-muted); }
+  .app-needs-row-go svg { width: 20px; height: 20px; }
+
+  /* ------------------------------------------------------------ a bot, and its page
+     The head: the way back, the face, the name and what the bot does, "Needs you 2", "Page". On the
+     page the row of tabs stands under it (the container rules of app.css put it there). */
+  .pb-shell[data-phone] .app-phone-head {
+    flex-wrap: wrap; gap: var(--space-2); row-gap: var(--space-1);
+    padding: max(var(--space-2), env(safe-area-inset-top)) var(--space-2) var(--space-2) var(--space-1);
+  }
+  .pb-shell[data-phone] .app-phone-head .app-head-text { flex: 1 1 0; min-width: 0; }
+  .app-phone-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .pb-shell[data-phone] .app-phone-head h1.app-phone-name { font-size: 17px; line-height: 22px; }
+  .app-phone-status { min-height: 18px; }
+  .pb-shell[data-phone] .app-phone-head .pb-helper-back { max-width: 32%; }
+  .pb-shell[data-phone] .app-phone-head[data-page] .pb-avatar { display: none; }
+  .pb-shell[data-phone] .app-phone-head[data-page] .pb-tabs { margin-left: 0; padding: 0 var(--space-2); }
+  .pb-shell[data-phone] .pb-artifact-needs { height: 44px; min-width: 44px; justify-content: center; padding: 0 var(--space-2); }
+  /* On a phone's width the head has no room for the words: the waiting mark and the count, the words read out. */
+  @container bot-page (max-width: 440px) {
+    .app-phone-needs .pb-artifact-needs-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  }
+  .pb-shell[data-phone] .app-phone-page { height: 44px; padding: 0 var(--space-3); font-size: 15px; }
+
+  /* A helper's thread: its bar leads back to the chat, 44 px to tap. */
+  .pb-shell[data-phone] .pb-helper-bar { height: auto; min-height: 48px; padding: var(--space-1) var(--space-3) 0 var(--space-2); }
+  /* A task manager's thread (protocol 21): its settings under the bar, its buttons 44 px to tap. */
+  .pb-shell[data-phone] .pb-tm-settings { padding: 0 var(--space-3) var(--space-1) var(--space-4); }
+  .pb-shell[data-phone] .pb-tm-foot .pb-btn { min-height: 44px; }
+  .pb-shell[data-phone] .pb-tm-bar-model { display: none; }
+  .pb-shell[data-phone] .pb-tm-list > .pb-tm-model { display: inline; }
+
+  /* ------------------------------------------------------------ Needs you
+     The rail's cards in one column at the full width, the Later today list under them. The way back
+     at the top. A typed answer: the field on its own line, the buttons under it. */
+  .pb-shell[data-phone] > .pb-rail.app-rail {
+    gap: var(--space-3); overscroll-behavior: contain;
+    padding: max(var(--space-2), env(safe-area-inset-top)) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom));
+  }
+  .app-rail-bar { margin-left: calc(var(--space-3) * -1); }
+  .pb-shell[data-phone] .app-rail .pb-btn,
+  .pb-shell[data-phone] .app-rail .pb-btn-sm { height: 44px; padding: 0 var(--space-4); font-size: 14px; }
+  .pb-shell[data-phone] .app-rail .pb-btn-flush { padding: 0 var(--space-3); margin-left: calc(var(--space-3) * -1); }
+  .pb-shell[data-phone] .app-rail .app-draft-more { margin-top: calc(var(--space-1) * -1); }
+  .pb-shell[data-phone] .app-rail .pb-card-actions { gap: var(--space-2); }
+  /* A long label wraps; the button grows with it. */
+  .pb-shell[data-phone] .app-rail .pb-card-actions .pb-btn { height: auto; min-height: 44px; padding-block: var(--space-2); }
+  .pb-shell[data-phone] .app-rail .pb-card-title { font-size: 16px; line-height: 24px; }
+  .pb-shell[data-phone] .app-card-answer { flex-direction: column; align-items: stretch; gap: var(--space-2); }
+  .pb-shell[data-phone] .app-card-answer .pb-input { flex: none; width: 100%; max-width: none; height: 44px; font-size: 16px; }
+  .pb-shell[data-phone] .app-card-answer .pb-btn { align-self: flex-start; }
+  /* Protocol 23: the box to ask about a card is a full finger's height on the phone. */
+  .pb-shell[data-phone] .app-rail .pb-cq-input { height: 44px; padding-block: 11px; }
+  .pb-shell[data-phone] .app-rail .pb-cq-form .pb-btn { height: 44px; min-width: 64px; }
+  .pb-shell[data-phone] .app-rail button.pb-later-item { min-height: 44px; align-items: center; }
+  /* Step 7c: a line of Your to-do is as easy to tap. */
+  .pb-shell[data-phone] .app-rail button.pb-todo-item { min-height: 44px; }
+  .pb-shell[data-phone] > .app-rail :is(.pb-rail-foot, .pb-todo) { --todo-under: max(var(--space-5), env(safe-area-inset-bottom)); }
+  /* Helpers at work: "N more" is as easy to tap as a row (a row is 44px already). */
+  .pb-shell[data-phone] .app-rail .pb-atwork-more { min-height: 44px; }
+
+  /* ------------------------------------------------------------ Pobots settings, a sheet */
+  .pb-shell[data-phone] .pb-appsettings-head { padding: max(var(--space-2), env(safe-area-inset-top)) var(--space-4) var(--space-3) var(--space-1); gap: var(--space-2); flex-wrap: nowrap; }
+  .pb-shell[data-phone] .pb-appsettings-head .pb-who-lg { display: none; }
+  .pb-shell[data-phone] .app-appsettings-scroll { padding-bottom: max(var(--space-5), env(safe-area-inset-bottom)); }
+  /* Step 7b: the settings window on a phone. The sections are a row of tabs under the head, each 44 px to tap; the section below scrolls. */
+  .pb-shell[data-phone] .app-appsettings .pb-setwin-body { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  .pb-shell[data-phone] .app-appsettings .pb-setwin-nav { flex: none; padding: 0 var(--space-3) var(--space-2); overflow-x: auto; scrollbar-width: none; }
+  .pb-shell[data-phone] .app-appsettings .pb-setwin-tabs { flex-direction: row; gap: var(--space-1); }
+  .pb-shell[data-phone] .app-appsettings .pb-setwin-tab { min-height: 44px; padding: 0 var(--space-3); white-space: nowrap; }
+  .pb-shell[data-phone] .app-appsettings .pb-setwin-body > .app-appsettings-scroll { flex: 1; min-height: 0; }
+  .pb-shell[data-phone] .pb-set7-row { grid-template-columns: minmax(0, 1fr); grid-template-areas: "text" "control" "reset" "problem"; row-gap: var(--space-1); }
+  .pb-shell[data-phone] .pb-set7-input { height: 44px; font-size: 16px; }
+  .pb-shell[data-phone] .pb-set7-row-control .pb-saved { order: 3; }
+  .pb-shell[data-phone] .pb-set7-hub-form .pb-input, .pb-shell[data-phone] .pb-set7-select { height: 44px; font-size: 16px; max-width: none; }
+  .pb-shell[data-phone] .pb-set7-which button { height: 40px; }
+  .pb-shell[data-phone] :is(.pb-set7-check, .pb-set7-refresh, .pb-set7-update, .pb-set7-reset-btn, .pb-set7-hub-remove, .pb-set7-hub-add) { height: 40px; position: relative; }
+  .pb-shell[data-phone] :is(.pb-set7-check, .pb-set7-refresh, .pb-set7-update, .pb-set7-reset-btn, .pb-set7-hub-remove, .pb-set7-hub-add)::after { content: ""; position: absolute; inset: -2px; }
+  .pb-shell[data-phone] .app-appsettings .pb-switch { box-sizing: content-box; border: 12px solid transparent; margin: -12px; background-clip: padding-box; }
+  .pb-shell[data-phone] .pb-set7-meter { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-1); }
+  .pb-shell[data-phone] .pb-set7-meter-head { flex-direction: row; align-items: baseline; justify-content: space-between; }
+  .pb-shell[data-phone] .pb-set7-bar { grid-template-columns: minmax(0, 1fr) 40px; row-gap: 2px; }
+  .pb-shell[data-phone] .pb-set7-bars[data-several] .pb-set7-bar { grid-template-columns: 22px minmax(0, 1fr) 40px; }
+  .pb-shell[data-phone] .pb-set7-bar-reset { grid-column: 1 / -1; }
+  .pb-shell[data-phone] .pb-set7-bars[data-several] .pb-set7-bar-reset { grid-column: 2 / -1; }
+  /* The icon row at the foot of the Bots screen: each 44 px to tap. */
+  .pb-shell[data-phone] .app-side .pb-foot-icons { flex-direction: row; height: 48px; padding: 0 var(--space-2); }
+  .pb-shell[data-phone] .app-side .pb-foot-space { display: block; }
+  .pb-shell[data-phone] .app-side :is(.pb-foot-icon, .pb-foot-update) { width: 44px; height: 44px; }
+
+  /* A channel's page: the way back above its head. */
+  .pb-shell[data-phone] .app-channel > .app-phone-bar { padding: max(var(--space-2), env(safe-area-inset-top)) var(--space-2) 0 var(--space-1); }
+  .pb-shell[data-phone] .app-channel .pb-channel-head { padding-top: var(--space-2); }
+  .pb-shell[data-phone] .app-channel-scroll { padding-bottom: max(var(--space-5), env(safe-area-inset-bottom)); }
+
+  /* ------------------------------------------------------------ an artifact or the browser, a sheet
+     The panel fills the screen. Its top line takes two lines: the way back, "Needs you" and the small
+     controls (44 px each) first, the title under them at the full width, so it is never cut short. */
+  .pb-shell[data-phone] > .pb-artifact-pane { padding: 0; }
+  .pb-shell[data-phone] .pb-artifact-panel { border-radius: 0; box-shadow: none; }
+  .pb-shell[data-phone] .pb-artifact-bar {
+    height: auto; flex-wrap: wrap; row-gap: 0; gap: var(--space-1);
+    padding: max(var(--space-1), env(safe-area-inset-top)) var(--space-1) var(--space-2) var(--space-1);
+  }
+  .pb-shell[data-phone] .pb-artifact-bar .pb-artifact-back { margin-right: auto; }
+  .pb-shell[data-phone] .pb-artifact-bar-text { order: 5; flex: 1 0 100%; padding: 0 var(--space-3); }
+  .pb-shell[data-phone] .pb-artifact-tools { gap: 0; }
+  .pb-shell[data-phone] .pb-tool { width: 44px; height: 44px; border-radius: var(--radius-md); }
+  .pb-shell[data-phone] .pb-browser-tabs { height: 52px; }
+  .pb-shell[data-phone] .pb-browser-tablist { overscroll-behavior-x: contain; scrollbar-width: none; }
+  .pb-shell[data-phone] .pb-browser-tablist::-webkit-scrollbar { display: none; }
+  .pb-shell[data-phone] .pb-browser-tab { height: 44px; min-width: 128px; font-size: 13px; }
+  /* No hover on a phone: each page's close is always shown, drawn small with a 44 px place to tap. */
+  .pb-shell[data-phone] .pb-browser-tab-close { opacity: 1; pointer-events: auto; position: relative; width: 28px; height: 28px; margin-right: calc(var(--space-2) * -1); }
+  .pb-shell[data-phone] .pb-browser-tab-close::after { content: ""; position: absolute; inset: -8px; }
+  .pb-shell[data-phone] .pb-browser-stateline { padding-left: max(var(--space-4), env(safe-area-inset-left)); }
+  .pb-shell[data-phone] .pb-artifact-body { margin-bottom: env(safe-area-inset-bottom); border-radius: 0; }
+
+  /* ------------------------------------------------------------ touch
+     A tap leaves no hover fill behind on a touch screen (iOS keeps :hover until the next tap). */
+  @media (hover: none) {
+    .pb-shell[data-phone] .pb-row:hover:not([aria-current="true"]),
+    .pb-shell[data-phone] :is(.pb-channel-row, .pb-browser-line):hover:not([aria-current="true"]),
+    .pb-shell[data-phone] .pb-settings-line:hover:not([aria-current="page"]),
+    .pb-shell[data-phone] :is(.pb-foot-icon, .pb-setwin-tab):hover:not([aria-current="page"], [aria-selected="true"]),
+    .pb-shell[data-phone] .pb-helper-back:hover,
+    .pb-shell[data-phone] .pb-tool:hover,
+    .pb-shell[data-phone] .pb-artifact-needs:hover,
+    .pb-shell[data-phone] .app-side .pb-icon-btn:hover,
+    .pb-shell[data-phone] button.pb-later-item:hover,
+    .pb-shell[data-phone] .pb-atwork-item:not([data-marked]):hover,
+    .pb-shell[data-phone] .pb-browser-tab:hover:not([aria-selected="true"]),
+    .pb-shell[data-phone] .app-rail .pb-btn-quiet:hover,
+    .pb-shell[data-phone] .app-phone-head .pb-btn-quiet:hover { background: none; }
+    .pb-shell[data-phone] .app-rail .pb-btn:not(.pb-btn-quiet, .pb-btn-primary):hover { background: var(--fill); }
+    .pb-shell[data-phone] .app-rail .pb-btn-primary:hover { background: var(--accent); }
+    .pb-shell[data-phone] .pb-row:hover .pb-avatar[data-state="idle"] .pb-eyes i:first-child { height: max(1.5px, 0.035em); }
+  }
+}

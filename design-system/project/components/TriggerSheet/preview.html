@@ -1,0 +1,37 @@
+<!-- @dsCard group="Triggers" height=1000 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TriggerSheet</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--ground); } .pb-scrim { position: relative; inset: auto; min-height: 1000px; display: flex; align-items: flex-start; justify-content: center; animation: none; padding: var(--space-5); } .pb-dialog { max-height: none; }</style>
+</head>
+<body>
+<div class="pb-scrim">
+  <div class="pb-dialog pb-dialog-sheet" role="dialog" aria-labelledby="t-title" aria-describedby="t-text">
+    <h2 class="pb-dialog-title" id="t-title">New trigger</h2>
+    <p class="pb-dialog-text" id="t-text">Something that wakes Kaja without you writing.</p>
+    <form class="pb-dialog-form">
+      <div class="pb-field pb-field-wide"><span class="pb-label" id="k">Kind</span><div class="pb-seg" role="group" aria-labelledby="k"><button type="button" aria-pressed="true">Schedule</button><button type="button" aria-pressed="false">Webhook</button></div><span class="pb-hint">Runs at the times you choose.</span></div>
+      <div class="pb-field pb-field-wide"><label class="pb-label" for="n">Name</label><input class="pb-input" id="n" type="text" value="Morning brief"></div>
+      <div class="pb-field pb-field-wide"><label class="pb-label" for="p">What Kaja is told</label><textarea class="pb-input pb-textarea" id="p" rows="3">Read the calendar, Teams and the other bots' notes, and write a short plan for today.</textarea></div>
+      <div class="pb-field pb-field-wide pb-sched">
+        <span class="pb-label" id="w">When</span>
+        <div class="pb-seg" role="group" aria-labelledby="w"><button type="button" aria-pressed="true">At a time</button><button type="button" aria-pressed="false">Every</button><button type="button" aria-pressed="false">Once</button></div>
+        <div class="pb-sched-row"><label class="pb-sched-part"><span class="pb-label">Time</span><input class="pb-input pb-time-input" type="text" value="07:30"></label></div>
+        <div class="pb-field pb-field-wide"><span class="pb-label" id="d">Days</span><div class="pb-days-row"><div class="pb-days" role="group" aria-labelledby="d"><button class="pb-day" type="button" aria-pressed="true">Mon</button><button class="pb-day" type="button" aria-pressed="true">Tue</button><button class="pb-day" type="button" aria-pressed="true">Wed</button><button class="pb-day" type="button" aria-pressed="true">Thu</button><button class="pb-day" type="button" aria-pressed="true">Fri</button><button class="pb-day" type="button" aria-pressed="false">Sat</button><button class="pb-day" type="button" aria-pressed="false">Sun</button></div><span class="pb-days-quick"><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button" aria-pressed="true">Weekdays</button><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button" aria-pressed="false">Every day</button></span></div></div>
+        <p class="pb-sched-say" role="status">Runs weekdays at 07:30. Next: tomorrow 07:30</p>
+      </div>
+      <div class="pb-field pb-field-wide"><span class="pb-label" id="wh">Where it runs</span>
+        <div class="pb-choices" role="radiogroup" aria-labelledby="wh">
+          <button class="pb-choice" type="button" role="radio" aria-checked="false" tabindex="-1"><span class="pb-choice-label">In its chat</span><span class="pb-choice-hint">Runs in Kaja's chat, as if you had written it.</span></button>
+          <button class="pb-choice" type="button" role="radio" aria-checked="true"><span class="pb-choice-label">As a fresh run</span><span class="pb-choice-hint">A fresh run starts with a clean head and only reports back if there is something to say.</span><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg></button>
+        </div>
+      </div>
+      <div class="pb-dialog-actions"><button class="pb-btn pb-btn-quiet" type="button">Cancel</button><button class="pb-btn pb-btn-primary" type="button">Create trigger</button></div>
+    </form>
+  </div>
+</div>
+</body>
+</html>

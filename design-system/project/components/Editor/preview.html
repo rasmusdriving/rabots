@@ -1,0 +1,45 @@
+<!-- @dsCard group="Bot page" height=520 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Editor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); height: 500px; max-width: 680px; }</style>
+</head>
+<body>
+<div class="demo">
+  <div class="pb-editor-bar">
+    <div class="pb-editor-name"><span class="pb-editor-title">Job</span><span class="pb-editor-path">AGENTS.md</span></div>
+    <span class="pb-editor-state" data-state="dirty">Not saved</span>
+    <button class="pb-btn pb-btn-sm pb-btn-primary" type="button">Save</button>
+  </div>
+  <div class="pb-editor-note" role="alert">
+    <span><span class="pb-mark pb-mark-waiting"></span>This file was changed while you were editing. Your text is still here.</span>
+    <span class="pb-editor-note-actions">
+      <button class="pb-btn pb-btn-sm" type="button">Load the new version</button>
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Keep editing</button>
+    </span>
+  </div>
+  <div class="pb-editor">
+    <textarea class="pb-editor-text" spellcheck="false" aria-label="Job, AGENTS.md"># Kaja
+
+## Your job
+
+You run the person's day. Every morning at 07:30, read the calendar,
+Teams and the other bots' notes and write a short plan.
+
+## How you work
+
+- Lead with the result, then the next step.
+- Ask before you send anything outside Pobots.</textarea>
+  </div>
+  <div class="pb-editor-bar">
+    <div class="pb-editor-name"><span class="pb-editor-title">customers</span><span class="pb-editor-path">memory/topics/customers.md</span></div>
+    <span class="pb-editor-state" data-state="saved">Saved</span>
+    <button class="pb-btn pb-btn-sm pb-btn-danger" type="button">Remove</button>
+    <button class="pb-btn pb-btn-sm pb-btn-primary" type="button" disabled>Save</button>
+  </div>
+</div>
+</body>
+</html>

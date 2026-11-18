@@ -1,0 +1,118 @@
+<!-- @dsCard group="Conversation" height=1800 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ModelPicker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { background: var(--surface); margin: 0; }
+  .demo { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-6); }
+  .demo-title { margin: 0; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-faint); }
+</style>
+</head>
+<body>
+<div class="demo">
+  <p class="demo-title">Both kinds offered: two quiet groups, Claude then ChatGPT, in the order the engine sends them. For a bot on Claude the heading of ChatGPT says quietly what choosing there means</p>
+  <div class="pb-pop pb-picker pb-arrive" role="dialog" aria-label="Choose model">
+    <div class="pb-picker-col" role="group" aria-label="Model">
+      <input class="pb-search" id="model-search" type="text" placeholder="Search models" aria-label="Search models">
+      <div class="pb-picker-group" aria-hidden="true"><span class="pb-group-name">Claude</span></div>
+      <button class="pb-option" type="button">Fable 5.2<span class="pb-key pb-push">⌘1</span></button>
+      <button class="pb-option" type="button" aria-selected="true">Opus 5.5
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg>
+        <span class="pb-key pb-push">⌘2</span></button>
+      <button class="pb-option" type="button">Sonnet 5.5<span class="pb-key pb-push">⌘3</span></button>
+      <button class="pb-option" type="button">Haiku 5.5<span class="pb-key pb-push">⌘4</span></button>
+      <div class="pb-picker-group" aria-hidden="true"><span class="pb-group-name">ChatGPT</span><span class="pb-group-note">starts a fresh session</span></div>
+      <button class="pb-option" type="button" aria-label="GPT-6.1 Sol, ChatGPT, starts a fresh session">GPT-6.1 Sol</button>
+      <button class="pb-option" type="button" aria-label="GPT-6.1 Terra, ChatGPT, starts a fresh session">GPT-6.1 Terra</button>
+      <button class="pb-option" type="button" aria-label="GPT-6 Luna, ChatGPT, starts a fresh session">GPT-6 Luna</button>
+      <button class="pb-option" type="button" aria-label="GPT-6 Astra, ChatGPT, starts a fresh session">GPT-6 Astra</button>
+    </div>
+    <div class="pb-picker-col pb-picker-side">
+      <div class="pb-picker-title"><span>Effort</span><span>Opus 5.5</span></div>
+      <button class="pb-option" type="button">Low</button>
+      <button class="pb-option" type="button">Medium<span class="pb-option-note">Default</span></button>
+      <button class="pb-option" type="button" aria-selected="true">High
+        <svg class="pb-push" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg></button>
+      <button class="pb-option" type="button">Extra high</button>
+      <button class="pb-option" type="button">Max</button>
+      <div class="pb-fast-room"></div>
+    </div>
+    <div class="pb-pop-foot">
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Mac mini</button>
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Asks first</button>
+    </div>
+  </div>
+
+  <p class="demo-title">A GPT model with a fast mode: the switch Fast under the efforts, the model's few words under its name. It saves at once and the picker stays open. A model without a fast mode leaves its room empty, as above, so nothing moves</p>
+  <div class="pb-pop pb-picker" role="dialog" aria-label="Choose model">
+    <div class="pb-picker-col" role="group" aria-label="Model">
+      <input class="pb-search" type="text" placeholder="Search models" aria-label="Search models">
+      <div class="pb-picker-group" aria-hidden="true"><span class="pb-group-name">Claude</span><span class="pb-group-note">starts a fresh session</span></div>
+      <button class="pb-option" type="button">Fable 5.2<span class="pb-key pb-push">⌘1</span></button>
+      <button class="pb-option" type="button">Opus 5.5<span class="pb-key pb-push">⌘2</span></button>
+      <button class="pb-option" type="button">Sonnet 5.5<span class="pb-key pb-push">⌘3</span></button>
+      <button class="pb-option" type="button">Haiku 5.5<span class="pb-key pb-push">⌘4</span></button>
+      <div class="pb-picker-group" aria-hidden="true"><span class="pb-group-name">ChatGPT</span></div>
+      <button class="pb-option" type="button">GPT-6.1 Sol</button>
+      <button class="pb-option" type="button" aria-selected="true">GPT-6.1 Terra
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg></button>
+      <button class="pb-option" type="button">GPT-6 Luna</button>
+      <button class="pb-option" type="button">GPT-6 Astra</button>
+    </div>
+    <div class="pb-picker-col pb-picker-side" role="group" aria-label="Effort">
+      <div class="pb-picker-title"><span>Effort</span><span>GPT-6.1 Terra</span></div>
+      <button class="pb-option" type="button">Low</button>
+      <button class="pb-option" type="button">Medium<span class="pb-option-note">Default</span></button>
+      <button class="pb-option" type="button">High</button>
+      <button class="pb-option" type="button" aria-selected="true">Extra high
+        <svg class="pb-push" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg></button>
+      <button class="pb-option" type="button">Max</button>
+      <div class="pb-fast-room"><button class="pb-option pb-fast-option" type="button" role="switch" aria-checked="true" aria-label="Fast" aria-describedby="fast-hint-picker"><span class="pb-fast-name">Fast</span><span class="pb-switch-quiet" aria-hidden="true"></span><span class="pb-option-note pb-fast-hint" id="fast-hint-picker">1.5x speed</span></button></div>
+    </div>
+    <div class="pb-pop-foot">
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Mac mini</button>
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Asks first</button>
+    </div>
+  </div>
+
+  <p class="demo-title">The model button of the message box says fast after the effort, for a model with a fast mode while the switch is on</p>
+  <div class="pb-composer-bar" style="justify-content: flex-start; margin-left: 0">
+    <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button" aria-label="Model: GPT-6.1 Terra, effort Extra high, fast. Change model">GPT-6.1 Terra <small>Extra high, fast</small></button>
+    <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button" aria-label="Model: Opus 5.5, effort High. Change model">Opus 5.5 <small>High</small></button>
+  </div>
+
+  <p class="demo-title">In a bot's settings: the same groups as rows of choices, and one quiet line under them in a box that keeps its height. The bot is now on GPT, so the heading of Claude carries the words</p>
+  <section class="pb-section" style="max-width: 560px">
+    <div class="pb-section-head"><h2 class="pb-section-title">Model and effort</h2><span class="pb-saved" data-show>Saved</span></div>
+    <div class="pb-model-groups" role="group" aria-label="Model">
+      <div class="pb-model-group"><span class="pb-model-group-title" aria-hidden="true"><span class="pb-group-name">Claude</span><span class="pb-group-note">starts a fresh session</span></span><div class="pb-seg" role="group" aria-label="Claude, starts a fresh session"><button type="button" aria-pressed="false">Fable 5.2</button><button type="button" aria-pressed="false">Opus 5.5</button><button type="button" aria-pressed="false">Sonnet 5.5</button><button type="button" aria-pressed="false">Haiku 5.5</button></div></div>
+      <div class="pb-model-group"><span class="pb-model-group-title" aria-hidden="true"><span class="pb-group-name">ChatGPT</span></span><div class="pb-seg" role="group" aria-label="ChatGPT"><button type="button" aria-pressed="false">GPT-6.1 Sol</button><button type="button" aria-pressed="true">GPT-6.1 Terra</button><button type="button" aria-pressed="false">GPT-6 Luna</button><button type="button" aria-pressed="false">GPT-6 Astra</button></div></div>
+    </div>
+    <div class="pb-effort-line">
+      <div class="pb-seg" role="group" aria-label="Effort"><button type="button" aria-pressed="false">Low</button><button type="button" aria-pressed="false">Medium</button><button type="button" aria-pressed="true">High</button><button type="button" aria-pressed="false">Extra high</button><button type="button" aria-pressed="false">Max</button></div>
+      <button type="button" class="pb-fast" role="switch" aria-checked="true" aria-label="Fast" aria-describedby="fast-hint-settings"><span class="pb-switch-quiet" aria-hidden="true"></span><span class="pb-fast-name">Fast</span><span class="pb-fast-hints"><span class="pb-option-note pb-fast-hint" id="fast-hint-settings" data-show>1.5x speed</span><span class="pb-option-note pb-fast-hint">2x speed, increased usage</span></span></button>
+    </div>
+    <span class="pb-hint">More effort thinks longer and costs more. The change applies from the next turn.</span>
+    <div class="pb-model-note" role="status">
+      <span class="pb-hint pb-model-note-line" data-show>Changing between Claude and ChatGPT starts a fresh session. The bot keeps its memory and gets the end of the chat.</span>
+      <span class="pb-hint pb-model-note-line" aria-hidden="true">Runs on Codex with your ChatGPT login.</span>
+    </div>
+  </section>
+
+  <p class="demo-title">Only one kind offered (Codex is not ready): no headings, as before, and the engine's sentence under the choices</p>
+  <div class="pb-field pb-field-wide">
+    <span class="pb-label" id="m1">Model</span>
+    <div class="pb-seg" role="group" aria-labelledby="m1"><button type="button" aria-pressed="false">Fable 5.2</button><button type="button" aria-pressed="true">Opus 5.5</button><button type="button" aria-pressed="false">Sonnet 5.5</button><button type="button" aria-pressed="false">Haiku 5.5</button></div>
+    <span class="pb-hint">Codex is not signed in. Run codex login in a terminal on the Mac.</span>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('[role="switch"]').forEach(function (s) {
+    s.addEventListener('click', function () { s.setAttribute('aria-checked', s.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); });
+  });
+</script>
+</body>
+</html>

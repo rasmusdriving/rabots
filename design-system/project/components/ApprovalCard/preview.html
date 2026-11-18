@@ -1,0 +1,77 @@
+<!-- @dsCard group="Needs you" height=1080 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ApprovalCard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+</head>
+<body>
+<div style="width: 344px; padding: var(--space-4)">
+  <div class="pb-card">
+    <div class="pb-card-head"><span class="pb-avatar pb-avatar-sm" data-eyes="round" data-gap="far"><span class="pb-eyes"><i></i><i></i></span></span><b>Inbox</b> asks to send</div>
+    <p class="pb-card-title">Send this reply in Teams?</p>
+    <div class="pb-draft"><span class="pb-draft-to">to the onboarding chat</span>Hi, the import is planned for Thursday. I will confirm here once it has run.</div>
+    <div class="pb-card-actions">
+      <button class="pb-btn pb-btn-sm pb-btn-primary" type="button">Allow once</button>
+      <button class="pb-btn pb-btn-sm" type="button">Always allow</button>
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Deny</button>
+    </div>
+    <div class="pb-card-foot">Expires in 28 min</div>
+  </div>
+  <div class="pb-card" style="margin-top: var(--space-3)">
+    <div class="pb-card-head"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><b>Kaja</b> asks for permission</div>
+    <p class="pb-card-title">Create a bot called Reports?</p>
+    <div class="pb-draft"><span class="pb-draft-to">new bot</span>Purpose: Writes the weekly customer report<br><br>Job: Every Friday at 13:00, collect the week's onboardings and tickets and write a short report.</div>
+    <div class="pb-card-actions">
+      <button class="pb-btn pb-btn-sm pb-btn-primary" type="button">Allow once</button>
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Deny</button>
+    </div>
+  </div>
+  <div class="pb-card" style="margin-top: var(--space-3)">
+    <div class="pb-card-head"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><b>Kaja</b> asks for permission</div>
+    <p class="pb-card-title">Make the tag Inbox reach Onboardings in Ops - Internal?</p>
+    <div class="pb-draft" style="white-space: pre-wrap; overflow-wrap: anywhere"><span class="pb-draft-to">set_channel_route</span>In Ops - Internal, a message tagged Inbox would go to Onboardings instead of Inbox.
+
+A tagged message from an allowed writer is an instruction to the bot it reaches.</div>
+    <div class="pb-card-actions">
+      <button class="pb-btn pb-btn-sm pb-btn-primary" type="button">Allow once</button>
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Deny</button>
+    </div>
+  </div>
+  <div class="pb-card" style="margin-top: var(--space-3)">
+    <div class="pb-card-head"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><b>Kaja</b> asks for permission</div>
+    <p class="pb-card-title">Change who may write in Ops - Internal?</p>
+    <div class="pb-draft" style="white-space: pre-wrap; overflow-wrap: anywhere"><span class="pb-draft-to">update_channel</span>Added: cy@example.com
+Removed: bo@example.com
+
+After this, these may write to bots in Ops - Internal:
+ada@example.com
+cy@example.com</div>
+    <div class="pb-card-actions">
+      <button class="pb-btn pb-btn-sm pb-btn-primary" type="button">Allow once</button>
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Deny</button>
+    </div>
+  </div>
+  <div class="pb-card" style="margin-top: var(--space-3)">
+    <div class="pb-card-head"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><b>Kaja</b> asks for permission</div>
+    <p class="pb-card-title">Book this meeting?</p>
+    <div class="pb-draft"><span class="pb-draft-to">Calendar</span><div class="pb-meet">
+      <span class="pb-meet-what">Nordvik kickoff</span>
+      <span class="pb-meet-when">Wed 18 Nov 10:00 to 11:00</span>
+      <span class="pb-meet-clash">You have something else then: Lunch (12:00 to 13:00)</span>
+      <ul class="pb-meet-people">
+        <li class="pb-meet-person"><span>Alex Lund</span><span class="pb-meet-addr">alex@example.com</span><span class="pb-meet-tag">Internal, free then</span></li>
+        <li class="pb-meet-person"><span>Kim Nordvik</span><span class="pb-meet-addr">kim@nordvik.example.net</span><span class="pb-meet-tag">External, the agreed time</span></li>
+      </ul>
+      <span class="pb-meet-line">Teams meeting, a link is added</span>
+      <span class="pb-meet-text"><span class="pb-meet-label">Text</span>Kickoff for the Nordvik onboarding: scope, timeline and who does what.</span>
+    </div></div>
+    <div class="pb-card-actions">
+      <button class="pb-btn pb-btn-sm pb-btn-primary" type="button">Approve</button>
+      <button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Deny</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

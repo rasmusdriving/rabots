@@ -1,0 +1,29 @@
+<!-- @dsCard group="Needs you" height=470 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SystemCard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+</head>
+<body>
+<div style="width: 344px; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3)">
+  <section class="pb-card pb-card-system" aria-labelledby="sys-title">
+    <div class="pb-card-head"><span class="pb-pobots-mark" aria-hidden="true">P</span><b>Pobots</b> tells you</div>
+    <div class="pb-card-system-body">
+      <p class="pb-card-title" id="sys-title">Last night's backup did not reach OneDrive</p>
+      <p class="pb-card-text">OneDrive did not take the file. Is OneDrive running and signed in on the Mac?</p>
+    </div>
+    <div class="pb-card-actions"><button class="pb-btn pb-btn-sm" type="button">Open backup settings</button><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Dismiss</button></div>
+  </section>
+  <section class="pb-card pb-card-system" aria-labelledby="sys-title-2">
+    <div class="pb-card-head"><span class="pb-pobots-mark" aria-hidden="true">P</span><b>Pobots</b> tells you</div>
+    <div class="pb-card-system-body">
+      <p class="pb-card-title" id="sys-title-2">No backup for two days</p>
+      <p class="pb-card-text">Pobots has not saved a backup to OneDrive for two days. The last one that reached OneDrive was made 11 Nov.</p>
+    </div>
+    <div class="pb-card-actions"><button class="pb-btn pb-btn-sm" type="button">Open backup settings</button><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Dismiss</button></div>
+  </section>
+</div>
+</body>
+</html>

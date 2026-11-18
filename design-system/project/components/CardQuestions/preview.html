@@ -1,0 +1,40 @@
+<!-- @dsCard group="Needs you" height=860 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CardQuestions</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+</head>
+<body>
+<div style="display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start; padding: var(--space-4)">
+  <!-- A question card with one answered question and one on its way. -->
+  <section class="pb-card" style="width: 320px">
+    <div class="pb-card-head"><span class="pb-avatar pb-avatar-sm" data-eyes="wide" data-gap="near"><span class="pb-eyes"><i></i><i></i></span></span><b>Onboardings</b> needs a choice</div>
+    <p class="pb-card-title">Kickoff date for the new onboarding</p>
+    <p class="pb-card-text">Two dates work for everyone invited.</p>
+    <div class="pb-card-actions"><button class="pb-btn pb-btn-sm" type="button">Tue 17 Nov</button><button class="pb-btn pb-btn-sm" type="button">Thu 19 Nov</button><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Later</button></div>
+    <div class="pb-cq" data-place="card">
+      <ol class="pb-cq-thread">
+        <li class="pb-cq-item" data-state="answered"><p class="pb-cq-question">Is Thursday better for the customer?</p><div class="pb-cq-answer"><p>Yes. Their IT lead is away on Tuesday.</p></div></li>
+        <li class="pb-cq-item" data-state="answering"><p class="pb-cq-question">Who else attends?</p><p class="pb-cq-wait" data-state="answering">Onboardings is answering</p></li>
+      </ol>
+      <form class="pb-cq-form"><textarea class="pb-input pb-cq-input" rows="1" placeholder="Ask about this before you act"></textarea><button class="pb-btn pb-btn-sm" type="submit" disabled>Ask</button></form>
+    </div>
+  </section>
+  <!-- The foot of a to-do's window: its buttons, then the questions and the box. -->
+  <div class="pb-dialog pb-dialog-sheet" role="dialog" aria-label="Send the Nordvik import summary" style="max-height: none">
+    <h2 class="pb-dialog-title">Send the Nordvik import summary</h2>
+    <div class="pb-todo-blocks"><div class="pb-todo-text"><p>The import <strong>finished</strong> at 09:12 with no errors.</p></div></div>
+    <p class="pb-hint pb-todo-error"></p>
+    <div class="pb-dialog-actions pb-todo-actions"><button class="pb-btn pb-btn-quiet" type="button">Dismiss</button><button class="pb-btn" type="button">Mark done</button><button class="pb-btn pb-btn-primary" type="button">I sent it</button></div>
+    <div class="pb-cq" data-place="todo">
+      <ol class="pb-cq-thread">
+        <li class="pb-cq-item" data-state="queued"><p class="pb-cq-question">Should the summary be in Swedish?</p><p class="pb-cq-wait" data-state="queued">HubSpot tickets answers when it is free</p></li>
+      </ol>
+      <form class="pb-cq-form"><textarea class="pb-input pb-cq-input" rows="1" placeholder="Ask about this before you act"></textarea><button class="pb-btn pb-btn-sm" type="submit" disabled>Ask</button></form>
+    </div>
+  </div>
+</div>
+</body>
+</html>

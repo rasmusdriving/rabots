@@ -1,0 +1,132 @@
+<!-- @dsCard group="Settings" height=1180 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ActivityDay</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { margin: 0; background: var(--ground); }
+  .demo { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start; padding: var(--space-4); }
+  .demo-title { margin: 0 0 var(--space-2); font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); }
+  .demo-panel { width: 560px; max-width: calc(100vw - 2 * var(--space-4)); padding: var(--space-4) var(--space-5); background: var(--surface); border-radius: var(--radius-xl); }
+</style>
+<style>
+/* A copy of ui/activity.css, the app's source. */
+/* Settings, Activity: a day of what happened in Pobots, read only (protocol 22, ui/components/ActivityView.tsx,
+   docs/build/step-activity-day-view.md, design-system/project/components/ActivityDay/). Tokens only.
+   Calm: the head keeps its size and place whatever the day; the rows only fade while the next day is read. */
+
+.pb-actday-about { margin: 0 0 var(--space-3); max-width: 480px; }
+.pb-actday-head { display: flex; align-items: center; gap: var(--space-1); min-height: 32px; }
+/* The day's name has a fixed room, so the arrows beside it never move ("Wed 30 Sep 2025" fits). */
+.pb-actday-name { flex: none; width: 9em; text-align: center; font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.pb-actday-head .pb-icon-btn[aria-disabled] { color: var(--ink-faint); background: none; cursor: default; }
+.pb-actday-today { margin-left: auto; }
+.pb-actday-today[data-hide] { visibility: hidden; }
+.pb-actday-checked { margin-top: var(--space-2); }
+
+.pb-actday-day { margin-top: var(--space-1); transition: opacity var(--dur-quick) var(--ease-soft); }
+.pb-actday[data-reading] .pb-actday-day { opacity: 0.6; }
+.pb-actday-summary { display: flex; flex-direction: column; gap: 2px; margin: 0 0 var(--space-3); }
+.pb-actday-summary .pb-hint, .pb-actday-empty { margin: 0; font-size: 13px; line-height: 20px; }
+.pb-actday-more { margin: var(--space-2) 0 0; }
+
+/* A row: the time in mono at the left (and its end under it), then who and what. Long titles wrap. */
+.pb-actday-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.pb-actday-row { display: grid; grid-template-columns: 4.5em minmax(0, 1fr); column-gap: var(--space-3); padding: var(--space-1) 0; font-size: 14px; line-height: 20px; }
+/* On a day the clocks change each time carries its offset: a wider column. */
+.pb-actday-rows[data-offsets] .pb-actday-row { grid-template-columns: 7.5em minmax(0, 1fr); }
+.pb-actday-time { display: flex; flex-direction: column; font-family: var(--font-mono); font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.pb-actday-end { font-size: 12px; line-height: 16px; color: var(--ink-faint); }
+.pb-actday-text { min-width: 0; overflow-wrap: anywhere; }
+.pb-actday-who { font-weight: 500; }
+.pb-actday-row[data-kind="you"] .pb-actday-who { color: var(--accent-text); }
+
+@media (prefers-reduced-motion: reduce) { .pb-actday-day { transition: none; } }
+
+/* On a phone the arrows are 44 px to tap, Today and Refresh 40 px. */
+.pb-shell[data-phone] .pb-actday-head .pb-icon-btn { width: 44px; height: 44px; }
+.pb-shell[data-phone] .pb-actday-today { height: 40px; }
+</style>
+</head>
+<body>
+<div class="demo">
+  <div>
+    <p class="demo-title">Today: the summary and the rows; Next day dimmed, Today's room kept</p>
+    <div class="demo-panel">
+    <section class="pb-section pb-actday">
+      <div class="pb-section-head"><h2 class="pb-section-title">Activity</h2></div>
+      <p class="pb-hint pb-actday-about">What happened in Pobots on a day, with times. Labels only, never what was written.</p>
+      <div class="pb-actday-head">
+        <button type="button" class="pb-icon-btn pb-actday-prev" aria-label="Previous day"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 8h-9M7 4.5 3.5 8 7 11.5"/></svg></button>
+        <span class="pb-actday-name">Today</span>
+        <button type="button" class="pb-icon-btn pb-actday-next" aria-label="Next day" aria-disabled="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M9 4.5 12.5 8 9 11.5"/></svg></button>
+        <button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-actday-today" data-hide aria-hidden="true" tabindex="-1">Today</button>
+      </div>
+      <div class="pb-set7-checked pb-actday-checked"><span class="pb-set7-checked-text">Read at 14:02.</span><button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-set7-refresh">Refresh</button></div>
+      <div class="pb-actday-day">
+      <div class="pb-actday-summary"><p class="pb-hint">You were active from 08:02 to 11:40: 34 minutes over 2 blocks.</p><p class="pb-hint">3 actions, 5 bot turns, 1 helper, 1 calendar action, 1 channel post.</p></div>
+      <ol class="pb-actday-rows">
+      <li class="pb-actday-row" data-kind="turn"><span class="pb-actday-time">06:00<span class="pb-actday-end">to 06:20</span></span><span class="pb-actday-text"><span class="pb-actday-who">Kaja</span> <span class="pb-actday-words">Worked, started by schedule "Morning round", 2 turns: "Weekly note"</span></span></li>
+      <li class="pb-actday-row" data-kind="you"><span class="pb-actday-time">08:02</span><span class="pb-actday-text"><span class="pb-actday-who">You</span> <span class="pb-actday-words">Message to Po, from a computer, chat "Planning the week"</span></span></li>
+      <li class="pb-actday-row" data-kind="turn"><span class="pb-actday-time">08:02<span class="pb-actday-end">to 08:09</span></span><span class="pb-actday-text"><span class="pb-actday-who">Po</span> <span class="pb-actday-words">Worked, started by you: "Planning the week"</span></span></li>
+      <li class="pb-actday-row" data-kind="helper"><span class="pb-actday-time">08:03<span class="pb-actday-end">to 08:30</span></span><span class="pb-actday-text"><span class="pb-actday-who">Po</span> <span class="pb-actday-words">Helper "Check the Nordvik import before Thursday and list what still blocks it" (Haiku 5.5, low), done</span></span></li>
+      <li class="pb-actday-row" data-kind="you"><span class="pb-actday-time">08:05</span><span class="pb-actday-text"><span class="pb-actday-who">You</span> <span class="pb-actday-words">Answered a card of Po: approval, allowed once, from the phone</span></span></li>
+      <li class="pb-actday-row" data-kind="calendar"><span class="pb-actday-time">09:00</span><span class="pb-actday-text"><span class="pb-actday-who">Kaja</span> <span class="pb-actday-words">Made the meeting "Weekly sync" for Wed 18 Nov 09:00, done</span></span></li>
+      <li class="pb-actday-row" data-kind="post"><span class="pb-actday-time">13:00</span><span class="pb-actday-text"><span class="pb-actday-who">Kaja</span> <span class="pb-actday-words">Wrote a post in channel "Ops - Internal", posted</span></span></li>
+      </ol>
+      </div>
+    </section>
+    </div>
+  </div>
+  <div>
+    <p class="demo-title">Changing day: the new name at once, the old rows faded until the day is read</p>
+    <div class="demo-panel">
+    <section class="pb-section pb-actday" data-reading>
+      <div class="pb-section-head"><h2 class="pb-section-title">Activity</h2></div>
+      <p class="pb-hint pb-actday-about">What happened in Pobots on a day, with times. Labels only, never what was written.</p>
+      <div class="pb-actday-head">
+        <button type="button" class="pb-icon-btn pb-actday-prev" aria-label="Previous day"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 8h-9M7 4.5 3.5 8 7 11.5"/></svg></button>
+        <span class="pb-actday-name">Yesterday</span>
+        <button type="button" class="pb-icon-btn pb-actday-next" aria-label="Next day"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M9 4.5 12.5 8 9 11.5"/></svg></button>
+        <button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-actday-today">Today</button>
+      </div>
+      <div class="pb-set7-checked pb-actday-checked"><span class="pb-set7-checked-text">Reading the day.</span><button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-set7-refresh" aria-disabled="true">Refresh</button></div>
+      <div class="pb-actday-day">
+      <div class="pb-actday-summary"><p class="pb-hint">You were active from 08:02 to 11:40: 34 minutes over 2 blocks.</p><p class="pb-hint">3 actions, 5 bot turns, 1 helper, 1 calendar action, 1 channel post.</p></div>
+      <ol class="pb-actday-rows">
+      <li class="pb-actday-row" data-kind="turn"><span class="pb-actday-time">06:00<span class="pb-actday-end">to 06:20</span></span><span class="pb-actday-text"><span class="pb-actday-who">Kaja</span> <span class="pb-actday-words">Worked, started by schedule "Morning round", 2 turns: "Weekly note"</span></span></li>
+      <li class="pb-actday-row" data-kind="you"><span class="pb-actday-time">08:02</span><span class="pb-actday-text"><span class="pb-actday-who">You</span> <span class="pb-actday-words">Message to Po, from a computer, chat "Planning the week"</span></span></li>
+      <li class="pb-actday-row" data-kind="turn"><span class="pb-actday-time">08:02<span class="pb-actday-end">to 08:09</span></span><span class="pb-actday-text"><span class="pb-actday-who">Po</span> <span class="pb-actday-words">Worked, started by you: "Planning the week"</span></span></li>
+      <li class="pb-actday-row" data-kind="helper"><span class="pb-actday-time">08:03<span class="pb-actday-end">to 08:30</span></span><span class="pb-actday-text"><span class="pb-actday-who">Po</span> <span class="pb-actday-words">Helper "Check the Nordvik import before Thursday and list what still blocks it" (Haiku 5.5, low), done</span></span></li>
+      <li class="pb-actday-row" data-kind="you"><span class="pb-actday-time">08:05</span><span class="pb-actday-text"><span class="pb-actday-who">You</span> <span class="pb-actday-words">Answered a card of Po: approval, allowed once, from the phone</span></span></li>
+      <li class="pb-actday-row" data-kind="calendar"><span class="pb-actday-time">09:00</span><span class="pb-actday-text"><span class="pb-actday-who">Kaja</span> <span class="pb-actday-words">Made the meeting "Weekly sync" for Wed 18 Nov 09:00, done</span></span></li>
+      <li class="pb-actday-row" data-kind="post"><span class="pb-actday-time">13:00</span><span class="pb-actday-text"><span class="pb-actday-who">Kaja</span> <span class="pb-actday-words">Wrote a post in channel "Ops - Internal", posted</span></span></li>
+      </ol>
+      </div>
+    </section>
+    </div>
+  </div>
+  <div>
+    <p class="demo-title">A quiet day</p>
+    <div class="demo-panel">
+    <section class="pb-section pb-actday">
+      <div class="pb-section-head"><h2 class="pb-section-title">Activity</h2></div>
+      <p class="pb-hint pb-actday-about">What happened in Pobots on a day, with times. Labels only, never what was written.</p>
+      <div class="pb-actday-head">
+        <button type="button" class="pb-icon-btn pb-actday-prev" aria-label="Previous day"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 8h-9M7 4.5 3.5 8 7 11.5"/></svg></button>
+        <span class="pb-actday-name">Fri 13 Nov</span>
+        <button type="button" class="pb-icon-btn pb-actday-next" aria-label="Next day"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h9M9 4.5 12.5 8 9 11.5"/></svg></button>
+        <button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-actday-today">Today</button>
+      </div>
+      <div class="pb-set7-checked pb-actday-checked"><span class="pb-set7-checked-text">Read at 14:02.</span><button type="button" class="pb-btn pb-btn-sm pb-btn-quiet pb-set7-refresh">Refresh</button></div>
+      <div class="pb-actday-day">
+      <p class="pb-hint pb-actday-empty">Nothing happened in Pobots on this day.</p>
+      </div>
+    </section>
+    </div>
+  </div>
+</div>
+</body>
+</html>

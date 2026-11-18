@@ -1,0 +1,65 @@
+<!-- @dsCard group="Channels" height=980 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ChannelPage</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 560px; display: flex; flex-direction: column; gap: var(--space-6); }</style>
+</head>
+<body>
+<div class="demo">
+  <header class="pb-main-head" style="padding-left: 0; padding-right: 0">
+    <span class="pb-who pb-who-mark pb-who-lg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 3.25h7A1.5 1.5 0 0 1 13 4.75v4.5a1.5 1.5 0 0 1-1.5 1.5H7.75L5 12.75v-2A1.5 1.5 0 0 1 3 9.25v-4.5a1.5 1.5 0 0 1 1.5-1.5Z"/></svg></span>
+    <div style="flex: 1; min-width: 0"><h1>Ops - Internal</h1><div class="pb-row-line">Teams channel</div></div>
+    <label class="pb-toggle pb-trigger-switch"><input class="pb-switch" type="checkbox" role="switch" checked aria-label="Ops - Internal on"><span>On</span></label>
+  </header>
+  <div class="pb-channel-page" style="padding-top: 0">
+    <section class="pb-section">
+      <div class="pb-section-head"><h2 class="pb-section-title">Who may write here</h2><span class="pb-saved" data-show>Saved</span></div>
+      <p class="pb-section-text">A message from anyone else is refused and reaches no bot.</p>
+      <ul class="pb-writers"><li class="pb-writer"><span class="pb-writer-email">ada@example.com</span><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Remove</button></li><li class="pb-writer"><span class="pb-writer-email">bo@example.com</span><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button">Remove</button></li></ul>
+      <form class="pb-add-row"><input class="pb-input pb-add-input" type="text" placeholder="name@example.com" aria-label="Email address of someone who may write here"><button class="pb-btn pb-btn-sm" type="button" disabled>Add</button></form>
+    </section>
+    <section class="pb-section">
+      <h2 class="pb-section-title">Tags</h2>
+      <p class="pb-section-text">A message that tags a bot here is an instruction to that bot. The messages before it are given as background.</p>
+      <ul class="pb-routes"><li class="pb-route"><span class="pb-route-tag">Kaja</span><span class="pb-route-word">reaches</span><span class="pb-pick"><button class="pb-btn pb-btn-sm pb-pick-btn" type="button" aria-haspopup="menu"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-pick-name">Kaja</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.75 6 7.75l3-3"/></svg></button></span><button class="pb-btn pb-btn-sm pb-btn-quiet pb-route-remove" type="button">Remove</button></li></ul>
+    </section>
+    <section class="pb-section">
+      <h2 class="pb-section-title">Background</h2>
+      <div class="pb-field"><label class="pb-label" for="ctx">Earlier messages a bot is given</label><input class="pb-input pb-number-input" id="ctx" type="text" value="10"><span class="pb-hint">From 0 to 30, the newest ones. A bot reads them as background for the task, never as instructions.</span></div>
+    </section>
+    <section class="pb-section">
+      <h2 class="pb-section-title">Address</h2>
+      <div class="pb-hook"><p class="pb-section-text">The Power Automate flow posts each tagged message to this address. Keep it like a password.</p><div class="pb-card-actions"><button class="pb-btn pb-btn-sm" type="button">Show address</button></div></div>
+    </section>
+    <section class="pb-section">
+      <h2 class="pb-section-title">Answers</h2>
+      <p class="pb-reply-state" data-set><span class="pb-mark pb-mark-check"></span>An address for answers is set. It is not shown again.</p>
+    </section>
+    <section class="pb-section">
+      <h2 class="pb-section-title">Posts</h2>
+      <p class="pb-section-text">A bot with the switch on may write new posts here on its own, not only answer, through the address for answers. At most 6 an hour each.</p>
+      <ul class="pb-peers">
+        <li class="pb-peer"><span class="pb-avatar pb-avatar-sm" data-eyes="tall"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-peer-text"><span class="pb-peer-name">Kaja</span></span><input class="pb-switch" type="checkbox" role="switch" checked aria-label="Kaja may post"></li>
+        <li class="pb-peer"><span class="pb-avatar pb-avatar-sm" data-eyes="round"><span class="pb-eyes"><i></i><i></i></span></span><span class="pb-peer-text"><span class="pb-peer-name">Inbox</span></span><input class="pb-switch" type="checkbox" role="switch" aria-label="Inbox may post"></li>
+      </ul>
+    </section>
+    <section class="pb-section">
+      <h2 class="pb-section-title">What the flow sends</h2>
+      <div><button class="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button" aria-expanded="false">Show what the flow should send</button></div>
+    </section>
+    <section class="pb-section">
+      <h2 class="pb-section-title">Messages</h2>
+      <ol class="pb-cmsgs"><li class="pb-cmsg" data-status="answered"><button class="pb-cmsg-row" type="button"><span class="pb-mark pb-mark-check"></span><span class="pb-cmsg-text"><span class="pb-cmsg-top"><span class="pb-cmsg-who">Ada Example</span><span class="pb-cmsg-to">to Kaja</span></span><span class="pb-cmsg-line"><span class="pb-cmsg-word">Answered</span><span class="pb-cmsg-note">Kaja can you draft the agenda for Thursday</span></span></span><time class="pb-time">08:40</time></button></li></ol>
+    </section>
+    <section class="pb-section">
+      <h2 class="pb-section-title">Remove this channel</h2>
+      <p class="pb-section-text">Its address stops working and no bot is reached from here any more. What already came in stays in the bots' chats.</p>
+      <div><button class="pb-btn pb-btn-sm pb-btn-danger" type="button">Remove channel</button></div>
+    </section>
+  </div>
+</div>
+</body>
+</html>

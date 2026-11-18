@@ -1,0 +1,48 @@
+<!-- @dsCard group="Channels" height=820 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FlowExample</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 560px; display: flex; flex-direction: column; gap: var(--space-6); }</style>
+</head>
+<body>
+<div class="demo">
+  <section class="pb-section">
+    <h2 class="pb-section-title">What the flow sends</h2>
+    <div><button class="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button" aria-expanded="false">Show what the flow should send</button></div>
+  </section>
+  <section class="pb-section">
+    <h2 class="pb-section-title">What the flow sends, open</h2>
+    <div><button class="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button" aria-expanded="true">Hide what the flow should send</button></div>
+    <div class="pb-flow">
+      <p class="pb-section-text">For each tagged message, the flow posts JSON like this. <code>messageId</code>, <code>from.email</code>, and <code>text</code> or <code>html</code> are needed; the rest may be left out. <code>context</code> holds the messages before it, oldest first.</p>
+      <div class="pb-address"><pre class="pb-address-text pb-flow-text" aria-label="Example body">{
+  "messageId": "1794391578003",
+  "threadId": "1794391500000",
+  "from": {
+    "name": "Ada Example",
+    "email": "ada@example.com"
+  },
+  "text": "Po can you draft the agenda for Thursday",
+  "html": "&lt;p&gt;&lt;at id=\"0\"&gt;Po&lt;/at&gt; can you draft the agenda for Thursday&lt;/p&gt;",
+  "mentions": [
+    "Po"
+  ],
+  "context": [
+    {
+      "from": "Bo Example",
+      "text": "We need an agenda for Thursday.",
+      "at": "2026-11-11T09:58:00Z"
+    }
+  ],
+  "at": "2026-11-11T10:06:20Z",
+  "link": "https://teams.example.com/l/message/..."
+}</pre><button class="pb-btn pb-btn-sm pb-copy" type="button">Copy</button></div>
+      <span class="pb-hint">Answers go to the address for answers as JSON with <code>channelId</code>, <code>messageId</code>, <code>threadId</code>, <code>bot</code>, <code>text</code> and <code>html</code>. A bot's own new post goes there too, with <code>kind</code> set to <code>post</code> and no <code>messageId</code> or <code>threadId</code>; the flow answers with the new post's <code>messageId</code>.</span>
+    </div>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!-- @dsCard group="Channels" height=520 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SecretField</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>body { background: var(--surface); } .demo { padding: var(--space-5); max-width: 560px; display: flex; flex-direction: column; gap: var(--space-6); }</style>
+</head>
+<body>
+<div class="demo">
+  <section class="pb-section">
+    <h2 class="pb-section-title">Answers, not set</h2>
+    <p class="pb-reply-state"><span class="pb-mark pb-mark-idle"></span>No address for answers yet.</p>
+    <form class="pb-field pb-field-wide">
+      <label class="pb-label" for="a1">Address for answers</label>
+      <div class="pb-add-row"><input class="pb-input pb-add-input pb-secret-input" id="a1" type="text" value="https://flows.example.com/x" autocomplete="off" data-1p-ignore><button class="pb-btn pb-btn-sm" type="button">Save</button></div>
+      <span class="pb-hint">Without it, bots read messages from here but cannot answer there. The second flow, the one that posts answers in Teams, gives you this address.</span>
+    </form>
+  </section>
+  <section class="pb-section">
+    <div class="pb-section-head"><h2 class="pb-section-title">Answers, set</h2><span class="pb-saved" data-show>Saved</span></div>
+    <p class="pb-reply-state" data-set><span class="pb-mark pb-mark-check"></span>An address for answers is set. It is not shown again.</p>
+    <form class="pb-field pb-field-wide">
+      <label class="pb-label" for="a2">Replace it with</label>
+      <div class="pb-add-row"><input class="pb-input pb-add-input pb-secret-input" id="a2" type="text" placeholder="https://" autocomplete="off" data-1p-ignore><button class="pb-btn pb-btn-sm" type="button" disabled>Replace</button><button class="pb-btn pb-btn-sm pb-btn-danger" type="button">Remove</button></div>
+      <p class="pb-hint" style="color: var(--clay)" role="alert">Use an address that starts with https://.</p>
+    </form>
+  </section>
+</div>
+</body>
+</html>
