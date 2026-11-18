@@ -48,6 +48,14 @@ const builders = {
       target: "node22",
       packages: "external",
     });
+    await build({
+      ...common,
+      entryPoints: [at("engine", "core", "usage-history", "worker.ts")],
+      outfile: join(dist, "engine", "usage-history-worker.mjs"),
+      platform: "node",
+      format: "esm",
+      target: "node22",
+    });
     // Not bundled: the engine runs it with osascript (engine/backup.ts). It ships beside main.mjs, so
     // the service's copy on the internal drive has it too.
     cpSync(at("engine", "upload-state.js"), join(dist, "engine", "upload-state.js"));
@@ -112,7 +120,7 @@ const builders = {
     for (const { file } of PHONE_ICONS) cpSync(at("ui", "icons", file), join(dist, "ui", file));
     cpSync(at("ui", "icons", BADGE_ICON.file), join(dist, "ui", BADGE_ICON.file));
     cpSync(at("design-system", "dist", "tokens.css"), join(dist, "ui", "tokens.css"));
-    cpSync(at("design-system", "project", "components", "bundle.css"), join(dist, "ui", "bundle.css"));
+    cpSync(at("design-system", "dist", "bundle.css"), join(dist, "ui", "bundle.css"));
   },
 };
 

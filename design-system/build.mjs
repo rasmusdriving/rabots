@@ -54,7 +54,9 @@ const css = [
 mkdirSync(join(out, "preview"), { recursive: true });
 writeFileSync(join(out, "tokens.css"), css);
 
-const bundle = readFileSync(join(src, "components", "bundle.css"), "utf8");
+const components = join(src, "components");
+const bundle = ["bundle.css", "PobotsUsage/usage.css"].map((file) => readFileSync(join(components, file), "utf8")).join("\n");
+writeFileSync(join(out, "bundle.css"), bundle);
 const names = readdirSync(join(src, "components"), { withFileTypes: true })
   .filter((entry) => entry.isDirectory() && existsSync(join(src, "components", entry.name, "preview.html")))
   .map((entry) => entry.name);

@@ -1,17 +1,16 @@
-// Step 7b: the sections of the settings window that are new (Chats, Providers, Usage), the update
+// Step 7b: the sections of the settings window that are new (Chats, Providers), the update
 // dialog behind the round arrow at the foot of the left side, and the words they use. The window
 // itself and its General section are in AppSettings.tsx. Follows T3 Code's settings
 // (apps/web/src/components/settings/*: Providers, "Usage providers" with "Add hub", "Advanced" with the
-// health check interval) and its usage view (apps/web/src/components/usage/UsageLimitsPooled.tsx: per
-// provider and window the % left in big, a bar per account, the reset time).
+// health check interval).
 import { useEffect, useState, type ReactNode } from "react";
-import type { ChatTimingKey, Harness, ModelInfo, ProviderId, ProviderState, ProvidersState, UsageAccount, UsageProvider, UsageWindow } from "../../shared/protocol";
+import type { ChatTimingKey, Harness, ModelInfo, ProviderId, ProviderState, ProvidersState } from "../../shared/protocol";
 import { messageOf } from "../engine/types";
 import { useNow, useSaver, type SaveState } from "../lib/hooks";
 import { groupModels, offeredModels } from "../lib/models";
 import { PROVIDERS } from "../lib/providers";
 import { clockTime } from "../lib/words";
-import { addUsageHub, checkProviders, readUsage, removeUsageHub, setSettings, updateProviders } from "../state/actions";
+import { addUsageHub, checkProviders, removeUsageHub, setSettings, updateProviders } from "../state/actions";
 import { useAppState } from "../state/store";
 import { Dialog } from "./Dialog";
 import { Mark } from "./bits";
@@ -574,121 +573,6 @@ function HubsSection() {
         <ProblemLine text={error} />
       </form>
     </section>
-  );
-}
-
-// ------------------------------------------------------------ Usage
-
-/** What is left of one window: 100 minus what is used, rounded. */
-const left = (w: UsageWindow) => Math.max(0, Math.round(100 - w.usedPercent));
-
-/** The windows of a provider in order, each with every account that reports it (pooled as in T3 Code). */
-function poolWindows(p: UsageProvider): { id: string; label: string; members: { account: UsageAccount; window: UsageWindow }[] }[] {
-  const out: { id: string; label: string; members: { account: UsageAccount; window: UsageWindow }[] }[] = [];
-  for (const a of p.accounts) {
-    for (const w of a.windows) {
-      let row = out.find((r) => r.id === w.id);
-      if (!row) out.push((row = { id: w.id, label: w.label, members: [] }));
-      row.members.push({ account: a, window: w });
-    }
-  }
-  return out;
-}
-
-function initials(email: string | undefined, fallback: string): string {
-  if (!email) return fallback.slice(0, 2).toUpperCase();
-  const [local = "", domain = ""] = email.split("@");
-  return `${local[0] ?? ""}${domain[0] ?? ""}`.toUpperCase() || "?";
-}
-
-export function UsageSection() {
-  const usage = useAppState((s) => s.usage);
-  const hubs = useAppState((s) => s.settings?.hubs) ?? NO_HUBS;
-  const now = useNow(30_000);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    readUsage(false).catch((e: unknown) => setError(messageOf(e)));
-  }, []);
-  const refresh = () => {
-    setError("");
-    readUsage(true).catch((e: unknown) => setError(messageOf(e)));
-  };
-  const reading = !usage || usage.reading;
-  const source = hubs.length ? `From ${hubs.map((h) => h.url.replace(/^https?:\/\//, "")).join(" and ")}.` : "From Claude Code and Codex on this Mac.";
-  return (
-    <section className="pb-section pb-set7-usage" aria-labelledby="set7-usage" data-reading={reading || undefined}>
-      <div className="pb-section-head">
-        <h2 className="pb-section-title" id="set7-usage">
-          Usage
-        </h2>
-      </div>
-      <div className="pb-set7-checked">
-        <span className="pb-set7-checked-text" role="status">
-          {reading ? "Reading now." : `${source} ${checkedWords(usage?.checkedAt, now)}`}
-        </span>
-        <button type="button" className="pb-btn pb-btn-sm pb-btn-quiet pb-set7-refresh" aria-disabled={reading || undefined} onClick={() => !reading && refresh()}>
-          Refresh
-        </button>
-      </div>
-      <ProblemLine text={error || usage?.problem || ""} />
-      <div className="pb-set7-meters">
-        {(usage?.providers ?? []).map((p) => (
-          <ProviderMeters key={p.id} p={p} now={now} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ProviderMeters({ p, now }: { p: UsageProvider; now: number }) {
-  const rows = poolWindows(p);
-  const several = p.accounts.length > 1;
-  return (
-    <div className="pb-set7-meter-group" data-provider={p.id}>
-      <h3 className="pb-set7-meter-title">{p.label}</h3>
-      {p.accounts
-        .filter((a) => a.problem)
-        .map((a) => (
-          <p key={a.id} className="pb-hint pb-set7-meter-problem">
-            {several && a.email ? `${a.email}: ${a.problem}` : a.problem}
-          </p>
-        ))}
-      {rows.map((r) => {
-        const pooled = Math.round(r.members.reduce((n, m) => n + left(m.window), 0) / r.members.length);
-        return (
-          <div className="pb-set7-meter" key={r.id} data-window={r.id}>
-            <div className="pb-set7-meter-head">
-              <span className="pb-set7-meter-label">{r.label}</span>
-              <span className="pb-set7-meter-left">
-                <span className="pb-set7-meter-pct">{`${pooled}%`}</span> left
-              </span>
-            </div>
-            <div className="pb-set7-bars" data-several={several || undefined}>
-              {r.members.map(({ account, window }) => (
-                <Bar key={account.id} account={account} window={window} now={now} several={several} />
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function Bar({ account, window, now, several }: { account: UsageAccount; window: UsageWindow; now: number; several: boolean }) {
-  const l = left(window);
-  const reset = resetWords(window.resetsAt, now);
-  const who = account.email ?? account.via;
-  const label = `${several ? `${who}: ` : ""}${l}% left${reset ? `, ${reset}` : ""}`;
-  return (
-    <div className="pb-set7-bar" title={[who, account.plan, reset].filter(Boolean).join(" · ")} aria-label={label} role="img" data-low={l <= 15 || undefined}>
-      {several && <span className="pb-set7-chip">{initials(account.email, account.via)}</span>}
-      <span className="pb-set7-bar-track">
-        <span className="pb-set7-bar-fill" style={{ width: `${l}%` }} />
-      </span>
-      <span className="pb-set7-bar-pct">{`${l}%`}</span>
-      <span className="pb-set7-bar-reset">{reset}</span>
-    </div>
   );
 }
 

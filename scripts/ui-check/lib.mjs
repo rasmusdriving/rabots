@@ -14,7 +14,7 @@ export const keep = process.argv.includes("--keep");
 // --only=<section> runs one section by itself, in a browser of its own. "base" is the first step
 // (a bot's page and the rail); "2b" to "2g" are the steps that followed it (2b holds 2c too, 2e its addition, 2g its two later rounds). scripts/ui-check-all.mjs runs them all side by side; a new
 // section gets a name here, a block `if (skip("<name>")) break ...;` below, and nothing else.
-export const SECTIONS = ["base", "2b", "2d", "2e", "2f", "2g", "3a", "3b", "files", "backup", "phone", "push", "steer", "settings7", "chat7", "todo", "anyfile", "sees", "changes", "mdtable", "foldsteer", "botreach", "posts", "helpersrail", "calendar", "taskmanagers", "smallfixes", "cards-after-restart", "activity", "railresize", "card-questions", "failedwords", "restored-waiting", "lost-reply", "firststart", "gpttitles", "selfupdate"];
+export const SECTIONS = ["base", "2b", "2d", "2e", "2f", "2g", "3a", "3b", "files", "backup", "phone", "push", "steer", "settings7", "chat7", "todo", "anyfile", "sees", "changes", "mdtable", "foldsteer", "botreach", "posts", "helpersrail", "calendar", "taskmanagers", "smallfixes", "cards-after-restart", "activity", "railresize", "card-questions", "failedwords", "restored-waiting", "lost-reply", "firststart", "gpttitles", "selfupdate", "usage-page"];
 export const only = arg("only");
 if (only && !SECTIONS.includes(only)) {
   console.error(`No section "${only}". The sections: ${SECTIONS.join(", ")}`);

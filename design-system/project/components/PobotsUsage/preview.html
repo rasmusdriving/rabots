@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Pobots Usage</title></head>
+<body class="body" style="background:var(--surface-overlay);color:var(--ink);margin:var(--space-5)">
+<main class="pb-usage">
+  <header class="pb-usage-top">
+    <div class="pb-usage-scope"><h2 class="heading">Usage</h2><span>/</span><span class="small">This computer</span><span>/</span><select class="pb-input pb-select pb-usage-filter" aria-label="Filter by provider"><option>All providers</option><option>Claude Code</option><option>Codex</option></select></div>
+    <div class="pb-usage-toolbar">
+      <div class="pb-usage-choices" role="group" aria-label="Usage view"><button aria-pressed="true">Cost</button><button>Tokens</button><button>Limits</button></div>
+      <button class="pb-btn pb-btn-sm pb-btn-quiet">Refresh</button>
+      <div class="pb-usage-choices pb-usage-ranges" role="group" aria-label="Usage range"><button>Past 24h</button><button>7 days</button><button aria-pressed="true">30 days</button><button>90 days</button></div>
+    </div>
+  </header>
+  <p class="pb-usage-status small">Counts all Claude Code and Codex sessions saved on this computer.</p>
+  <div class="pb-usage-data">
+    <section class="pb-usage-overview">
+      <div class="pb-usage-summary">
+        <div class="display pb-usage-total">$128.36</div>
+        <div class="pb-usage-caption small">42 sessions · API estimate<br>Your subscription bill is separate.</div>
+        <div class="pb-usage-provider" data-provider="claude"><div class="pb-usage-provider-line body-strong"><span><i class="pb-usage-dot"></i>Claude Code</span><strong>$90.25</strong></div><div class="pb-usage-provider-details small">30 sessions · 70.3% of cost<br>28M tokens</div></div>
+        <div class="pb-usage-provider" data-provider="codex"><div class="pb-usage-provider-line body-strong"><span><i class="pb-usage-dot"></i>Codex</span><strong>$38.11</strong></div><div class="pb-usage-provider-details small">12 sessions · 29.7% of cost<br>18M tokens</div></div>
+      </div>
+      <div class="pb-usage-chart">
+        <h3 class="body-strong">Daily cost</h3>
+        <div class="pb-usage-plot">
+          <div class="pb-usage-axis label"><span>$20.00</span><span>$10.00</span><span>0</span></div>
+          <svg viewBox="0 0 600 176" preserveAspectRatio="none" aria-label="Two provider trends" role="img">
+            <g data-provider="claude"><path class="pb-usage-area" d="M0 170 L70 140 L120 160 L200 70 L300 120 L420 40 L500 100 L600 85 V176 H0Z"/><path class="pb-usage-line" d="M0 170 L70 140 L120 160 L200 70 L300 120 L420 40 L500 100 L600 85" vector-effect="non-scaling-stroke"/></g>
+            <g data-provider="codex"><path class="pb-usage-line" d="M0 174 L140 170 L230 140 L310 158 L470 125 L600 170" vector-effect="non-scaling-stroke"/></g>
+          </svg>
+          <div class="pb-usage-dates label"><span>Oct 20</span><span>Nov 4</span><span>Nov 18</span></div>
+        </div>
+      </div>
+    </section>
+    <section class="pb-usage-totals">
+      <h3 class="body-strong">Totals</h3>
+      <dl><div><dt class="small">Processed tokens</dt><dd class="heading">46M</dd></div><div><dt class="small">Cached input</dt><dd class="heading">41M</dd></div><div><dt class="small">Uncached input</dt><dd class="heading">2M</dd></div><div><dt class="small">Output</dt><dd class="heading">1M</dd></div><div><dt class="small">Cache savings</dt><dd class="heading">$280.43</dd></div></dl>
+    </section>
+  </div>
+  <section class="pb-set7-meter-group" data-provider="claude" aria-label="Example from the Limits view">
+    <h3 class="heading pb-set7-meter-title">Claude</h3>
+    <div class="pb-set7-meter">
+      <div class="pb-set7-meter-head"><span class="body-strong">Weekly</span><span class="label"><strong class="title">74%</strong> left</span></div>
+      <div class="pb-set7-bars"><div class="pb-set7-bar label"><span class="pb-set7-bar-track"><span class="pb-set7-bar-fill" style="width:74%"></span></span><span>74%</span><span class="pb-set7-bar-reset">Resets in 3 days</span></div></div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

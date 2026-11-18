@@ -131,6 +131,7 @@ export default async function section() {
     // Usage: the bars open the window on Usage; one account, then several.
     await open("usage=several", { theme });
     await ev(`click($(".pb-foot-usage"))`);
+    await ev(`click(btn("Limits"))`);
     const usage = await until(`$$(".pb-set7-meter").length >= 6 ? { current: $(".pb-foot-usage").getAttribute("aria-current"), section: $('.pb-setwin-tab[aria-selected="true"]').dataset.section, groups: $$(".pb-set7-meter-title").map((x) => x.textContent), first: $(".pb-set7-meter").querySelector(".pb-set7-meter-pct").textContent, bars: $(".pb-set7-meter").querySelectorAll(".pb-set7-bar").length, chips: $$(".pb-set7-chip").length, label: $(".pb-set7-bar").getAttribute("aria-label"), fable: $$(".pb-set7-meter-label").map((x) => x.textContent).includes("Weekly · Fable"), spend: $$(".pb-set7-meter-label").map((x) => x.textContent).includes("Monthly spend") } : null`, 5000);
     check(T("Usage: the bars open the window on Usage"), usage?.current === "page" && usage.section === "usage", usage);
     check(T("Usage: per provider and window the % left in big, a bar per account with its two letters, the reset time"), usage?.groups?.join(",") === "Claude,Codex" && usage.first === "100%" && usage.bars === 2 && usage.chips > 0 && /^kaja\.lind@example\.com: 100% left, resets in 3 h \d+ min$/.test(usage.label) && usage.fable && usage.spend, usage);
@@ -140,13 +141,14 @@ export default async function section() {
     await houseRules(T("the usage section, several accounts"));
     const meters0 = await ev(`$$(".pb-set7-meter").map((m) => Math.round(m.getBoundingClientRect().top)).join(",")`);
     await mock(`usageNext("several")`);
-    await ev(`click($(".pb-set7-refresh"))`);
+    await ev(`click($(".pb-usage-refresh"))`);
     await until(`$(".pb-set7-usage")?.dataset.reading === "true"`, 1500);
     const meters1 = await ev(`$$(".pb-set7-meter").map((m) => Math.round(m.getBoundingClientRect().top)).join(",")`);
     await until(`!$(".pb-set7-usage")?.dataset.reading`, 3000);
     check(T("Usage: Refresh reads again with the meters in place"), meters0 === meters1, { meters0, meters1 });
     await open("", { theme });
     await ev(`click($(".pb-foot-usage"))`);
+    await ev(`click(btn("Limits"))`);
     const one = await until(`$$(".pb-set7-meter").length >= 4 && !$(".pb-set7-usage").dataset.reading ? { bars: $(".pb-set7-meter").querySelectorAll(".pb-set7-bar").length, chips: $$(".pb-set7-chip").length, source: $(".pb-set7-checked-text").textContent } : null`, 5000);
     check(T("Usage: with one account each there is one bar per window, no letters, and it says where the reading came from"), one?.bars === 1 && one.chips === 0 && /^From Claude Code and Codex on this Mac\./.test(one.source), one);
     await zShot(`05-usage-one-${theme}`);

@@ -169,6 +169,7 @@ import { MockCardQuestions } from "./mock-cardquestions";
 import { cardAnswerLevers, seedCardAnswer } from "./mock-cardanswer";
 import { restWaitGone, restWaitView, seedRestoredWait } from "./mock-restoredwait";
 import { CODING_SEES, MockSees } from "./mock-sees";
+import { mockUsageOverview } from "./mock-usage";
 import { MockActivity } from "./mock-activity";
 import { MockCalendar } from "./mock-calendar";
 import { MockFirstStart } from "./mock-firststart";
@@ -402,6 +403,7 @@ export class MockEngine implements EngineClient {
     this.sees = new MockSees(flags.get("sees"));
     window.pobotsSees = this.sees.levers();
     window.pobotsActivity = this.activity.levers;
+    window.pobotsUsage = { waitMs: 0 };
     if (flags.get("seesset") === "1") this.bots = this.bots.map((b) => (b.harness === "codex" ? b : { ...b, sees: CODING_SEES() }));
     this.calendar = new MockCalendar(this, flags.get("calendar") ?? undefined);
     window.pobotsCalendar = this.calendar.levers();
@@ -656,6 +658,7 @@ export class MockEngine implements EngineClient {
     if (method === "artifact.open" && this.openDelayMs > 0) await later(this.openDelayMs);
     if (method === "notify.test" && this.notify.testMs > 0) await later(this.notify.testMs);
     if (method === "sees.inventory") await later(this.sees.wait());
+    if (method === "usage.overview" && window.pobotsUsage?.waitMs) await later(window.pobotsUsage.waitMs);
     if (method === "activity.day") await later(this.activity.wait());
     if (!this.connected) throw new EngineError({ code: "disconnected", message: "The engine is not reachable right now. Try again in a moment." });
     // Each handler returns the right result for its method; the cast ties them to M.
@@ -917,6 +920,7 @@ export class MockEngine implements EngineClient {
     "settings.set": (p) => this.settings7.handlers["settings.set"](p),
     "providers.check": (p) => this.settings7.handlers["providers.check"](p),
     "providers.update": (p) => this.settings7.handlers["providers.update"](p),
+    "usage.overview": mockUsageOverview,
     "usage.read": (p) => this.settings7.handlers["usage.read"](p),
     "usage.hub.add": (p) => this.settings7.handlers["usage.hub.add"](p),
     "usage.hub.remove": (p) => this.settings7.handlers["usage.hub.remove"](p),

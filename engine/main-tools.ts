@@ -4,7 +4,8 @@
 // This file only says what each tool is; the engine does the work behind them (engine/core/).
 import { z } from "zod";
 import type { BotColor } from "../shared/protocol.js";
-import { BOT_COLORS } from "../shared/protocol.js";
+import type { UsageToolArgs } from "./core/usage-history/tool.js";
+import { BOT_COLORS, USAGE_PROVIDERS, USAGE_RANGES } from "../shared/protocol.js";
 import type { BotTool } from "./claude/session.js";
 import { ok, TOOL_NAMES } from "./tool-names.js";
 import type { ActivityLogArgs } from "./core/activity-log.js";
@@ -167,8 +168,13 @@ export function mainTools(host: TeamHost, models: string): BotTool[] {
       name: TOOL_NAMES.getSettings,
       description:
         "See Pobots' own settings: what a message sent while a bot works does, when bots start fresh for each provider, how often Pobots looks at Claude Code and Codex, the providers and their versions, Pobots' own version and whether a new Pobots is available, the model that names chats, notifications and their devices, the backup and the usage meters.",
-      shape: { fresh: z.boolean().optional().describe("true: look at the providers, for a new Pobots, and read usage again first.") },
-      handler: async (args) => ok(await host.getSettings(args as { fresh?: boolean })),
+      shape: {
+        fresh: z.boolean().optional().describe("Look again. With usage_range, refresh saved session usage only."),
+        usage_range: z.enum(USAGE_RANGES).optional().describe("Read estimated API cost and tokens for all Claude Code and Codex sessions saved on this computer, including outside Pobots. Use 24h, 7d, 30d or 90d. Omit to read settings and plan limits as usual."),
+        usage_provider: z.enum(USAGE_PROVIDERS).optional().describe("With usage_range, show only Claude Code or Codex."),
+        usage_breakdown: z.enum(["model", "day"]).optional().describe("With usage_range, include the breakdown by model or day."),
+      },
+      handler: async (args) => ok(await host.getSettings(args as UsageToolArgs)),
     },
     {
       name: TOOL_NAMES.changeSettings,

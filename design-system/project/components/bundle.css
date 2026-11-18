@@ -1279,27 +1279,6 @@ a.pb-msg-file:focus-visible { outline: 2px solid var(--focus); outline-offset: 2
 .pb-set7-hub-form .pb-field { max-width: 420px; }
 .pb-set7-hub-act { display: flex; }
 
-/* Usage: per provider and window, what is left in big, a bar per account, the reset time (T3 Code). */
-.pb-set7-meters { display: flex; flex-direction: column; gap: var(--space-5); }
-.pb-set7-meter-group { display: flex; flex-direction: column; gap: var(--space-3); }
-.pb-set7-meter-title { margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; }
-.pb-set7-meter { display: grid; grid-template-columns: 132px minmax(0, 1fr); column-gap: var(--space-4); align-items: start; }
-.pb-set7-meter-head { display: flex; flex-direction: column; }
-.pb-set7-meter-label { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
-.pb-set7-meter-left { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
-.pb-set7-meter-pct { font-size: 22px; line-height: 28px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.pb-set7-bars { display: flex; flex-direction: column; gap: var(--space-1); padding-top: 4px; }
-.pb-set7-bar { display: grid; grid-template-columns: minmax(0, 1fr) 40px 132px; align-items: center; column-gap: var(--space-2); min-height: 24px; }
-.pb-set7-bars[data-several] .pb-set7-bar { grid-template-columns: 22px minmax(0, 1fr) 40px 132px; }
-.pb-set7-chip { width: 22px; height: 22px; border-radius: var(--radius-full); background: var(--fill-strong); color: var(--ink-muted); font-size: 10px; line-height: 22px; font-weight: 600; text-align: center; }
-.pb-set7-bar-track { height: 8px; border-radius: var(--radius-full); background: var(--fill); overflow: hidden; }
-.pb-set7-bar-fill { display: block; height: 100%; border-radius: var(--radius-full); background: var(--ink-muted); transition: width var(--dur-calm) var(--ease-soft); }
-.pb-set7-bar[data-low] .pb-set7-bar-fill { background: var(--clay); }
-.pb-set7-bar-pct { font-size: 12px; line-height: 16px; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
-.pb-set7-bar-reset { font-size: 12px; line-height: 16px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pb-set7-usage[data-reading] .pb-set7-meters { opacity: 0.6; transition: opacity var(--dur-quick) var(--ease-soft); }
-.pb-set7-meter-problem { margin: 0; }
-
 /* The History tab: earlier chats by their titles. */
 .pb-history-title { margin: var(--space-2) 0 var(--space-1); }
 .pb-history-chats { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-4); }

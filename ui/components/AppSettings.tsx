@@ -51,7 +51,8 @@ import { phoneBack } from "../state/screens";
 import { store, useAppState, type SettingsSection } from "../state/store";
 import { CheckIcon, CloseIcon, GearIcon, Mark } from "./bits";
 import { keepTabInside } from "./Dialog";
-import { ChatsSection, ProvidersSection, UsageSection } from "./SettingsWindow";
+import { ChatsSection, ProvidersSection } from "./SettingsWindow";
+import { UsageSection } from "./usage/UsageSection";
 import { PhoneBack } from "./PhoneBack";
 import { CalendarSection } from "./CalendarSection";
 import { ActivityView } from "./ActivityView";
@@ -84,7 +85,7 @@ const WINDOW_SECTIONS: { id: SettingsSection; label: string; render: () => React
   { id: "chats", label: "Chats", render: () => <div className="pb-settings"><ChatsSection /></div> },
   { id: "providers", label: "Providers", render: () => <div className="pb-settings"><ProvidersSection /></div> },
   { id: "calendar", label: "Calendar", render: () => <div className="pb-settings"><CalendarSection /></div> },
-  { id: "usage", label: "Usage", render: () => <div className="pb-settings"><UsageSection /></div> },
+  { id: "usage", label: "Usage", render: () => <UsageSection /> },
   // Protocol 22: a day's activity, read only, as T3 Code lists its Diagnostics page among its settings.
   { id: "activity", label: "Activity", render: () => <div className="pb-settings"><ActivityView /></div> },
 ];

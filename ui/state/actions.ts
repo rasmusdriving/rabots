@@ -653,6 +653,10 @@ export async function readActivityDay(day?: string): Promise<ActivityDay> {
 }
 
 /** Reads the usage meters (again, with `refresh`). */
+export function readUsageOverview(range: Methods["usage.overview"]["params"]["range"], refresh = false) {
+  return engine().request("usage.overview", { range, refresh });
+}
+
 export async function readUsage(refresh = false): Promise<void> {
   const { usage } = await engine().request("usage.read", { refresh });
   store.setUsage(usage);

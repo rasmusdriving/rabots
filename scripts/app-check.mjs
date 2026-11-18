@@ -106,44 +106,50 @@ const OWN_FILE = ["sees", "maintools", "cards-after-restart"];
 
 // ------------------------------------------------------------ the check
 try {
-  let endpoint = await startEngine();
-  await connectBrowser();
-  await cmd("Page.enable");
-  await openWindow(endpoint);
+  if (only === "usage-page") {
+    await connectBrowser();
+    await cmd("Page.enable");
+    await (await import("./app-check/sections/usage-page.mjs")).default();
+  } else {
+    let endpoint = await startEngine();
+    await connectBrowser();
+    await cmd("Page.enable");
+    await openWindow(endpoint);
 
-  // 1. First start (engine 0.33.0): the window asks for the main bot, named Po unless changed. Made on
-  // Haiku, it greets by itself (the welcome turn); the sections that follow see that greeting first.
-  check("first run asks for the first bot", !!(await until(`[...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Create main bot") && document.querySelector("#first-name")?.value === "Po"`, 15_000)));
-  await shot("1-first-run");
-  await js(`(() => { const i = document.querySelector("#first-name"); i.focus(); i.select(); })()`);
-  await cmd("Input.insertText", { text: "Kaja" });
-  await js(`[...document.querySelectorAll(".app-first-form [aria-pressed]")].find((b) => /Haiku/.test(b.textContent))?.click()`);
-  await clickButton("Create main bot");
-  check("the bot is created and its chat opens", !!(await until(`document.querySelector("textarea")?.placeholder === "Message Kaja"`, 15_000)));
-  const greeted = await until(`(${headStatus}) === "Done" && (${lastAnswer}).length > 0 && !document.querySelector(".pb-msg-you")`, 120_000);
-  check("the main bot greets the person by itself", !!greeted, JSON.stringify(await js(lastAnswer)).slice(0, 80));
-  run.greeting = String(await js(lastAnswer));
-  check("the bot folder exists with its job file", existsSync(join(botsDir, "kaja", "AGENTS.md")) && existsSync(join(botsDir, "kaja", "bot.json")));
+    // 1. First start (engine 0.33.0): the window asks for the main bot, named Po unless changed. Made on
+    // Haiku, it greets by itself (the welcome turn); the sections that follow see that greeting first.
+    check("first run asks for the first bot", !!(await until(`[...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Create main bot") && document.querySelector("#first-name")?.value === "Po"`, 15_000)));
+    await shot("1-first-run");
+    await js(`(() => { const i = document.querySelector("#first-name"); i.focus(); i.select(); })()`);
+    await cmd("Input.insertText", { text: "Kaja" });
+    await js(`[...document.querySelectorAll(".app-first-form [aria-pressed]")].find((b) => /Haiku/.test(b.textContent))?.click()`);
+    await clickButton("Create main bot");
+    check("the bot is created and its chat opens", !!(await until(`document.querySelector("textarea")?.placeholder === "Message Kaja"`, 15_000)));
+    const greeted = await until(`(${headStatus}) === "Done" && (${lastAnswer}).length > 0 && !document.querySelector(".pb-msg-you")`, 120_000);
+    check("the main bot greets the person by itself", !!greeted, JSON.stringify(await js(lastAnswer)).slice(0, 80));
+    run.greeting = String(await js(lastAnswer));
+    check("the bot folder exists with its job file", existsSync(join(botsDir, "kaja", "AGENTS.md")) && existsSync(join(botsDir, "kaja", "bot.json")));
 
-  // Use the cheapest model for the rest. Set behind the window's back; the window must follow.
-  const side = await sideChannel(endpoint);
-  const snap = await side.request("snapshot");
-  const cheap = snap.models.find((m) => /haiku/.test(m.id)) ?? snap.models[snap.models.length - 1];
-  await side.request("bot.update", { botId: "kaja", patch: { model: cheap.id, effort: cheap.efforts.includes("low") ? "low" : cheap.defaultEffort } });
-  // The first-start screen made Kaja on Haiku at its default effort; the change to low must show.
-  const lowWord = cheap.efforts.includes("low") ? "Low" : "";
-  check("the window follows a settings change made elsewhere", !!(await until(`document.querySelector(".pb-composer")?.textContent.includes(${JSON.stringify(cheap.label)}) && document.querySelector(".pb-composer").textContent.includes(${JSON.stringify(lowWord)})`, 10_000)), cheap.label);
-  // What every section uses (lib.mjs). A section that restarts the engine writes the new address back.
-  Object.assign(run, { endpoint, side, snap, cheap });
+    // Use the cheapest model for the rest. Set behind the window's back; the window must follow.
+    const side = await sideChannel(endpoint);
+    const snap = await side.request("snapshot");
+    const cheap = snap.models.find((m) => /haiku/.test(m.id)) ?? snap.models[snap.models.length - 1];
+    await side.request("bot.update", { botId: "kaja", patch: { model: cheap.id, effort: cheap.efforts.includes("low") ? "low" : cheap.defaultEffort } });
+    // The first-start screen made Kaja on Haiku at its default effort; the change to low must show.
+    const lowWord = cheap.efforts.includes("low") ? "Low" : "";
+    check("the window follows a settings change made elsewhere", !!(await until(`document.querySelector(".pb-composer")?.textContent.includes(${JSON.stringify(cheap.label)}) && document.querySelector(".pb-composer").textContent.includes(${JSON.stringify(lowWord)})`, 10_000)), cheap.label);
+    // What every section uses (lib.mjs). A section that restarts the engine writes the new address back.
+    Object.assign(run, { endpoint, side, snap, cheap });
 
-  if (only === "backup" || only === "push" || only === "steer" || only === "titles" || only === "chat7" || only === "workers" || STEP7C.includes(only) || OWN_FILE.includes(only)) side.close();
+    if (only === "backup" || only === "push" || only === "steer" || only === "titles" || only === "chat7" || only === "workers" || STEP7C.includes(only) || OWN_FILE.includes(only)) side.close();
 
-  // Every section lives in a file of its own under app-check/sections/, named as in SECTIONS
-  // (app-check/lib.mjs), and they run in that order. A new section: add its name there and a file
-  // there whose default function holds its checks.
-  for (const name of SECTIONS) {
-    if (only && only !== name) continue;
-    await (await import(`./app-check/sections/${name}.mjs`)).default();
+    // Every section lives in a file of its own under app-check/sections/, named as in SECTIONS
+    // (app-check/lib.mjs), and they run in that order. A new section: add its name there and a file
+    // there whose default function holds its checks.
+    for (const name of SECTIONS) {
+      if (only && only !== name) continue;
+      await (await import(`./app-check/sections/${name}.mjs`)).default();
+    }
   }
 } catch (err) {
   check("the check ran to the end", false, err instanceof Error ? err.message : String(err));

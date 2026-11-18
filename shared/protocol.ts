@@ -38,7 +38,10 @@
 // GPT models. A bot's model decides its harness (see ModelInfo.harness). Everything else in this
 // file is the same for both: the app never asks which harness a bot runs on, except to say so.
 
-export const PROTOCOL_VERSION = 25;
+import type { UsageOverviewRead, UsageRange } from "./usage-overview.js";
+export * from "./usage-overview.js";
+
+export const PROTOCOL_VERSION = 26;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -1662,6 +1665,8 @@ export interface Methods {
   "providers.update": { params: Record<string, never>; result: { providers: ProvidersState } };
   /** The usage meters. `refresh`: read again now, else the last reading when it is fresh enough. */
   "usage.read": { params: { refresh?: boolean }; result: { usage: UsageState } };
+  /** Local harness history, grouped for Settings > Usage. A cold scan can return reading with no figures yet. */
+  "usage.overview": { params: { range: UsageRange; refresh?: boolean }; result: UsageOverviewRead };
   /** Adds a CLIProxyAPI hub: its address and its management key (or an op:// reference to it). The key is never sent back. */
   "usage.hub.add": { params: { url: string; key: string }; result: { settings: PobotsSettings } };
   "usage.hub.remove": { params: { id: string }; result: { settings: PobotsSettings } };

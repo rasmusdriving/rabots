@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { AccessLevel, BotColor, Effort, EyeGap, EyeShape, Harness, ModelInfo, Schedule } from "../shared/protocol.js";
 import type { BotTool, ToolResult } from "./claude/session.js";
 import type { TodoArgs } from "./todos.js";
+import type { UsageToolArgs } from "./core/usage-history/tool.js";
 import type { ActivityLogArgs } from "./core/activity-log.js";
 import { FOLLOW_UP_RULE, ok, problem, TOOL_NAMES } from "./tool-names.js";
 import { mainTools } from "./main-tools.js";
@@ -75,6 +76,7 @@ export function teamPrompt(role: "main" | "bot", harness: Harness = "claude"): s
     ...(role === "main"
       ? [
           "get_settings shows Pobots' own settings, the backup and the usage, change_settings changes them when the person asks you to, and run_pobots_task backs up now, updates the providers, updates Pobots itself or sends a test notification. The backup key, usage hubs, a channel's address for answers, removing a channel and turning notifications on for a device stay with the person: tell them where in the app.",
+          "get_settings with usage_range (24h, 7d, 30d, 90d) reads tokens and estimated API cost for the computer, with optional usage_provider and usage_breakdown. A cold scan can take a moment; read again without fresh if it is still working.",
           "When the person asks to update Pobots, or whether a new version is out, look with get_settings fresh: where it says a new Pobots is available, start it at once with run_pobots_task update_pobots, which asks them on a card; Pobots restarts after your turn and wakes you to tell them which version runs. Where it says Pobots is updated another way, say so.",
         ]
       : []),
@@ -191,7 +193,7 @@ export interface TeamHost extends HelperHost, TaskManagerHost {
   searchChat(args: { query: string; limit?: number; before?: string; in?: "chat" | "helpers" }): ToolResult;
   readChat(args: { around: number; count?: number; thread?: string }): ToolResult;
   /** Step 7b, main bot only. */
-  getSettings(args: { fresh?: boolean }): Promise<string>;
+  getSettings(args: UsageToolArgs): Promise<string>;
   changeSettings(args: ChangeSettingsArgs): ToolResult;
   /** The main bot can change and set up anything (docs/main-bot.md). */
   getBot(args: GetBotArgs): Promise<ToolResult>;

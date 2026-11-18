@@ -15,10 +15,12 @@ import { refused } from "./words.js";
 import { wake } from "./start-helper.js";
 import { log } from "../log.js";
 import { localWhen } from "./words.js";
+import { usageHistoryWords, type UsageToolArgs } from "./usage-history/tool.js";
 import { nowWords } from "../schedule.js";
 
 /** get_settings: Pobots' settings, then the backup, the devices and the usage. `fresh` looks again first. */
-export async function getSettingsFresh(eng: Engine, args: { fresh?: boolean }): Promise<string> {
+export async function getSettingsFresh(eng: Engine, args: UsageToolArgs): Promise<string> {
+  if (args.usage_range) return usageHistoryWords(eng, { ...args, usage_range: args.usage_range });
   if (args.fresh) {
     await Promise.allSettled([eng.providersCheck(), eng.usageRead({ refresh: true })]).then((rs) => {
       for (const r of rs) if (r.status === "rejected") log.warn("get_settings: a fresh look failed", r.reason);
