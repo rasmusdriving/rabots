@@ -55,9 +55,12 @@ import { ChatsSection, ProvidersSection, UsageSection } from "./SettingsWindow";
 import { PhoneBack } from "./PhoneBack";
 import { CalendarSection } from "./CalendarSection";
 import { ActivityView } from "./ActivityView";
+import { AboutYouSection } from "./AboutYouSection";
 
 /** The parts of the General section, in order. A new part is one more entry here. */
 const SECTIONS: { id: string; render: () => ReactNode }[] = [
+  // Engine 0.33.0: the note about the person every bot gets, first.
+  { id: "about", render: () => <AboutYouSection /> },
   { id: "notify", render: () => <NotifySection /> },
   { id: "chat", render: () => <FollowUpSection /> },
   { id: "backup", render: () => <BackupSection /> },

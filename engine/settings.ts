@@ -183,7 +183,6 @@ export function applyPatch(file: SettingsFile, patch: SettingsPatch, models: { i
   if (patch.titleModel !== undefined) {
     const m = models.find((x) => x.id === patch.titleModel);
     if (!m) throw new EngineError("bad_request", "That model is not in the list.");
-    if (m.harness !== "claude") throw new EngineError("bad_request", "Chat titles are made by a Claude model for now.");
     next.titleModel = m.id;
   }
   for (const p of PROVIDER_IDS) {

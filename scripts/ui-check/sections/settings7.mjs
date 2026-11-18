@@ -43,7 +43,7 @@ export default async function section() {
     await until(`!!$(".pb-setwin")`);
     await sleep(250);
     const win = await ev(`({ tabs: $$(".pb-setwin-tab").map((t) => t.textContent + (t.getAttribute("aria-selected") === "true" ? "*" : "")), title: $(".pb-appsettings-title").textContent, focus: document.activeElement?.textContent, parts: $$(".pb-appsettings-section").map((s) => s.dataset.section).join(",") })`);
-    check(T("the settings window opens on General, the six sections listed on the left, its title in focus"), win?.tabs?.join(",") === "General*,Chats,Providers,Calendar,Usage,Activity" && win.title === "Settings" && win.focus === "Settings" && win.parts === "notify,chat,backup", win);
+    check(T("the settings window opens on General, the six sections listed on the left, its title in focus"), win?.tabs?.join(",") === "General*,Chats,Providers,Calendar,Usage,Activity" && win.title === "Settings" && win.focus === "Settings" && win.parts === "about,notify,chat,backup", win);
     const box0 = await ev(winBox);
     const boxes = [];
     for (const id of ["chats", "providers", "calendar", "usage", "general"]) {
@@ -94,7 +94,8 @@ export default async function section() {
     const codexTab = await until(`$("#set7-codex-warmMarginMinutes") ? { disabled: $("#set7-codex-warmMarginMinutes").disabled, hint: $('.pb-set7-row[data-key="warmMarginMinutes"] .pb-set7-row-hint').textContent } : null`);
     check(T("Chats: for Codex bots the cache value is off, and says why"), codexTab?.disabled && /Codex does not say how long its cache lives/.test(codexTab.hint), codexTab);
     await ev(`(() => { const s = $("#set7-title-model"); s.value = "claude-sonnet-5-5"; s.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`);
-    check(T("Chats: the model that names chats is chosen from the Claude models"), !!(await until(`window.pobotsMock.settingsState().titleModel === "claude-sonnet-5-5"`)) && !(await ev(`$$("#set7-title-model option").some((o) => o.value.startsWith("gpt"))`)));
+    // Since 18 Nov 2026 the ChatGPT models are offered too, in a group of their own (section gpttitles).
+    check(T("Chats: the model that names chats is chosen from the Claude and ChatGPT models"), !!(await until(`window.pobotsMock.settingsState().titleModel === "claude-sonnet-5-5"`)) && (await ev(`$$("#set7-title-model optgroup").map((g) => g.label).join(",")`)) === "Claude,ChatGPT");
     await zShot(`02-chats-${theme}`);
 
     // Providers.

@@ -372,6 +372,8 @@ export interface AppState {
   notify: NotifyState | null;
   /** The chat settings (protocol 14): what a message sent while a bot works does by default. */
   chat: ChatSettings;
+  /** Protocol 24: "About you", the note about the person every bot gets. Empty when none. */
+  aboutYou: string;
   /** Step 7c: the person's open to-dos, as the engine keeps them (oldest first; the rail sorts them). */
   todos: Todo[];
   /**
@@ -466,6 +468,7 @@ export class Store {
     backup: null,
     notify: null,
     chat: { followUp: "steer" },
+    aboutYou: "",
     todos: [],
     // On a phone the history entry's view says whether settings show; on the laptop its own mark does.
     appSettings: PHONE_START ? PHONE_START.settings === true : appSettingsAtStart(),
@@ -485,6 +488,8 @@ export class Store {
   notifyEvents = 0;
   /** How many "chat.changed" events have come, for the same reason. */
   chatEvents = 0;
+  /** How many "aboutYou.changed" events have come, for the same reason. */
+  aboutYouEvents = 0;
   /** Step 7b: how many "settings.changed" events have come, for the same reason. */
   settingsEvents = 0;
   /** How many "calendar.changed" events have come, for the same reason. */
@@ -532,6 +537,7 @@ export class Store {
       backup: s.backup ?? null,
       notify: s.notify ?? null,
       chat: s.chat ?? { followUp: "steer" },
+      aboutYou: s.aboutYou ?? "",
       settings: s.settings ?? null,
       providers: s.providers ?? null,
       todos: s.todos ?? [],
@@ -717,6 +723,10 @@ export class Store {
         this.chatEvents++;
         this.set({ chat: e.data.chat });
         return;
+      case "aboutYou.changed":
+        this.aboutYouEvents++;
+        this.set({ aboutYou: e.data.aboutYou });
+        return;
       // step 7c: to-dos for the person
       case "todo.changed": {
         const todo = e.data.todo;
@@ -867,6 +877,10 @@ export class Store {
 
   setChat(chat: ChatSettings): void {
     this.set({ chat });
+  }
+
+  setAboutYou(aboutYou: string): void {
+    this.set({ aboutYou });
   }
 
   setNotify(notify: NotifyState): void {

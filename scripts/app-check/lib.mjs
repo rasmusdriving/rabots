@@ -29,7 +29,7 @@ export const only = arg("only");
 // The sections, each runnable by itself with --only=<name>. "base" is the first bot and steps 2 to
 // 14; every other section is the first bot and its own step. scripts/check-all.mjs runs them side
 // by side. A new step gets a name here and a file of its own in sections/ (see ../app-check.mjs).
-export const SECTIONS = ["base", "files", "backup", "push", "steer", "titles", "chat7", "fullaccess", "anyfile", "todo", "sees", "workers", "maintools", "botreach", "posts", "helpersrail", "calendar", "aside", "taskmanagers", "helpersees", "gptbotsees", "gptchangesees", "activitylog", "cards-after-restart", "activityday", "railresize", "card-questions", "restored-waiting"];
+export const SECTIONS = ["base", "files", "backup", "push", "steer", "titles", "chat7", "fullaccess", "anyfile", "todo", "sees", "workers", "maintools", "botreach", "posts", "helpersrail", "calendar", "aside", "taskmanagers", "helpersees", "gptbotsees", "gptchangesees", "activitylog", "cards-after-restart", "activityday", "railresize", "card-questions", "restored-waiting", "firststart", "gpttitles"];
 if (process.argv.includes("--sections")) {
   console.log(SECTIONS.join("\n"));
   process.exit(0);
@@ -314,4 +314,4 @@ export const openWindow = async (endpoint) => {
 // What step 1 (in ../app-check.mjs) makes and every section uses: the engine's address, the side
 // channel, the first snapshot and the cheapest model. A field, not a constant, because two sections
 // restart the engine and write the new address back here for the sections after them.
-export const run = { endpoint: undefined, side: undefined, snap: undefined, cheap: undefined };
+export const run = { endpoint: undefined, side: undefined, snap: undefined, cheap: undefined, greeting: "" };

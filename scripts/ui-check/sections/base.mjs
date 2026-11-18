@@ -235,8 +235,8 @@ export default async function section() {
 
   // ---------------- first run, as in step 1
   await open("scene=first-run");
-  check("first run still asks for the first bot", (await until(`text(".app-first-title") === "Your first bot"`)) === true);
-  await ev(`$("#first-name").focus()`);
+  check("first run still asks for the first bot", (await until(`text(".app-first-title") === "Welcome to Pobots"`)) === true);
+  await ev(`(() => { const i = $("#first-name"); i.focus(); i.select(); })()`);
   await type("Po");
   await key("Enter");
   check("and opens its chat as the main bot", !!(await until(`$(".app-main")?.getAttribute("aria-label") === "Po" && text(".app-head .pb-row-line") === "Main bot" && tabOpen() === "chat"`)));

@@ -239,16 +239,20 @@ try {
   // 1. From "the laptop": over HTTPS with the allowed identity.
   identity = LOGIN;
   await open(`${tailnetPage}?theme=dark`);
-  check("the page loads over HTTPS and asks for the first bot", !!(await browser.until(`[...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Create bot")`, 20_000)));
+  check("the page loads over HTTPS and asks for the first bot", !!(await browser.until(`[...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Create main bot")`, 20_000)));
   check("the page knows it is in a browser, not the desktop shell", (await browser.js(`document.documentElement.dataset.shell`)) === "browser");
   const who = await browser.js(`fetch("/api/whoami").then((r) => r.text())`);
   check("whoami says the device is let in over Tailscale, without echoing the login", /"via":"tailscale"/.test(who) && !who.includes("example.com"));
   await shot("1-first-run");
 
-  await browser.js(`document.querySelector("input").focus()`);
+  // The first start (engine 0.33.0): named Kaja over "Po", on Haiku; the main bot greets by itself.
+  await browser.js(`(() => { const i = document.querySelector("#first-name"); i.focus(); i.select(); })()`);
   await browser.cmd("Input.insertText", { text: "Kaja" });
-  await clickButton("Create bot");
+  await browser.js(`[...document.querySelectorAll(".app-first-form [aria-pressed]")].find((b) => /Haiku/.test(b.textContent))?.click()`);
+  await clickButton("Create main bot");
   check("the bot is created and its chat opens", !!(await browser.until(`document.querySelector("textarea")?.placeholder === "Message Kaja"`, 15_000)));
+  check("the main bot greets by itself", !!(await browser.until(`(${headStatus}) === "Done" && (${lastAnswer}).length > 0 && !document.querySelector(".pb-msg-you")`, 120_000)));
+  const greeting = String(await browser.js(lastAnswer));
   const gap = await browser.js(`({ drag: getComputedStyle(document.querySelector(".app-drag")).display, top: getComputedStyle(document.querySelector(".app-side-top")).paddingTop })`);
   check("no room is kept for macOS window buttons in a browser", gap?.drag === "none" && gap?.top !== "24px", JSON.stringify(gap));
 
@@ -261,7 +265,7 @@ try {
 
   await type("Say hello in five words or fewer.");
   check("your message shows as a bubble", !!(await browser.until(`document.querySelector(".pb-msg-you")?.textContent.includes("five words")`, 10_000)));
-  const answered = await browser.until(`(${headStatus}) === "Done" && (${lastAnswer}).length > 0`, 120_000);
+  const answered = await browser.until(`(${headStatus}) === "Done" && (${lastAnswer}).length > 0 && (${lastAnswer}) !== ${JSON.stringify(greeting)}`, 120_000);
   check("the bot answers over the tailnet page", !!answered, JSON.stringify(await browser.js(lastAnswer)).slice(0, 80));
   const answer = await browser.js(lastAnswer);
   await shot("2-answered");

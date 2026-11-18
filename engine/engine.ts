@@ -73,7 +73,9 @@ import { Backup, type BackupTimings, type UploadReader } from "./backup.js";
 import { SHORTEN_STUCK_MS, SHORTEN_WAIT_MS } from "./shorten.js";
 import { BACKUP_TIME, chatConfig, CONTEXT_DEFAULTS, fullAt, NOTIFY_DEFAULTS, writeConfigPart, type ContextSettings, type EngineConfig } from "./config.js";
 import { SettingsHub, type SettingsHubOptions } from "./settings-hub.js";
-import { claudeTitleMaker, Titles, toChatTitle, type TitleMaker } from "./titles.js";
+import { TITLE_MODEL_DEFAULT } from "./settings.js";
+import { claudeTitleMaker, routedTitleMaker, TITLE_SYSTEM, Titles, toChatTitle, type TitleMaker } from "./titles.js";
+import { CodexTitles } from "./codex/titles.js";
 import { EngineError } from "./errors.js";
 import { type ChangeBy } from "./history.js";
 import { log } from "./log.js";
@@ -107,6 +109,7 @@ import { startTurn } from "./core/turn-start.js";
 import { calm, checkContext, startFresh } from "./core/turn-end.js";
 import { cancelSettle, stopHelper, stopHelpers } from "./core/helpers.js";
 import { closeAllSessions, closeLive, refreshSessions } from "./core/aside.js";
+import { aboutYou, setAboutYou } from "./core/first-start.js";
 import { workingHelpers } from "./core/working-helpers.js";
 import { closeTaskManagers, taskManagerInfos } from "./core/task-managers.js";
 import { init } from "./core/start-up.js";
@@ -116,7 +119,7 @@ import { activityDayFor } from "./core/activity-day.js";
 export { HELPER_LAST_MAX, helperLine, helperTitle, insideDir, waitingWords } from "./core/words.js";
 export { TIDY_PROMPT, TIDY_REFUSAL } from "./core/runtime.js";
 
-export const ENGINE_VERSION = "0.32.0";
+export const ENGINE_VERSION = "0.33.0";
 
 /** How long a bot waits for another bot's answer before the answer is sent later as a message. */
 const ASK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -248,7 +251,7 @@ export interface EngineOptions {
    */
   settingsHub?: SettingsHubOptions;
   checkClaude?: () => Promise<ClaudeSetup>;
-  /** Step 7b: what makes a chat's title. Defaults to a `claude -p` call; tests pass a stand-in. */
+  /** Step 7b: what makes a chat's title with a Claude model. Defaults to a `claude -p` call; tests pass a stand-in. A GPT model's titles go through Codex (engine/codex/titles.ts). */
   titleMaker?: TitleMaker;
   titleTimings?: { backfillStartMs?: number; backfillEveryMs?: number };
   /** The nightly backup's stand-ins and shorter waits, for tests. */
@@ -313,6 +316,8 @@ export class Engine {
   readonly seesHub: SeesHub;
   /** Step 7b: chat titles. */
   readonly titles: Titles;
+  /** The quiet Codex app-server that makes a GPT model's chat titles. */
+  private readonly codexTitles: CodexTitles;
   readonly wakeGraceMs: number;
   readonly helperStopMs: number;
   readonly shortenTimings: { waitMs: number; stuckMs: number };
@@ -437,11 +442,24 @@ export class Engine {
       opts.config.context,
       opts.settingsHub,
     );
+    const titlesDir = join(opts.config.dataDir, "titles");
+    this.codexTitles = new CodexTitles({ setup: () => this.codex, workDir: titlesDir, system: TITLE_SYSTEM });
+    const claudeOk = () => this.opts.claude.ready && this.hub.enabled("claude");
+    const codexOk = () => this.codex.ready && this.hub.enabled("codex");
+    const isGpt = (model: string) => this.harnessOf(model) === "codex";
     this.titles = new Titles({
       store: this.store,
-      maker: opts.titleMaker ?? claudeTitleMaker(() => this.opts.claude, join(opts.config.dataDir, "titles")),
+      // A GPT model's titles come from Codex, with the Claude default when Codex cannot (step gpt-titles).
+      maker: routedTitleMaker({
+        claude: opts.titleMaker ?? claudeTitleMaker(() => this.opts.claude, titlesDir),
+        codex: (prompt, model) => this.codexTitles.make(prompt, model),
+        isGpt,
+        codexOk,
+        claudeOk,
+        fallbackModel: TITLE_MODEL_DEFAULT,
+      }),
       model: () => this.hub.titleModel(),
-      canMake: () => !this.stopping && this.opts.claude.ready && this.hub.enabled("claude"),
+      canMake: () => !this.stopping && (claudeOk() || (isGpt(this.hub.titleModel()) && codexOk())),
       titled: (botId, chat) => this.opts.emit("chat.titled", { botId, chat }),
       ...(opts.titleTimings ? { timings: opts.titleTimings } : {}),
     });
@@ -582,6 +600,7 @@ export class Engine {
       settings: this.hub.view(),
       providers: this.hub.providers(),
       todos: this.store.openTodos(),
+      aboutYou: aboutYou(this),
       calendar: calendarState(this),
     };
   }
@@ -613,6 +632,12 @@ export class Engine {
       if (byBot) noteChanges(this, byBot, r.changes);
     }
     return r;
+  }
+
+  /** "aboutYou.set" from the window (engine 0.33.0, core/first-start.ts). */
+  aboutYouSet(text: string): Methods["aboutYou.set"]["result"] {
+    setAboutYou(this, text);
+    return { aboutYou: aboutYou(this) };
   }
 
   providersCheck(): Promise<Methods["providers.check"]["result"]> {
@@ -1383,6 +1408,7 @@ export class Engine {
     this.stopping = true;
     this.hub.stop();
     this.titles.stop();
+    this.codexTitles.stop();
     this.notifier.shutdown();
     // A backup being made is ended and its half-made file removed; await backupStopped() before the database closes.
     void this.backup.stop();

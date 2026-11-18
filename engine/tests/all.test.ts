@@ -77,3 +77,5 @@ await import("./cards-after-restart.spec.js");
 await import("./card-questions.spec.js");
 await import("./restored-waiting.spec.js");
 await import("./lost-reply.spec.js");
+await import("./first-start.spec.js");
+await import("./gpt-titles.spec.js");

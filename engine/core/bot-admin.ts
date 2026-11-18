@@ -6,6 +6,7 @@ import { changedSummary, cleanName, cleanPurpose, now } from "./words.js";
 import { EngineError } from "../errors.js";
 import { archiveBotFolder, archivedIds, type BotFile, type BotFolder, createBotFolder, DEFAULT_ACCESS, DEFAULT_EFFORT, DEFAULT_MODEL, pickColor, pickLook, uniqueSlug, writeBotFile } from "../bots.js";
 import { readdirSync } from "node:fs";
+import { startWelcome } from "./first-start.js";
 import { log } from "../log.js";
 import { type BotRuntime, inBackground, newRuntime, SWITCH_WORDS } from "./runtime.js";
 import { endAllTaskManagers } from "./task-managers.js";
@@ -81,6 +82,8 @@ export function createBot(eng: Engine, params: Methods["bot.create"]["params"] |
   tellModelsIfChanged(eng, modelsBefore);
   eng.opts.emit("bot.added", { bot });
   log.info(`Created bot ${id}`);
+  // The first-start screen's main bot greets the person by itself (engine 0.33.0).
+  if (p.welcome && file.role === "main") startWelcome(eng, rt);
   return bot;
 }
 

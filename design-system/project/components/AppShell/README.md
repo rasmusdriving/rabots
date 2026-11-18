@@ -24,3 +24,14 @@ Rules for the whole window:
 **The browser in the same panel** (step 2g, see Browser). The bots' browser opens in the artifact panel itself: one panel, two kinds of content. Width, divider, fill, the way back at 800 px, "Needs you 2", Escape, the focus back to the row and the chat keeping its place are the same. Opening the browser while an artifact is open swaps the content and the other way round; the panel and its divider stay. Unlike an artifact, the browser is not one bot's: it stays open when another bot or a channel is chosen. At the bottom of the roster, with the machines, a quiet "Browser" line says how much is open ("2 open") and opens it; it is there only while the browser can be reached, and in a roster of faces only it is a small drawn window.
 
 **Pobots settings** (job 5, see PobotsSettings). At the very foot of the roster, under the machines, one quiet line, "Pobots settings", opens the settings page for Pobots as a whole in the reading panel. The bot's or channel's page stays laid out underneath, out of sight, and what is open beside it steps aside, so going back shows both exactly as they were. Opening it moves nothing in the roster. While no backup key is saved the line carries a small quiet dot (`ink-muted`, 6px), read out as "backup not set up": not an alarm, no colour, no count. In a roster of faces only it is the small drawn sliders, with the dot on the mark's corner.
+
+## First start (engine 0.33.0)
+
+With no bots yet, the window shows one calm screen instead of the shell (`app-first`), centred on `ground`, at most 440px wide:
+
+- the face at its largest, the title "Welcome to Pobots" (`display`), and one muted line: "Start with your main bot. It looks after your other bots, makes new ones with you, and first gets to know you a little."
+- the field "Name your main bot", filled with "Po" (selected and in focus, so typing replaces it), the hint "You can change it later." (an error takes its place),
+- "Model": the model choices as "Add a bot" has them (see ModelPicker, two groups with both providers), the default Opus 5.5,
+- one primary button, "Create main bot".
+
+The main bot made here starts by itself: its greeting is the first thing in its chat, with a question or two about the person. There is no second step and no wizard. On a phone the field and button are 44px and the model choices 40px with a 44px place to tap, with the page's own side room. An install with bots never sees this screen.

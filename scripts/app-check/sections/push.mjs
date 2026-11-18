@@ -258,7 +258,7 @@ export default async function section() {
   check("push: after that nothing more is sent to it, not for another bot's note nor for its finished turn", !!note2 && relay.got.length === relayAt, `${note2 ? "note seen" : "no note"}, ${relay.got.length - relayAt} sent`);
   if (note2) await answerCard(note2);
 
-  // 6. The real window: Pobots settings starts with Notifications, which shows the device's row and
+  // 6. The real window: Pobots settings starts with About you (engine 0.33.0), then Notifications, which shows the device's row and
   //    the switches as the engine has them.
   const engineNotify = (await p.request("snapshot")).notify;
   await openWindow(endpoint);
@@ -266,11 +266,12 @@ export default async function section() {
   await js(`document.querySelector(".pb-foot-settings").click()`);
   const shownPage = await until(
     `(() => {
-      const first = document.querySelector(".app-appsettings .pb-appsettings-section");
+      const sections = [...document.querySelectorAll(".app-appsettings .pb-appsettings-section")];
+      const first = sections.find((s) => s.dataset.section === "notify");
       const row = document.querySelector('.pb-notify-device[data-id=${JSON.stringify(deviceId)}]');
       if (!first || !row) return null;
       return {
-        first: first.dataset.section,
+        order: sections.map((s) => s.dataset.section).slice(0, 2).join(","),
         title: first.querySelector(".pb-section-title")?.textContent.trim(),
         label: row.querySelector(".pb-notify-device-label")?.textContent,
         gone: row.hasAttribute("data-gone"),
@@ -280,7 +281,7 @@ export default async function section() {
     })()`,
     15_000,
   );
-  check("push: Pobots settings opens with Notifications as its first section", shownPage?.first === "notify" && shownPage.title === "Notifications", JSON.stringify(shownPage && { first: shownPage.first, title: shownPage.title }));
+  check("push: Pobots settings opens with About you, then Notifications", shownPage?.order === "about,notify" && shownPage.title === "Notifications", JSON.stringify(shownPage && { order: shownPage.order, title: shownPage.title }));
   check(
     "push: it shows the device's row as stopped and the switches as the engine has them",
     !!shownPage && shownPage.label === LABEL && shownPage.gone && /^Stopped working/.test(shownPage.line) && JSON.stringify(shownPage.kinds) === JSON.stringify({ needs: engineNotify.kinds.needs, note: engineNotify.kinds.note, finished: engineNotify.kinds.finished }),

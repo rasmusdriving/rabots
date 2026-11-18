@@ -38,7 +38,7 @@
 // GPT models. A bot's model decides its harness (see ModelInfo.harness). Everything else in this
 // file is the same for both: the app never asks which harness a bot runs on, except to say so.
 
-export const PROTOCOL_VERSION = 23;
+export const PROTOCOL_VERSION = 24;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -1026,6 +1026,11 @@ export interface Snapshot {
   chat: ChatSettings;
   /** Step 7c (protocol 15): the person's open to-dos, oldest first (the app sorts them). */
   todos: Todo[];
+  /**
+   * Protocol 24: "About you", the short note about the person every bot gets in its instructions.
+   * Written by the person in Settings or by the main bot (change_settings about_you). Empty when none.
+   */
+  aboutYou: string;
 }
 
 export interface Methods {
@@ -1037,10 +1042,12 @@ export interface Methods {
 
   /**
    * Creates a bot folder and its main thread. The first bot becomes the main bot. Only the name is
-   * needed. `job` is the text for the "Your job" part of its AGENTS.md.
+   * needed. `job` is the text for the "Your job" part of its AGENTS.md. `welcome` (protocol 24, sent
+   * by the first-start screen): when the bot made is the main bot, its first turn starts by itself,
+   * greets the person and gets to know them. Ignored for any other bot.
    */
   "bot.create": {
-    params: { name: string; purpose?: string; job?: string; model?: string; effort?: Effort; fast?: boolean; access?: AccessLevel; look?: BotLook; mayMessage?: string[] };
+    params: { name: string; purpose?: string; job?: string; model?: string; effort?: Effort; fast?: boolean; access?: AccessLevel; look?: BotLook; mayMessage?: string[]; welcome?: boolean };
     result: { bot: Bot };
   };
 
@@ -1274,6 +1281,13 @@ export interface Methods {
   /** Changes the chat settings, saved in config.json. Answers with all of them. */
   "chat.set": { params: { followUp: FollowUp }; result: { chat: ChatSettings } };
 
+  /**
+   * Protocol 24: writes "About you" (the whole text; empty clears it). Trimmed; at most 4,000
+   * characters, more is refused with "bad_request". Every bot's session starts again between turns
+   * so its next turn has the new text. Answers with the text as kept.
+   */
+  "aboutYou.set": { params: { text: string }; result: { aboutYou: string } };
+
   /** Throws away an upload that was not sent (the person removed it from the box). No error when it is already gone. */
   "attachment.discard": { params: { id: string }; result: Record<string, never> };
 
@@ -1362,6 +1376,8 @@ export interface Events {
   "notify.changed": { notify: NotifyState };
   /** The chat settings changed (protocol 14). Always all of them. */
   "chat.changed": { chat: ChatSettings };
+  /** Protocol 24: "About you" changed, from the window or the main bot. */
+  "aboutYou.changed": { aboutYou: string };
   /** Files in a bot's folder changed and the change was saved. `by` says who: you in the app, the bot in a turn, or the app (an undo). */
   "bot.files.changed": { botId: string; paths: string[]; by: "you" | "bot" | "app" };
   /** An artifact was made or changed (the whole artifact), or taken off the list (`removedId`). */

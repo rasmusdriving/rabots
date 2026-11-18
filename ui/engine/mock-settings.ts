@@ -175,7 +175,6 @@ export class MockSettings {
       if (p.patch.titleModel !== undefined) {
         const m = this.host.models().find((x) => x.id === p.patch.titleModel);
         if (!m) throw new EngineError({ code: "bad_request", message: "That model is not in the list." });
-        if (m.harness !== "claude") throw new EngineError({ code: "bad_request", message: "Chat titles are made by a Claude model for now." });
         s.titleModel = m.id;
       }
       const changed = JSON.stringify(s) !== JSON.stringify(this.settings);

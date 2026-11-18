@@ -128,6 +128,11 @@
   .pb-dialog .pb-textarea { height: auto; }
   .pb-dialog .pb-field { max-width: none; }
   .pb-dialog .pb-seg button { height: 40px; }
+  /* The first-start screen (engine 0.33.0) at the add sheet's sizes: field and button 44, the model
+     choices 40 with a 44 px place to tap. */
+  .app-first .pb-btn:not(.pb-btn-sm), .app-first .pb-input { height: 44px; }
+  .app-first .pb-seg button { height: 40px; position: relative; }
+  .app-first .pb-seg button::after { content: ""; position: absolute; inset: -2px; }
 
   /* ------------------------------------------------------------ the bot's page
      The row of tabs scrolls sideways inside itself, never the page; tabs are 40 px tall. */
@@ -174,6 +179,9 @@
   .app-appsettings .pb-notify .pb-btn-sm::after { content: ""; position: absolute; inset: -2px; }
   .app-appsettings .pb-notify .pb-switch { box-sizing: content-box; border: 12px solid transparent; margin: -12px; background-clip: padding-box; }
   .app-appsettings .pb-notify-act { min-height: 44px; }
+  /* About you (engine 0.33.0): Save 40 px with a 44 px place to tap. */
+  .app-appsettings .pb-about .pb-btn-sm { height: 40px; position: relative; }
+  .app-appsettings .pb-about .pb-btn-sm::after { content: ""; position: absolute; inset: -2px; }
   .app-appsettings .pb-notify-kind { min-height: 44px; }
   .app-appsettings .pb-notify-device { grid-template-areas: "name forget" "line line"; row-gap: 2px; }
 

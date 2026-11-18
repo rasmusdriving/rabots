@@ -154,6 +154,8 @@ export function codexWorld(
     timings?: EngineOptions["timings"];
     /** Lists Codex's MCP servers for a helper (step helper-sees). Left out: none, Codex is not asked. */
     listCodexMcp?: EngineOptions["listCodexMcp"];
+    /** What makes a title with a Claude model (step gpt-titles). Left out: none comes back. */
+    titleMaker?: EngineOptions["titleMaker"];
     /** Claude helpers started with start_helper also run on FakeSession. */
   } = {},
 ) {
@@ -186,7 +188,7 @@ export function codexWorld(
     browser: null,
     // Step 7b: no network, no programs, no model calls.
     settingsHub: { fetcher: async () => ({ ok: false, status: 404, text: async () => "" }), runner: async () => ({ ok: false, out: "" }) },
-    titleMaker: async () => undefined,
+    titleMaker: o.titleMaker ?? (async () => undefined),
     ...(o.listCodexMcp ? { listCodexMcp: o.listCodexMcp } : {}),
   });
   engine.init();

@@ -41,7 +41,8 @@ export default async function section() {
     // 2. A message gets a real answer.
     await type("Remember the code word: lighthouse. Reply with one short sentence.");
     check("your message shows as a bubble", !!(await until(`document.querySelector(".pb-msg-you")?.textContent.includes("lighthouse")`, 10_000)));
-    const answered = await until(`(${headStatus}) === "Done" && (${lastAnswer}).length > 0`, 120_000);
+    // Kaja's greeting from the first start is already there: the answer is a new one.
+    const answered = await until(`(${headStatus}) === "Done" && (${lastAnswer}).length > 0 && (${lastAnswer}) !== ${JSON.stringify(run.greeting)}`, 120_000);
     check("the bot answers", !!answered, JSON.stringify(await js(lastAnswer)).slice(0, 80));
     await shot("2-answered");
 
