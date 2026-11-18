@@ -1,6 +1,6 @@
 // The left side, on the ground: the name, the bots with a quiet add control, then at the bottom the
 // channels (with their own add control), the browser, the machines, and the icon row (step 7b):
-// settings, usage, and the update arrow when Claude Code or Codex has an update.
+// settings, usage, and the update arrow when Claude Code, Codex or (on a public install) Pobots has an update.
 import { useEffect, useRef, useState } from "react";
 import type { Bot, Channel } from "../../shared/protocol";
 import { usePhone } from "../lib/phone";
@@ -10,6 +10,7 @@ import { store, useAppState } from "../state/store";
 import { countWord, MACHINE_CONNECTED, MACHINE_WORD, STATE_WORD } from "../lib/words";
 import { BrowserIcon, Face, ForwardIcon, GearIcon, Mark, PlusIcon, SpeechIcon, UpdateIcon, UsageIcon } from "./bits";
 import { UpdateDialog } from "./SettingsWindow";
+import { anyUpdateRunning, labelsWords, updateTodo } from "../lib/pobots-update";
 
 /** `covered`: on a phone, another screen or a sheet shows; the roster stays laid out underneath, out of sight, so it keeps its place. */
 export function Roster({ covered = false }: { covered?: boolean } = {}) {
@@ -91,10 +92,11 @@ function FootIcons() {
   const noKey = useAppState((s) => !!s.backup && !s.backup.key);
   const providers = useAppState((s) => s.providers);
   const [asking, setAsking] = useState(false);
-  const todo = providers?.providers.filter((p) => p.updateAvailable) ?? [];
-  const running = !!providers?.update && !providers.update.endedAt;
+  // Pobots itself is in the list too on a public install (engine 0.34.0, lib/pobots-update.ts).
+  const todo = updateTodo(providers);
+  const running = anyUpdateRunning(providers);
   const show = todo.length > 0 || running;
-  const updateWords = running ? "Updating" : `Update ${todo.map((p) => p.label).join(" and ")}`;
+  const updateWords = running ? "Updating" : `Update ${labelsWords(todo)}`;
   const settingsLabel = `Settings${noKey ? ", backup not set up" : ""}`;
   return (
     <div className="pb-side-group app-foot-icons">

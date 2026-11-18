@@ -14,7 +14,12 @@
 //   --data-dir=PATH      the engine's data folder (default ~/Library/Application Support/Pobots)
 //   --bots-dir=PATH      the bots' folders (default ~/Pobots/bots, or `botsDir` in config.json)
 //   --port=N             the engine's port (default: the engine's own, 47600 or `port` in config.json)
-//   --install-dir=PATH   where the built app is copied (default: next to the dependencies)
+//   --install-dir=PATH   where the built app is copied (default: next to the dependencies; for a clone
+//                        with its own node_modules folder (a plain npm install), ~/.local/share/pobots)
+//
+// The installed copy notes the clone it came from in source.json, so a clone of the public repository
+// can update itself from the app (engine/self-update.ts). launchd hands the engine its label as
+// POBOTS_SERVICE_LABEL, so it knows it may restart itself as this service.
 //   --plist-dir=PATH     where the agent file is written (default ~/Library/LaunchAgents)
 import { spawnSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -60,6 +65,16 @@ function depsHome() {
   return dirname(realpathSync(link));
 }
 
+/**
+ * Where the built app goes by default: next to the dependencies on the internal drive. A plain
+ * `npm install` puts them in the clone itself; copying dist onto itself there would delete it, so
+ * such a clone installs into ~/.local/share/pobots with a link to its node_modules.
+ */
+function defaultInstallDir() {
+  const deps = depsHome();
+  return deps === realpathSync(repo) ? join(homedir(), ".local", "share", "pobots") : deps;
+}
+
 const launchctl = (...args) => spawnSync("launchctl", args, { encoding: "utf8" });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -82,6 +97,8 @@ ${programArguments.map((a) => `    <string>${xml(a)}</string>`).join("\n")}
   <dict>
     <key>ELECTRON_RUN_AS_NODE</key>
     <string>1</string>
+    <key>POBOTS_SERVICE_LABEL</key>
+    <string>${xml(label)}</string>
   </dict>
   <key>WorkingDirectory</key>
   <string>${xml(homedir())}</string>
@@ -186,7 +203,11 @@ async function install() {
 
   // Copy the built app next to the dependencies on the internal drive. The repo is on an external
   // drive that a background program may not be allowed to read.
-  const installDir = arg("install-dir") ? expand(arg("install-dir")) : deps;
+  const installDir = arg("install-dir") ? expand(arg("install-dir")) : defaultInstallDir();
+  if (realpathSync(repo) === (existsSync(installDir) ? realpathSync(installDir) : installDir)) {
+    console.error("The install folder is the clone itself. Choose another with --install-dir.");
+    process.exit(1);
+  }
   mkdirSync(installDir, { recursive: true });
   rmSync(join(installDir, "dist"), { recursive: true, force: true });
   cpSync(join(repo, "dist"), join(installDir, "dist"), { recursive: true });
@@ -195,6 +216,8 @@ async function install() {
     const link = join(installDir, "node_modules");
     if (!lstatSync(link, { throwIfNoEntry: false })) symlinkSync(join(deps, "node_modules"), link);
   }
+  // The clone this copy came from: a clone of the public repository updates itself from it.
+  writeFileSync(join(installDir, "source.json"), JSON.stringify({ repo: realpathSync(repo) }, null, 2) + "\n");
 
   mkdirSync(join(dataDir, "logs"), { recursive: true });
   mkdirSync(plistDir, { recursive: true });
@@ -225,8 +248,9 @@ async function restart() {
 async function uninstall() {
   await bootout();
   rmSync(plistPath, { force: true });
-  const installDir = arg("install-dir") ? expand(arg("install-dir")) : depsHome();
+  const installDir = arg("install-dir") ? expand(arg("install-dir")) : defaultInstallDir();
   rmSync(join(installDir, "dist"), { recursive: true, force: true });
+  rmSync(join(installDir, "source.json"), { force: true });
   console.log(`Stopped and removed the background service ${label}. The data in ${dataDir} is kept.`);
 }
 

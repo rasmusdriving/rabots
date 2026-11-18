@@ -1,5 +1,6 @@
 // Engine entry point.
-//   node dist/engine/main.mjs [--port=N] [--data-dir=PATH] [--bots-dir=PATH] [--serve] [--ui-dir=PATH]
+//   node dist/engine/main.mjs [--port=N] [--data-dir=PATH] [--bots-dir=PATH] [--serve] [--ui-dir=PATH] [--shell]
+//                             (--shell: started by the desktop window, which opens again after an update)
 //                             [--push-relay=http://127.0.0.1:<port>]   (checks only: see docs/build/step-push.md)
 // Without serve mode: a random port, and one announcement line on stdout once listening
 // ({"pobotsEngine":{"port","token"}}). In serve mode: a fixed port (47600 unless --port or `port`
@@ -59,6 +60,11 @@ async function main(): Promise<void> {
     checkCodex: () => detectCodex(config.codex ?? {}),
     emit: (event, data) => server.broadcast(event, data),
     ...(flags.pushRelay ? { notify: { relay: flags.pushRelay } } : {}),
+    // The running build's folder: a public install updates itself from the clone it came from (engine/self-update.ts).
+    selfUpdate: {
+      installDir: fileURLToPath(new URL("../../", import.meta.url)).replace(/\/$/, ""),
+      appArgs: [...(flags.dataDir ? [`--data-dir=${flags.dataDir}`] : []), ...(flags.botsDir ? [`--bots-dir=${flags.botsDir}`] : [])],
+    },
   });
   engine.init();
   server.attach(engine);

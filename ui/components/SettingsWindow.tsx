@@ -15,6 +15,8 @@ import { addUsageHub, checkProviders, readUsage, removeUsageHub, setSettings, up
 import { useAppState } from "../state/store";
 import { Dialog } from "./Dialog";
 import { Mark } from "./bits";
+import { PobotsRunLine, PobotsUpdateCard } from "./PobotsUpdateCard";
+import { anyUpdateRunning, labelsWords, updateTodo } from "../lib/pobots-update";
 
 // ------------------------------------------------------------ small pieces
 
@@ -340,6 +342,7 @@ export function ProvidersSection() {
   const providers = useAppState((s) => s.providers);
   const now = useNow(30_000);
   const [checkError, setCheckError] = useState("");
+  const [askingPobots, setAskingPobots] = useState(false);
   if (!providers) return <p className="pb-section-text">Pobots has not said how Claude Code and Codex are yet.</p>;
   const check = () => {
     setCheckError("");
@@ -366,11 +369,18 @@ export function ProvidersSection() {
         <ul className="pb-set7-provider-list">
           {providers.providers.map((p) => (
             <li key={p.id}>
-              <ProviderCard p={p} running={!!providers.update && !providers.update.endedAt} />
+              <ProviderCard p={p} running={anyUpdateRunning(providers)} />
             </li>
           ))}
+          {providers.pobots && (
+            <li>
+              <PobotsUpdateCard s={providers.pobots} running={anyUpdateRunning(providers)} onUpdate={() => setAskingPobots(true)} />
+            </li>
+          )}
         </ul>
         <UpdateRunLine providers={providers} />
+        <PobotsRunLine s={providers.pobots} />
+        {askingPobots && <UpdateDialog onClose={() => setAskingPobots(false)} />}
       </section>
       <HealthSection />
       <HubsSection />
@@ -382,12 +392,13 @@ function ProviderCard({ p, running }: { p: ProviderState; running: boolean }) {
   const [state, save] = useSaver();
   const [asking, setAsking] = useState(false);
   const facts = [p.version ? `Version ${p.version}` : "", p.signedIn === true ? "Signed in" : p.signedIn === false ? "Not signed in" : "", INSTALL_WORDS[p.installedBy]].filter(Boolean).join(" · ");
-  const latest = !p.enabled ? "Off: not looked at or updated." : p.updateAvailable ? `Version ${p.latest} is out.` : p.latest ? "Up to date." : "The newest version could not be read.";
+  // A program that is not installed (Codex for someone who never set it up) says only that, calmly.
+  const latest = !p.enabled ? "Off: not looked at or updated." : !p.installed ? "" : p.updateAvailable ? `Version ${p.latest} is out.` : p.latest ? "Up to date." : "The newest version could not be read.";
   const nameId = `set7-prov-${p.id}`;
   return (
     <div className="pb-set7-provider" data-provider={p.id} data-on={p.enabled || undefined}>
       <div className="pb-set7-provider-head">
-        <Mark state={!p.enabled ? "idle" : p.ready ? "check" : "blocked"} />
+        <Mark state={!p.enabled || !p.installed ? "idle" : p.ready ? "check" : "blocked"} />
         <span className="pb-set7-provider-name" id={nameId}>
           {p.label}
         </span>
@@ -395,7 +406,11 @@ function ProviderCard({ p, running }: { p: ProviderState; running: boolean }) {
         <input className="pb-switch" type="checkbox" role="switch" checked={p.enabled} aria-labelledby={nameId} onChange={(e) => void save(() => setSettings({ providers: { [p.id]: { enabled: e.target.checked } } }))} />
       </div>
       <p className="pb-set7-provider-facts">{facts || " "}</p>
-      {p.problem && <p className="pb-set7-provider-problem">{p.problem}</p>}
+      {p.problem && (
+        <p className="pb-set7-provider-problem" data-calm={!p.installed || undefined}>
+          {p.problem}
+        </p>
+      )}
       <div className="pb-set7-provider-update">
         <span className="pb-set7-provider-latest">{latest}</span>
         <button type="button" className="pb-btn pb-btn-sm pb-set7-update" data-hide={!p.updateAvailable || undefined} aria-hidden={!p.updateAvailable || undefined} tabIndex={p.updateAvailable ? 0 : -1} aria-disabled={running || undefined} onClick={() => !running && setAsking(true)}>
@@ -687,9 +702,17 @@ export function UpdateDialog({ onClose }: { onClose(): void }) {
   const providers = useAppState((s) => s.providers);
   const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
-  const run = providers?.update ?? null;
-  const going = !!run && !run.endedAt;
-  const todo = providers?.providers.filter((p) => p.updateAvailable) ?? [];
+  const [openedAt] = useState(() => Date.now());
+  // The runs this dialog shows: the ones going on, and the ones that ended while it was open.
+  const fresh = <R extends { endedAt?: string }>(r: R | null | undefined): R | null => (r && (!r.endedAt || Date.parse(r.endedAt) >= openedAt - 2000) ? r : null);
+  const run = fresh(providers?.update);
+  const pobotsRun = fresh(providers?.pobots?.run);
+  const runs = [run, pobotsRun].filter((r): r is NonNullable<typeof r> => !!r);
+  const going = anyUpdateRunning(providers);
+  // Claude Code and Codex first, then Pobots itself on a public install (engine 0.34.0).
+  const todo = updateTodo(providers);
+  const harnesses = todo.filter((t) => t.id !== "pobots");
+  const pobots = todo.some((t) => t.id === "pobots");
   const showRun = started || going;
   const start = () => {
     setError("");
@@ -699,18 +722,33 @@ export function UpdateDialog({ onClose }: { onClose(): void }) {
       setError(messageOf(e));
     });
   };
-  const title = !showRun ? `Update ${todo.map((p) => p.label).join(" and ") || "the providers"}?` : going || !run ? "Updating" : run.phase === "done" ? "Update done" : "Update did not finish";
+  const title = !showRun ? `Update ${labelsWords(todo) || "the providers"}?` : going || !runs.length ? "Updating" : runs.every((r) => r.phase === "done") ? "Update done" : "Update did not finish";
+  const how = !pobots
+    ? `Pobots waits until your bots are done, updates, and restarts their ${labelsWords(harnesses) || "programs"}. Pobots itself keeps running.`
+    : harnesses.length
+      ? `Pobots waits until your bots are done, updates, and restarts their ${labelsWords(harnesses)}. Then Pobots updates itself and restarts; it reconnects by itself after about a minute.`
+      : "Pobots waits until your bots are done, then updates itself and restarts. It reconnects by itself after about a minute.";
   const intro: ReactNode = !showRun ? (
     <>
       {todo.map((p) => (
-        <span key={p.id} className="pb-set7-update-what">{`${p.label} ${p.version ?? ""} to ${p.latest ?? ""}`}</span>
+        <span key={p.id} className="pb-set7-update-what">{`${p.label} ${p.from ?? ""} to ${p.to ?? ""}`}</span>
       ))}
-      <span>Pobots waits until your bots are done, updates, and restarts their {todo.map((p) => p.label).join(" and ") || "programs"}. Pobots itself keeps running.</span>
+      <span>{how}</span>
     </>
   ) : (
-    <span className="pb-set7-update-line" role="status">
-      {run?.line ?? "Starting the update."}
-    </span>
+    <>
+      {runs.length ? (
+        runs.map((r, i) => (
+          <span key={i} className="pb-set7-update-line" role="status">
+            {r.line}
+          </span>
+        ))
+      ) : (
+        <span className="pb-set7-update-line" role="status">
+          Starting the update.
+        </span>
+      )}
+    </>
   );
   return (
     <Dialog title={title} onClose={onClose}>

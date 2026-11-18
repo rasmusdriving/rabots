@@ -6,11 +6,18 @@
 // ?usage= picks the usage reading: one (the default: one account each), several (two Claude
 // accounts and two Codex accounts, as from a hub), none (nothing could be read).
 // ?update=none starts with Claude Code and Codex up to date; the default has a Codex update.
+// ?update=nocodex: Codex is not installed (a public install without it), Claude Code up to date.
+// ?pobots= acts out a public install (engine 0.34.0): available (Pobots 0.34.1 is out), current (up
+// to date), manual (out, but Pobots cannot restart itself), problem (the last look did not work),
+// dirty (the folder has changes of its own, so the update refuses). Without it, no Pobots card.
 // Levers on window.pobotsMock: settingsState, providersState, usageState, updateHold, updateNext,
 // hubKeysKept, titleChat, usageNext.
-import type { ChatTitle, ChatTiming, ChatTimingKey, Events, Methods, ModelInfo, PobotsSettings, ProviderId, ProvidersState, ProviderUpdateRun, UsageAccount, UsageProvider, UsageState } from "../../shared/protocol";
+import type { ChatTitle, ChatTiming, ChatTimingKey, Events, Methods, ModelInfo, PobotsSettings, PobotsUpdateRun, ProviderId, ProvidersState, ProviderUpdateRun, UsageAccount, UsageProvider, UsageState } from "../../shared/protocol";
 import { at } from "./mock-data";
 import { EngineError } from "./types";
+
+/** The sample public install's clone (?pobots=). */
+const CLONE = "/Users/kaja/pobots";
 
 type SettingsMethod = "settings.set" | "providers.check" | "providers.update" | "usage.read" | "usage.hub.add" | "usage.hub.remove" | "chat.titles";
 type Emit = (e: { event: "settings.changed"; data: Events["settings.changed"] } | { event: "providers.changed"; data: Events["providers.changed"] } | { event: "usage.changed"; data: Events["usage.changed"] } | { event: "chat.titled"; data: Events["chat.titled"] }) => void;
@@ -86,6 +93,7 @@ export class MockSettings {
   keysKept = 0;
   private hold: string[] | null = null;
   private next: "ok" | "fail" = "ok";
+  private pobotsKind: string | null;
 
   constructor(
     private readonly host: MockSettingsHost,
@@ -93,7 +101,9 @@ export class MockSettings {
     botIds: string[],
   ) {
     this.usageKind = flags.get("usage") ?? "one";
-    const upToDate = flags.get("update") === "none";
+    this.pobotsKind = flags.get("pobots");
+    const noCodex = flags.get("update") === "nocodex";
+    const upToDate = flags.get("update") === "none" || noCodex;
     this.settings = {
       // The built-in size for summarising is per provider (15 Nov 2026): Claude 500,000, Codex 300,000.
       timing: { claude: { ...DEFAULT_TIMING, minTokens: 150000, compactTokens: 500000 }, codex: { ...DEFAULT_TIMING } },
@@ -111,9 +121,24 @@ export class MockSettings {
       update: null,
       providers: [
         { id: "claude", label: "Claude Code", enabled: true, installed: true, ready: true, version: "2.1.325", latest: "2.1.325", updateAvailable: false, signedIn: true, executable: "/Users/kaja/.local/bin/claude", installedBy: "native" },
-        { id: "codex", label: "Codex", enabled: true, installed: true, ready: true, version: "0.165.0", latest: upToDate ? "0.165.0" : "0.169.0", updateAvailable: !upToDate, signedIn: true, executable: "/Users/kaja/.local/bin/codex", installedBy: "native" },
+        noCodex
+          ? { id: "codex", label: "Codex", enabled: true, installed: false, ready: false, updateAvailable: false, installedBy: "none", problem: "Codex is not installed on this Mac." }
+          : { id: "codex", label: "Codex", enabled: true, installed: true, ready: true, version: "0.165.0", latest: upToDate ? "0.165.0" : "0.169.0", updateAvailable: !upToDate, signedIn: true, executable: "/Users/kaja/.local/bin/codex", installedBy: "native" },
       ],
     };
+    const k = this.pobotsKind;
+    if (k) {
+      const out = k !== "current";
+      this.prov.pobots = {
+        current: "0.34.0",
+        latest: out ? "0.34.1" : "0.34.0",
+        available: out,
+        checkedAt: this.prov.checkedAt!,
+        canRestart: k !== "manual",
+        ...(k === "problem" ? { problem: "Pobots could not look for a new version just now. It tries again later." } : {}),
+        run: null,
+      };
+    }
     // Titles for the first two bots: three earlier sessions, a fresh run and a helper.
     for (const [i, id] of botIds.slice(0, 2).entries()) {
       this.titles.set(id, [
@@ -198,12 +223,22 @@ export class MockSettings {
       return { providers: this.providers() };
     },
     "providers.update": () => {
-      if (this.prov.update && !this.prov.update.endedAt) throw new EngineError({ code: "conflict", message: "An update is already running." });
+      const pb = this.prov.pobots;
+      if ((this.prov.update && !this.prov.update.endedAt) || (pb?.run && !pb.run.endedAt)) throw new EngineError({ code: "conflict", message: "An update is already running." });
       const todo = this.prov.providers.filter((p) => p.updateAvailable);
-      if (!todo.length) throw new EngineError({ code: "conflict", message: "Claude Code and Codex are up to date. Press Check now to look again." });
+      const self = !!pb?.available && pb.canRestart;
+      if (!todo.length && !self) throw new EngineError({ code: "conflict", message: pb ? "Pobots, Claude Code and Codex are up to date. Press Check now to look again." : "Claude Code and Codex are up to date. Press Check now to look again." });
+      if (self && this.pobotsKind === "dirty") throw new EngineError({ code: "conflict", message: `Pobots was not updated: ${CLONE} has changes of its own. Commit or undo them, then try again.` });
       const busy = this.hold ?? this.host.busyBots();
-      this.prov.update = { startedAt: new Date().toISOString(), phase: "waiting", line: busy.length ? `Waiting for ${busy.join(" and ")} to finish.` : "Starting the update.", results: [] };
-      void this.runUpdate(todo.map((p) => p.id));
+      let first: Promise<void> | undefined;
+      if (todo.length) {
+        this.prov.update = { startedAt: new Date().toISOString(), phase: "waiting", line: busy.length ? `Waiting for ${busy.join(" and ")} to finish.` : "Starting the update.", results: [] };
+        first = this.runUpdate(todo.map((p) => p.id));
+      }
+      if (self) {
+        pb!.run = { startedAt: new Date().toISOString(), phase: "waiting", line: first ? "Waiting for the other updates to finish." : busy.length ? `Waiting for ${busy.join(" and ")} to finish.` : "Starting the update of Pobots.", from: pb!.current, to: pb!.latest! };
+        void (first ?? Promise.resolve()).then(() => this.runPobots());
+      }
       return { providers: this.providers() };
     },
     "usage.read": (p) => {
@@ -286,6 +321,40 @@ export class MockSettings {
       return r.outcome === "updated" ? `${name} updated from ${r.from} to ${r.to}.` : `${name} could not be updated. ${r.problem ?? ""}`.trim();
     };
     Object.assign(run, { phase: failed ? "failed" : "done", endedAt: new Date().toISOString(), line: run.results.map(words).join(" ") });
+    tell();
+  }
+
+  /** Pobots's own update, acted out: the phases, then the restart and its result. */
+  private async runPobots(): Promise<void> {
+    const pb = this.prov.pobots!;
+    const run = pb.run!;
+    const tell = () => this.host.emit({ event: "providers.changed", data: { providers: this.providers() } });
+    tell();
+    for (;;) {
+      const busy = this.hold ?? this.host.busyBots();
+      if (!busy.length) break;
+      const line = `Waiting for ${busy.join(" and ")} to finish.`;
+      if (line !== run.line) {
+        run.line = line;
+        tell();
+      }
+      await later(300);
+    }
+    const step = async (phase: PobotsUpdateRun["phase"], line: string, ms: number) => {
+      Object.assign(run, { phase, line });
+      tell();
+      await later(ms);
+    };
+    await step("pulling", `Fetching Pobots ${run.to}.`, 500);
+    await step("building", `Building Pobots ${run.to}.`, 900);
+    if (this.next === "fail") {
+      Object.assign(run, { phase: "failed", endedAt: new Date().toISOString(), line: `Pobots ${run.to} could not be built, so nothing changed. See the log.` });
+      return tell();
+    }
+    await step("restarting", "Restarting Pobots to finish the update.", 900);
+    pb.current = run.to!;
+    pb.available = false;
+    Object.assign(run, { phase: "done", endedAt: new Date().toISOString(), line: `Pobots updated to ${run.to}.` });
     tell();
   }
 

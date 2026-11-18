@@ -27,6 +27,11 @@ export interface Flags {
    * protocol, and no service file passes it.
    */
   pushRelay?: string;
+  /**
+   * --shell: started by the desktop window (desktop/main.ts), so the window closes with the engine
+   * and can be opened again. Lets a public install restart itself after an update (engine 0.34.0).
+   */
+  shell?: boolean;
 }
 
 /** The shape of config.json. Every field is optional. */
@@ -68,6 +73,12 @@ export interface ConfigFile {
   chat?: { followUp?: FollowUp };
   /** Step 7b: the settings window's settings, read from "context" (per provider), "providers", "titles" and "usage" (engine/settings.ts). */
   settings?: SettingsFile;
+  /**
+   * A public install's own updates (engine 0.34.0, docs/build/step-self-update.md). `repo`: the public
+   * repository (the default in engine/self-update.ts); `source`: the clone Pobots runs from, when it
+   * cannot be found by itself; `checkHours`: how often to look (0 is off); `branch`: "main".
+   */
+  updates?: { repo?: string; source?: string; checkHours?: number; branch?: string };
 }
 
 /** What a message sent while a bot works does when config.json says nothing: it steers (T3 Code's default too). */
@@ -247,6 +258,10 @@ export interface EngineConfig {
   chat?: ChatSettings;
   /** Step 7b: the settings window's settings. Left out (as in tests): the defaults, with `context` for all providers. */
   settings?: SettingsFile;
+  /** --shell (Flags.shell). */
+  shell?: boolean;
+  /** config.json's "updates", as read. Left out (as in tests): the defaults. */
+  updates?: ConfigFile["updates"];
 }
 
 const validPort = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 65535;
@@ -264,6 +279,11 @@ export function parseFlags(argv: string[]): Flags {
       const relay = m[2] === undefined ? undefined : cleanRelay(m[2]);
       if (!relay) throw new Error('"--push-relay" takes only the form --push-relay=http://127.0.0.1:<port>.');
       flags.pushRelay = relay;
+      continue;
+    }
+    if (name === "shell") {
+      // A switch, like --serve without a value.
+      flags.shell = m[2] === undefined || /^(true|1)$/i.test(m[2]);
       continue;
     }
     if (name === "serve") {
@@ -416,6 +436,23 @@ export function loadConfigFile(dataDir: string): ConfigFile {
       out.chat = keep;
     }
   }
+  // A public install's updates: a bad value never stops the engine; it falls back with a warning.
+  if (obj.updates !== undefined) {
+    if (!obj.updates || typeof obj.updates !== "object" || Array.isArray(obj.updates)) log.warn(`"updates" in ${path} must hold an object. Using the defaults.`);
+    else {
+      const u = obj.updates as Record<string, unknown>;
+      const keep: NonNullable<ConfigFile["updates"]> = {};
+      if (typeof u.repo === "string" && u.repo.trim()) keep.repo = u.repo.trim();
+      else if (u.repo !== undefined) log.warn(`"updates.repo" in ${path} must be the address of a git repository. Using the default.`);
+      if (typeof u.source === "string" && u.source.trim()) keep.source = u.source.trim();
+      else if (u.source !== undefined) log.warn(`"updates.source" in ${path} must be the full path of a folder. Ignoring it.`);
+      if (typeof u.checkHours === "number" && Number.isFinite(u.checkHours) && u.checkHours >= 0 && u.checkHours <= 24 * 7) keep.checkHours = u.checkHours;
+      else if (u.checkHours !== undefined) log.warn(`"updates.checkHours" in ${path} must be a number of hours from 0 to 168. Using the default.`);
+      if (typeof u.branch === "string" && /^[A-Za-z0-9._/-]{1,100}$/.test(u.branch) && !u.branch.includes("..")) keep.branch = u.branch;
+      else if (u.branch !== undefined) log.warn(`"updates.branch" in ${path} must be a branch name. Using main.`);
+      out.updates = keep;
+    }
+  }
   out.settings = readSettingsFile(obj, out.context as ContextSettings | undefined, path);
   return out;
 }
@@ -542,6 +579,8 @@ export function resolveConfig(flags: Flags): EngineConfig {
     notify: notifyConfig(file.notify),
     chat: chatConfig(file.chat),
     ...(file.settings ? { settings: file.settings } : {}),
+    ...(flags.shell ? { shell: true } : {}),
+    ...(file.updates ? { updates: { ...file.updates, ...(file.updates.source ? { source: resolve(expandHome(file.updates.source)) } : {}) } } : {}),
   };
 }
 

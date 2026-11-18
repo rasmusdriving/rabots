@@ -38,7 +38,7 @@
 // GPT models. A bot's model decides its harness (see ModelInfo.harness). Everything else in this
 // file is the same for both: the app never asks which harness a bot runs on, except to say so.
 
-export const PROTOCOL_VERSION = 24;
+export const PROTOCOL_VERSION = 25;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -1548,6 +1548,44 @@ export interface ProvidersState {
   checking: boolean;
   /** The running update, or the last one since the engine started. */
   update: ProviderUpdateRun | null;
+  /**
+   * Pobots itself, only on an install run from a clone of the public repository (protocol 25).
+   * Absent everywhere else, and then nothing about it shows.
+   */
+  pobots?: PobotsUpdateState;
+}
+
+/** A self-update of Pobots from the update button (protocol 25). */
+export interface PobotsUpdateRun {
+  startedAt: string;
+  endedAt?: string;
+  /**
+   * waiting: for the bots to be calm. pulling: the new code is fetched into the folder. installing:
+   * packages. building: the new build, beside the running one. restarting: handed over to the job that
+   * swaps the build in and starts Pobots again. done / failed: the end.
+   */
+  phase: "waiting" | "pulling" | "installing" | "building" | "restarting" | "done" | "failed";
+  /** One plain line: "Building Pobots 0.34.1.", "Pobots updated to 0.34.1.". */
+  line: string;
+  from: string;
+  to?: string;
+}
+
+/** Pobots's own version on a public install (protocol 25). */
+export interface PobotsUpdateState {
+  /** The running version. */
+  current: string;
+  /** The newest version on the public repository's main branch, when it was read. */
+  latest?: string;
+  /** True when `latest` is newer than `current`. */
+  available: boolean;
+  checkedAt?: string;
+  /** False when Pobots was started in a way it cannot restart itself (then the button says so). */
+  canRestart: boolean;
+  /** One plain sentence when the last look or the folder has a problem. Calm, never red. */
+  problem?: string;
+  /** The running update, or the last one (also the one before the restart, read back after it). */
+  run: PobotsUpdateRun | null;
 }
 
 /** One limit window of one account. */

@@ -11,15 +11,17 @@
 //
 // Run: node scripts/build.mjs                 everything
 //      node scripts/build.mjs engine          only that part (engine | desktop | ui), leaving the others alone
+// POBOTS_BUILD_OUT=PATH builds into PATH instead of dist/: a public install's self-update builds the
+// new version beside the running one (engine/self-update.ts).
 import { build } from "esbuild";
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BADGE_ICON, groundDark, groundLight, iconSvg, manifest, PHONE_ICONS } from "./icon.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const dist = join(root, "dist");
+const dist = process.env.POBOTS_BUILD_OUT ? resolve(process.env.POBOTS_BUILD_OUT) : join(root, "dist");
 const at = (...parts) => join(root, ...parts);
 
 const all = ["engine", "desktop", "ui"];
@@ -115,4 +117,4 @@ const builders = {
 };
 
 for (const t of targets) await builders[t]();
-console.log(`Built ${targets.join(", ")} into dist/`);
+console.log(`Built ${targets.join(", ")} into ${process.env.POBOTS_BUILD_OUT ? dist : "dist/"}`);

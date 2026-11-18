@@ -79,3 +79,4 @@ await import("./restored-waiting.spec.js");
 await import("./lost-reply.spec.js");
 await import("./first-start.spec.js");
 await import("./gpt-titles.spec.js");
+await import("./self-update.spec.js");

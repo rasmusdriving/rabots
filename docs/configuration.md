@@ -20,6 +20,9 @@ The data folder is `~/Library/Application Support/Pobots` on macOS. The engine a
 | `browser.enabled`, `browser.executable` | The bots' browser shown live in the app (see below) | on, command looked for in the usual places |
 | `backup.folder`, `backup.time` | The nightly backup (see below) | see below, `03:00` |
 | `notify` | Which notifications are sent to your devices | needs you and notes on, finished off |
+| `updates.checkHours` | How often a clone of the public repository looks for a new Pobots (0 is never; Check now in Providers still looks) | `4` |
+| `updates.source` | The clone Pobots updates itself from, when it cannot find it by itself | the clone it was built from |
+| `updates.repo` | The repository a new version comes from; only a clone with this remote updates itself | the public repository |
 
 Paths may start with `~`.
 

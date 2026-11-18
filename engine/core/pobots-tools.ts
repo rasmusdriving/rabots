@@ -1,6 +1,6 @@
 // Pobots as a whole, for the main bot (docs/main-bot.md): get_settings with the backup, the
 // notification devices and the usage meters, and run_pobots_task (back up now, update the providers,
-// a test notification). The backup key, usage hubs and turning notifications on for a device stay with
+// update Pobots itself on a public install behind a card (engine 0.34.0), a test notification). The backup key, usage hubs and turning notifications on for a device stay with
 // the person: none of them is reachable here, and no key, address or token is ever told.
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
@@ -10,6 +10,9 @@ import { EngineError } from "../errors.js";
 import { getSettingsFor } from "./main-bot-tools.js";
 import { calendarSettingsWords } from "./calendar-settings.js";
 import { noteChange } from "./notes.js";
+import { approval } from "./cards.js";
+import { refused } from "./words.js";
+import { wake } from "./start-helper.js";
 import { log } from "../log.js";
 import { localWhen } from "./words.js";
 import { nowWords } from "../schedule.js";
@@ -55,8 +58,25 @@ function usageWords(eng: Engine): string {
   return `Usage${u.checkedAt ? ` (read ${localWhen(eng, u.checkedAt)})` : ""}:\n${lines.join("\n")}`;
 }
 
+/** The note that wakes the bot that started Pobots's own update, once it has ended (also after the restart). */
+export function updateAskerNote(line: string, version: string, ok: boolean): string {
+  return [
+    `Note from Pobots: the update of Pobots that the person allowed has ended. ${line} Pobots now runs version ${version}.`,
+    ok ? "Tell the person in one short sentence that Pobots is updated and which version runs now." : "Tell the person in one or two short sentences that the update did not go through, which version runs now, and the reason in plain words.",
+    "Use no tools.",
+  ].join(" ");
+}
+
+/** Wakes that bot (the main bot when it is gone) in its main chat. */
+export function tellUpdateAsker(eng: Engine, botId: string, line: string, version: string, ok: boolean): void {
+  const rt = eng.bots.get(botId) ?? [...eng.bots.values()].find((b) => b.folder.file.role === "main");
+  if (!rt) return;
+  log.info(`Bot ${rt.folder.id}: told how the update of Pobots went`);
+  wake(eng, rt, { text: updateAskerNote(line, version, ok), purpose: { startedBy: "you", threadId: rt.threadId, fresh: false, hops: 0 } });
+}
+
 /** run_pobots_task: one thing for Pobots now. */
-export async function runPobotsTaskFor(eng: Engine, rt: BotRuntime, args: PobotsTaskArgs): Promise<ToolResult> {
+export async function runPobotsTaskFor(eng: Engine, rt: BotRuntime, args: PobotsTaskArgs, signal?: AbortSignal): Promise<ToolResult> {
   try {
     switch (args.task) {
       case "back_up_now": {
@@ -66,10 +86,33 @@ export async function runPobotsTaskFor(eng: Engine, rt: BotRuntime, args: Pobots
         return ok(`${b.running ? "A backup is being made now." : "The backup was started."} If it fails the person gets a card; get_settings shows how it went.`);
       }
       case "update_providers": {
-        const p = eng.providersUpdate().providers;
+        const p = (await eng.providersUpdate({ providers: true })).providers;
         const todo = p.providers.filter((x) => x.updateAvailable).map((x) => `${x.label} ${x.version ?? "?"} to ${x.latest ?? "the newest"}`);
         noteChange(eng, rt, "pobots", "Pobots", [`started an update of ${todo.join(" and ") || "Claude Code and Codex"}, once every bot is calm`]);
         return ok(`The update has started: ${p.update?.line ?? "it waits until every bot is calm"} It goes on after your turn ends. get_settings shows how it went.`);
+      }
+      case "update_pobots": {
+        const s = eng.hub.providers().pobots;
+        if (!s) return problem("This Pobots updates another way: it does not run from a copy of the public repository, so there is nothing to update here.");
+        if (s.run && !s.run.endedAt) return ok(`An update of Pobots is already running: ${s.run.line}`);
+        if (!s.available || !s.latest) return ok(`Pobots is up to date (${s.current}).${s.checkedAt ? "" : " It has not looked yet; get_settings fresh looks now."}`);
+        // Asked before the card, so the person is never asked for something that cannot run.
+        const no = await eng.hub.pobotsRefusal();
+        if (no) return problem(no);
+        const decision = await approval(
+          eng,
+          rt,
+          {
+            title: `Update Pobots to ${s.latest}?`,
+            detail: [`Pobots ${s.current} to ${s.latest}.`, "", "It waits until every bot is calm, then restarts. The window reconnects by itself after about a minute.", "", `Asked by ${rt.folder.file.name}.`].join("\n"),
+            caption: "Update",
+          },
+          signal,
+        );
+        if (decision !== "allow") return refused(decision, "Pobots was not updated");
+        await eng.providersUpdate({ pobots: true, askedBy: rt.folder.id });
+        noteChange(eng, rt, "pobots", "Pobots", [`started the update to ${s.latest}, as you allowed; Pobots restarts once every bot is calm`]);
+        return ok(`The person allowed it. The update to ${s.latest} has started; Pobots restarts once every bot is calm, so after your turn. Tell the person in a sentence that Pobots will restart and come back by itself in about a minute. When it is done, Pobots wakes you with how it went, and you tell them which version runs.`);
       }
       case "test_notification": {
         const devices = eng.notifier.state().devices.filter((d) => !d.goneAt);

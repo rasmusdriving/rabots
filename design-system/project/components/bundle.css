@@ -1254,6 +1254,8 @@ a.pb-msg-file:focus-visible { outline: 2px solid var(--focus); outline-offset: 2
 .pb-set7-provider-name { flex: 1; font-size: 15px; line-height: 22px; font-weight: 600; }
 .pb-set7-provider-facts { margin: 0; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
 .pb-set7-provider-problem { margin: 0; font-size: 13px; line-height: 20px; color: var(--clay); }
+/* A program that is not installed is no fault while no bot needs it: said in the muted ink. */
+.pb-set7-provider-problem[data-calm] { color: var(--ink-muted); }
 .pb-set7-provider-update { display: flex; align-items: center; gap: var(--space-3); min-height: 32px; }
 .pb-set7-provider-latest { flex: 1; font-size: 13px; line-height: 20px; }
 .pb-set7-update[data-hide] { visibility: hidden; }
@@ -1263,6 +1265,9 @@ a.pb-msg-file:focus-visible { outline: 2px solid var(--focus); outline-offset: 2
 .pb-set7-run > .pb-mark { margin-top: 4px; }
 .pb-set7-update-text { display: flex; flex-direction: column; gap: var(--space-2); min-height: 44px; }
 .pb-set7-update-what { color: var(--ink); font-weight: 500; }
+/* Pobots itself, on a public install only (engine 0.34.0): a card like the providers', last in the list.
+   A look that did not work is one calm line, never the clay of a problem. */
+.pb-set7-pobots-note { flex: none; color: var(--ink-muted); }
 
 /* Usage hubs. */
 .pb-set7-hub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }

@@ -15,7 +15,17 @@
 // Flags: --test-copy works on the test copy (app.pobots.engine-test) instead of the real Pobots.
 //        --break (only with --test-copy) stages a build that cannot start, to try the way back.
 //        --allow-dirty stages a build from a working tree with uncommitted changes.
+//
+//   node scripts/live-update.mjs request --self --data-dir=PATH --install-dir=PATH --dist=PATH
+//        --old-commit=SHA (--label=LABEL | --app [--app-arg=ARG ...]) [--node=PATH] [--install=JSON]
+//       A public install's own update (engine 0.34.0, engine/self-update.ts), asked for by its engine
+//       after it moved its clone forward and built the new version into --dist. The same job, with
+//       these differences: the service is the one named by --label (launchd tells where its file is),
+//       or with --app the engine started by the desktop window, which is stopped with it and opened
+//       again; the stage is <data dir>/updates/job; and when the update does not go in, the clone is
+//       put back on --old-commit (and --install runs again when the packages had changed).
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { appendFileSync, copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, userInfo } from "node:os";
@@ -46,6 +56,106 @@ function places(testCopy) {
 }
 
 const command = process.argv[2];
+
+// ------------------------------------------------------------ request --self (asked for by a public install's engine)
+if (command === "request" && has("self")) {
+  const repo = dirname(here);
+  const dataDir = arg("data-dir");
+  const installDir = arg("install-dir");
+  const built = arg("dist");
+  const oldCommit = arg("old-commit");
+  const label = arg("label");
+  const app = has("app");
+  if (!dataDir || !installDir || !built || !oldCommit || !/^[0-9a-f]{7,64}$/.test(oldCommit) || (!label && !app) || (label && app)) fail("A self-update needs --data-dir, --install-dir, --dist, --old-commit and either --label or --app.");
+  if (label && !/^[A-Za-z0-9.-]+$/.test(label)) fail(`"${label}" is not a usable service name.`);
+  if (!existsSync(join(built, "engine", "main.mjs")) || !existsSync(join(built, "ui", "index.html"))) fail("The new build is not there.");
+  if (!existsSync(join(installDir, "dist", "engine", "main.mjs"))) fail(`There is no installed build in ${installDir} to update.`);
+  let plistPath;
+  if (label) {
+    plistPath = /^\s*path = (.+)$/m.exec(launchctl("print", `${domain}/${label}`).stdout ?? "")?.[1]?.trim();
+    if (!plistPath || !existsSync(plistPath)) fail("The service's file could not be found, so Pobots cannot be restarted.");
+  }
+  const jobLabel = label ? `${label}.self-update` : `app.pobots.self-update-${createHash("sha1").update(dataDir).digest("hex").slice(0, 8)}`;
+  if (loaded(jobLabel)) fail("An update is already waiting or running.");
+  const electronApp = join(repo, "node_modules", "electron", "dist", "Electron.app");
+  if (app && !existsSync(electronApp)) fail("Electron is not installed in the clone, so the window cannot be opened again.");
+  const node = arg("node") ?? process.execPath;
+  let install = null;
+  if (arg("install")) {
+    try {
+      install = JSON.parse(arg("install"));
+    } catch {
+      fail("--install is not readable.");
+    }
+  }
+  const protocol = Number(/export const PROTOCOL_VERSION = (\d+)/.exec(readFileSync(join(repo, "shared", "protocol.ts"), "utf8"))?.[1]);
+  const version = /export const ENGINE_VERSION = "([^"]+)"/.exec(readFileSync(join(repo, "engine", "engine.ts"), "utf8"))?.[1];
+  if (!protocol || !version) fail("Could not read the protocol number or the engine's version from the source.");
+  const commit = spawnSync("git", ["-C", repo, "rev-parse", "--short", "HEAD"], { encoding: "utf8" }).stdout.trim();
+  const stageDir = join(dataDir, "updates", "job");
+  rmSync(stageDir, { recursive: true, force: true });
+  mkdirSync(stageDir, { recursive: true });
+  cpSync(built, join(stageDir, "dist"), { recursive: true });
+  copyFileSync(join(repo, "package.json"), join(stageDir, "package.json"));
+  copyFileSync(fileURLToPath(import.meta.url), join(stageDir, "runner.mjs"));
+  const stage = {
+    self: true,
+    mode: app ? "app" : "service",
+    testCopy: false,
+    label: label ?? jobLabel,
+    jobLabel,
+    dataDir,
+    stageDir,
+    plistPath: plistPath ?? "",
+    installDir,
+    repo,
+    oldCommit,
+    install,
+    appArgs: process.argv.filter((a) => a.startsWith("--app-arg=")).map((a) => a.slice("--app-arg=".length)),
+    electronApp,
+    electron: node,
+    protocol,
+    version,
+    commit,
+    note: arg("note") ?? "",
+    waitMinutes: Number(arg("wait") ?? 30),
+    requestedAt: now(),
+  };
+  writeFileSync(join(stageDir, "stage.json"), JSON.stringify(stage, null, 2) + "\n");
+  bootstrapJob(stage, node);
+  console.log(`The update to ${version} (${commit}) is handed over.`);
+  process.exit(0);
+}
+
+/** Starts the job under launchd, so it outlives the engine it stops. */
+function bootstrapJob(p, electron) {
+  const xml = (s) => String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  const jobPlist = join(p.stageDir, "job.plist");
+  writeFileSync(
+    jobPlist,
+    `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${xml(p.jobLabel)}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${xml(electron)}</string>
+    <string>${xml(join(p.stageDir, "runner.mjs"))}</string>
+    <string>run</string>
+  </array>
+  <key>EnvironmentVariables</key><dict><key>ELECTRON_RUN_AS_NODE</key><string>1</string></dict>
+  <key>WorkingDirectory</key><string>${xml(home)}</string>
+  <key>RunAtLoad</key><true/>${p.self ? "\n  <key>AbandonProcessGroup</key><true/>" : ""}
+  <key>StandardOutPath</key><string>${xml(join(p.stageDir, "run.log"))}</string>
+  <key>StandardErrorPath</key><string>${xml(join(p.stageDir, "run.log"))}</string>
+</dict>
+</plist>
+`,
+  );
+  const started = launchctl("bootstrap", domain, jobPlist);
+  if (started.status !== 0) fail(`launchd would not start the update: ${(started.stderr || started.stdout).trim()}`);
+}
 
 // ------------------------------------------------------------ request (run from the repo)
 if (command === "request") {
@@ -80,32 +190,7 @@ if (command === "request") {
   const stage = { ...p, installDir, electron, protocol, version, commit, note: arg("note") ?? "", waitMinutes: Number(arg("wait") ?? 30), requestedAt: now() };
   writeFileSync(join(p.stageDir, "stage.json"), JSON.stringify(stage, null, 2) + "\n");
 
-  const xml = (s) => String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-  const jobPlist = join(p.stageDir, "job.plist");
-  writeFileSync(
-    jobPlist,
-    `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>${xml(p.jobLabel)}</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>${xml(electron)}</string>
-    <string>${xml(join(p.stageDir, "runner.mjs"))}</string>
-    <string>run</string>
-  </array>
-  <key>EnvironmentVariables</key><dict><key>ELECTRON_RUN_AS_NODE</key><string>1</string></dict>
-  <key>WorkingDirectory</key><string>${xml(home)}</string>
-  <key>RunAtLoad</key><true/>
-  <key>StandardOutPath</key><string>${xml(join(p.stageDir, "run.log"))}</string>
-  <key>StandardErrorPath</key><string>${xml(join(p.stageDir, "run.log"))}</string>
-</dict>
-</plist>
-`,
-  );
-  const started = launchctl("bootstrap", domain, jobPlist);
-  if (started.status !== 0) fail(`launchd would not start the update: ${(started.stderr || started.stdout).trim()}`);
+  bootstrapJob(p, electron);
   console.log(`The update of ${p.testCopy ? "the test copy" : "Pobots"} to ${version} (${commit}) is handed over.`);
   console.log(`It starts when every bot is idle, and gives up after ${stage.waitMinutes} ${stage.waitMinutes === 1 ? "minute" : "minutes"} of waiting.`);
   console.log(`Result: ${join(p.dataDir, "updates", "last.json")}  (or: node scripts/live-update.mjs status${p.testCopy ? " --test-copy" : ""})`);
@@ -136,6 +221,35 @@ const db = join(s.dataDir, "pobots.db");
 const updatesDir = join(s.dataDir, "updates");
 const log = (line) => console.log(`${now()} ${line}`);
 const WebSocket = createRequire(join(s.installDir, "package.json"))("ws");
+/** A self-update's window mode: the engine was started by the desktop window, which goes and comes with it. */
+const appMode = s.self && s.mode === "app";
+/** The installed copy has its own package.json (not the clone itself, whose package.json git keeps). */
+const ownPackage = !s.self || realOf(s.installDir) !== realOf(s.repo);
+function realOf(p) {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
+const alive = (pid) => {
+  if (!(pid > 1)) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err.code === "EPERM";
+  }
+};
+function enginePid() {
+  try {
+    return Number(JSON.parse(readFileSync(join(s.dataDir, "engine.json"), "utf8")).pid) || undefined;
+  } catch {
+    return undefined;
+  }
+}
+/** Whether an engine runs: launchd's word for the service, the engine's own note for the window. */
+const engineUp = () => (appMode ? alive(enginePid()) : loaded(s.label));
 
 /** One short look at the running engine: its version and its bots. Undefined when it cannot be reached. */
 async function look(protocol) {
@@ -274,7 +388,55 @@ async function waitUp(ms, differentFrom) {
   return undefined;
 }
 
+/** The window's engine: stopped with SIGTERM (the window closes with it), and the window waited for. */
+async function stopApp() {
+  const pid = enginePid();
+  if (!alive(pid)) return;
+  const ps = (field, of) => spawnSync("/bin/ps", ["-o", `${field}=`, "-p", String(of)], { encoding: "utf8" }).stdout.trim();
+  const parent = Number(ps("ppid", pid)) || undefined;
+  const window = parent && /electron|pobots/i.test(ps("comm", parent)) ? parent : undefined;
+  const kill = (p, sig) => {
+    try {
+      process.kill(p, sig);
+    } catch {}
+  };
+  kill(pid, "SIGTERM");
+  for (let i = 0; i < 200 && alive(pid); i++) await sleep(100);
+  if (alive(pid)) kill(pid, "SIGKILL");
+  if (!window) return;
+  for (let i = 0; i < 100 && alive(window); i++) await sleep(100);
+  if (alive(window)) kill(window, "SIGTERM");
+  for (let i = 0; i < 50 && alive(window); i++) await sleep(100);
+}
+
+/** Opens the window again, from the clone, through Launch Services so it outlives this job. */
+function startApp() {
+  // `open` hands this job's environment to the app it opens. This job runs Electron as Node
+  // (ELECTRON_RUN_AS_NODE, the job's plist), and a window opened with that set starts as Node too and
+  // ends at once: no window, no engine (found in the browser test, 18 Nov 2026). So never pass it on.
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  const r = spawnSync("/usr/bin/open", ["-n", "-a", s.electronApp, "--args", s.repo, ...s.appArgs], { encoding: "utf8", env });
+  if (r.status !== 0) log(`The window could not be opened: ${(r.stderr || r.stdout || "").trim().slice(0, 200)}`);
+  return r.status === 0;
+}
+
+/** A self-update that did not go in puts the clone back on the commit it came from. Once. */
+let gitBack = false;
+function resetGit() {
+  if (!s.self || gitBack) return;
+  gitBack = true;
+  const r = spawnSync("git", ["-C", s.repo, "reset", "--keep", "--quiet", s.oldCommit], { encoding: "utf8" });
+  if (r.status !== 0) return log(`The folder ${s.repo} could not be put back on ${s.oldCommit}: ${(r.stderr || "").trim().slice(0, 200)}`);
+  log(`The folder ${s.repo} is back on ${s.oldCommit.slice(0, 12)}.`);
+  if (s.install?.command) {
+    const i = spawnSync(s.install.command, s.install.args ?? [], { encoding: "utf8", env: { ...process.env, PATH: s.install.path || process.env.PATH }, timeout: 15 * 60_000 });
+    log(i.status === 0 ? "The packages of the old version are installed again." : "The packages of the old version could not be installed again.");
+  }
+}
+
 async function stopEngine() {
+  if (appMode) return stopApp();
   if (!loaded(s.label)) return;
   launchctl("bootout", target);
   for (let i = 0; i < 100 && loaded(s.label); i++) await sleep(100);
@@ -299,6 +461,7 @@ function ensureInteractive() {
 }
 
 async function startEngine() {
+  if (appMode) return startApp();
   ensureInteractive();
   launchctl("enable", target);
   for (let i = 0; i < 10; i++) {
@@ -309,8 +472,9 @@ async function startEngine() {
 }
 
 function finish(result) {
+  if (s.self && !result.installed) resetGit();
   mkdirSync(updatesDir, { recursive: true });
-  const record = { at: now(), requestedAt: s.requestedAt, commit: s.commit, note: s.note, ...result };
+  const record = { at: now(), requestedAt: s.requestedAt, commit: s.commit, note: s.note, ...(s.self ? { kind: "self", version: s.version } : {}), ...result };
   writeFileSync(join(updatesDir, "last.json"), JSON.stringify(record, null, 2) + "\n");
   appendFileSync(join(updatesDir, "history.jsonl"), JSON.stringify(record) + "\n");
   log(result.summary);
@@ -378,10 +542,10 @@ try {
   rmSync(previous, { recursive: true, force: true });
   swap = "begun"; // from here until "done", a failure must put the old build back (see the catch below)
   renameSync(dist, previous);
-  copyFileSync(join(s.installDir, "package.json"), join(s.installDir, "package.previous.json"));
-  swap = "package saved";
+  if (ownPackage) copyFileSync(join(s.installDir, "package.json"), join(s.installDir, "package.previous.json"));
+  swap = ownPackage ? "package saved" : "begun";
   cpSync(join(here, "dist"), dist, { recursive: true });
-  copyFileSync(join(here, "package.json"), join(s.installDir, "package.json"));
+  if (ownPackage) copyFileSync(join(here, "package.json"), join(s.installDir, "package.json"));
   swap = "done";
 
   // 3. Start the new build and check it.
@@ -389,6 +553,15 @@ try {
   const after = await waitUp(90_000, before.pid);
   const sameBots = after && before.bots.every((b) => after.bots.some((a) => a.id === b.id)) && after.bots.length >= before.bots.length;
   if (after && sameBots && after.version === s.version) {
+    // A clone's own window (npm start) joins the service: give it the new build too, for its next start.
+    if (s.self && !appMode && realOf(s.repo) !== realOf(s.installDir)) {
+      try {
+        rmSync(join(s.repo, "dist"), { recursive: true, force: true });
+        cpSync(join(here, "dist"), join(s.repo, "dist"), { recursive: true });
+      } catch (err) {
+        log(`The clone's own build could not be replaced (${err.message}); npm start builds it again.`);
+      }
+    }
     finish({
       ok: true,
       installed: true,
@@ -406,9 +579,10 @@ try {
   await stopEngine();
   rmSync(dist, { recursive: true, force: true });
   renameSync(previous, dist);
-  copyFileSync(join(s.installDir, "package.previous.json"), join(s.installDir, "package.json"));
+  if (ownPackage) copyFileSync(join(s.installDir, "package.previous.json"), join(s.installDir, "package.json"));
   for (const tail of ["-wal", "-shm"]) rmSync(db + tail, { force: true });
   copyFileSync(backup, db);
+  resetGit();
   await startEngine();
   const back = await waitUp(90_000, after?.pid);
   const backOk = back && back.version === before.version && before.bots.every((b) => back.bots.some((a) => a.id === b.id));
@@ -419,7 +593,7 @@ try {
     from: before.version,
     summary: backOk
       ? `Not installed: ${why}. The old build (${before.version}) and the database from before are back and running. See the engine's log for why the new one failed.`
-      : `Not installed, and the old build did not come back either: ${why}. Pobots is down. The old build is in ${dist}, the database from before at ${backup}. Start it with: launchctl bootstrap ${domain} "${s.plistPath}"`,
+      : `Not installed, and the old build did not come back either: ${why}. Pobots is down. The old build is in ${dist}, the database from before at ${backup}. ${appMode ? `Start it with: npm start in ${s.repo}` : `Start it with: launchctl bootstrap ${domain} "${s.plistPath}"`}`,
   });
 } catch (err) {
   // The swap broke off halfway (a full disk, a file that could not be copied): the old build is in
@@ -441,7 +615,7 @@ try {
     }
   }
   // Never leave the engine stopped: start whatever build is in place.
-  let up = loaded(s.label);
+  let up = engineUp();
   if (!up && !halfBuild && existsSync(join(dist, "engine", "main.mjs"))) up = await startEngine();
   const state = halfBuild
     ? `Pobots is down: the old build could not be put back. It is in ${previous}; move it to ${dist}, then start it with: launchctl bootstrap ${domain} "${s.plistPath}"`

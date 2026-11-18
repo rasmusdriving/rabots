@@ -73,6 +73,8 @@ import { Backup, type BackupTimings, type UploadReader } from "./backup.js";
 import { SHORTEN_STUCK_MS, SHORTEN_WAIT_MS } from "./shorten.js";
 import { BACKUP_TIME, chatConfig, CONTEXT_DEFAULTS, fullAt, NOTIFY_DEFAULTS, writeConfigPart, type ContextSettings, type EngineConfig } from "./config.js";
 import { SettingsHub, type SettingsHubOptions } from "./settings-hub.js";
+import { SelfUpdate, type SelfUpdateOptions } from "./self-update.js";
+import { tellUpdateAsker } from "./core/pobots-tools.js";
 import { TITLE_MODEL_DEFAULT } from "./settings.js";
 import { claudeTitleMaker, routedTitleMaker, TITLE_SYSTEM, Titles, toChatTitle, type TitleMaker } from "./titles.js";
 import { CodexTitles } from "./codex/titles.js";
@@ -119,7 +121,7 @@ import { activityDayFor } from "./core/activity-day.js";
 export { HELPER_LAST_MAX, helperLine, helperTitle, insideDir, waitingWords } from "./core/words.js";
 export { TIDY_PROMPT, TIDY_REFUSAL } from "./core/runtime.js";
 
-export const ENGINE_VERSION = "0.33.0";
+export const ENGINE_VERSION = "0.34.0";
 
 /** How long a bot waits for another bot's answer before the answer is sent later as a message. */
 const ASK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -250,6 +252,11 @@ export interface EngineOptions {
    * requests and the usage readers (tests and checks), and how Claude is looked for again after an update.
    */
   settingsHub?: SettingsHubOptions;
+  /**
+   * A public install's own update (engine 0.34.0, engine/self-update.ts): `installDir` is the running
+   * build's folder (main.ts). Left out (as in most tests): nothing about it runs or shows.
+   */
+  selfUpdate?: Omit<SelfUpdateOptions, "current">;
   checkClaude?: () => Promise<ClaudeSetup>;
   /** Step 7b: what makes a chat's title with a Claude model. Defaults to a `claude -p` call; tests pass a stand-in. A GPT model's titles go through Codex (engine/codex/titles.ts). */
   titleMaker?: TitleMaker;
@@ -417,6 +424,13 @@ export class Engine {
       },
     });
     this.seesHub = new SeesHub({ read: opts.readSees ?? (opts.createSession ? noReader : readSeesWithClaude), claude: () => this.opts.claude, ...(opts.clock ? { clock: opts.clock } : {}) });
+    const busyBots = () => [...this.bots.values()].filter((rt) => !calm(this, rt) || !!rt.turn).map((rt) => rt.folder.file.name);
+    const self = opts.selfUpdate?.installDir
+      ? new SelfUpdate(
+          { dataDir: opts.config.dataDir, busyBots, changed: () => this.hub?.selfChanged(), tellAsker: (botId, line, version, ok) => tellUpdateAsker(this, botId, line, version, ok) },
+          { current: ENGINE_VERSION, ...(opts.config.updates ? { config: opts.config.updates } : {}), ...(opts.config.shell ? { shell: true } : {}), ...opts.selfUpdate },
+        )
+      : undefined;
     this.hub = new SettingsHub(
       {
         dataDir: opts.config.dataDir,
@@ -429,7 +443,7 @@ export class Engine {
         recheckCodex: () => this.recheckCodex(),
         models: () => this.modelList(),
         botsOn: (p) => [...this.bots.values()].filter((rt) => rt.folder.file.harness === p).map((rt) => rt.folder.file.name),
-        busyBots: () => [...this.bots.values()].filter((rt) => !calm(this, rt) || !!rt.turn).map((rt) => rt.folder.file.name),
+        busyBots,
         restartHarnesses: () => {
           for (const rt of this.bots.values()) this.refreshSession(rt);
         },
@@ -440,7 +454,7 @@ export class Engine {
       },
       opts.config.settings,
       opts.config.context,
-      opts.settingsHub,
+      { ...opts.settingsHub, ...(self ? { self } : {}) },
     );
     const titlesDir = join(opts.config.dataDir, "titles");
     this.codexTitles = new CodexTitles({ setup: () => this.codex, workDir: titlesDir, system: TITLE_SYSTEM });
@@ -644,8 +658,14 @@ export class Engine {
     return this.hub.check(true).then(() => ({ providers: this.hub.providers() }));
   }
 
-  providersUpdate(): Methods["providers.update"]["result"] {
-    return { providers: this.hub.startUpdate() };
+  /** The running version, for words that name it (core/ cannot import it from here). */
+  get engineVersion(): string {
+    return ENGINE_VERSION;
+  }
+
+  /** The update button: Claude Code and Codex, and Pobots itself on a public install (engine 0.34.0). */
+  async providersUpdate(what?: { providers?: boolean; pobots?: boolean; askedBy?: string }): Promise<Methods["providers.update"]["result"]> {
+    return { providers: await this.hub.startUpdate(what) };
   }
 
   /** A provider switched off in Settings takes no new bot (step 7b). */
