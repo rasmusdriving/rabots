@@ -44,7 +44,9 @@ describe("step 7b: the settings", () => {
     const next = applyPatch(file, { timing: { claude: { minTokens: 150000 }, codex: { coldHours: null } }, titleModel: "claude-sonnet-5-5", healthCheckSeconds: 0 }, models);
     assert.equal(settingsView(next).timing.claude.minTokens, 150000);
     assert.equal(settingsView(next).timing.codex.coldHours, CONTEXT_DEFAULTS.coldHours);
-    assert.throws(() => applyPatch(file, { titleModel: "gpt-6-luna" }, models), /Claude model/);
+    // Since 18 Nov 2026 a GPT model may name chats too (through Codex); a model not in the list never.
+    assert.equal(settingsView(applyPatch(file, { titleModel: "gpt-6-luna" }, models)).titleModel, "gpt-6-luna");
+    assert.throws(() => applyPatch(file, { titleModel: "gpt-6.1-luna" }, models), /not in the list/);
     assert.throws(() => applyPatch(file, { healthCheckSeconds: 10 }, models), /0 \(never\) or from 30/);
     assert.throws(() => applyPatch(file, { timing: { claude: { fullFraction: 2 } } }, models), /share above 0/);
     // A bad value in config.json never stops the engine.

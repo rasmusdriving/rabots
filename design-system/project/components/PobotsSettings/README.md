@@ -4,7 +4,18 @@ The settings page for Pobots as a whole (job 5): what belongs to the app, not to
 
 - It stands in the reading panel's place. The bot's or channel's page stays laid out underneath, out of sight, and what was open beside it (an artifact, the browser) steps aside while the page is open; going back shows both exactly as they were, the chat at the same place.
 - **The head** is a bot page's head: the small drawn sliders on a soft disc at the size of a face, "Pobots settings", one muted line "For the whole app, not one bot", and a quiet "Back to Kaja" with a back arrow at the right. Opening gives the title the focus (no ring: it is not a control); going back gives the focus to what opened it, else to the roster's line. Escape goes back, except in a field. Choosing a bot or a channel in the roster leaves the page for it. A reload keeps the page open (the history entry is marked, as for a helper's thread); back still returns to the chat that was open.
-- **Sections** like a bot's Settings tab (`pb-settings`, `pb-section`): one calm column, a heading per section. "Notifications" is the first, then "When a bot is working", then "Backup", whose list of runs stays the last thing on the page.
+- **Sections** like a bot's Settings tab (`pb-settings`, `pb-section`): one calm column, a heading per section. "About you" is the first (engine 0.33.0), then "Notifications", then "When a bot is working", then "Backup", whose list of runs stays the last thing on the page.
+
+## About you (engine 0.33.0)
+
+The first part of General. A short note about the person that every bot gets in its instructions; the main bot writes it when they first meet (see AppShell, "First start") and can change it with `change_settings`.
+
+1. **What it is** (`pb-section-text`): "A short note every bot gets: who you are, what you do, what matters to you and how you like to be talked to. Your main bot writes it when you first meet. Change it here, or ask your main bot."
+2. **The text box** (`pb-about-input`, a `pb-textarea` at least 144px tall, named by the section's title), empty with the hint "Who you are, what you do, what matters to you."
+3. **One line under it** (`pb-about-foot`): at the left the count, "81 of 4,000 characters", which becomes what is wrong ("Keep it under 4,000 characters.", or the engine's sentence) in the same place, so nothing moves; at the right a small **Save**, lit only when the box holds an edit. "Saved" shows beside the title for a moment.
+4. A change from the main bot shows in the box at once, unless the box holds an edit not saved yet: that edit stays until it is saved.
+
+On a phone Save is 40px with a 44px place to tap.
 
 ## When a bot is working
 
@@ -81,7 +92,7 @@ Since step 7b the page above is the **General** section of one settings window, 
 
 ### Chats
 
-"When chats start fresh": one sentence on what a fresh start is, a choice "Claude bots" / "Codex bots", then "Fresh starts" (a switch) and the values, each a row (`pb-set7-row`): its name and one muted sentence at the left, the number field and its unit at the right, "Default: 100,000 tokens" under it (with "(in use)" while it is the default) and a quiet **Reset** that keeps its room while it is not needed, and a line that keeps its room for a refusal. A value saves when the field is left or with Enter. "Before the cache runs out" is greyed for Codex bots, saying why. Then "Chat titles": what a title is for, "Made by" (the Claude models), and that only the start and the end of a chat are sent.
+"When chats start fresh": one sentence on what a fresh start is, a choice "Claude bots" / "Codex bots", then "Fresh starts" (a switch) and the values, each a row (`pb-set7-row`): its name and one muted sentence at the left, the number field and its unit at the right, "Default: 100,000 tokens" under it (with "(in use)" while it is the default) and a quiet **Reset** that keeps its room while it is not needed, and a line that keeps its room for a refusal. A value saves when the field is left or with Enter. "Before the cache runs out" is greyed for Codex bots, saying why. Then "Chat titles": what a title is for, "Made by" (the Claude models and, while Codex is ready, the ChatGPT models, in two groups named as in the bot picker; the chosen model's provider mark in a soft disc beside it, `pb-set7-model-mark`, which changes without anything moving), and that only the start and the end of a chat are sent. A ChatGPT model names chats through Codex; the hint says Haiku 5.5 does it when Codex cannot.
 
 ### Providers
 

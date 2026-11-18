@@ -143,7 +143,7 @@ export default async function section() {
     check(T("the settings window opens over the app, the gear marked as the open page"), opened?.page && opened.current === "page" && opened.modal === "true" && opened.title === "Settings", opened);
     // Job 4: Notifications stands first (was: Backup is the first section). Steering (protocol 14) put
     // "When a bot is working" between them; Backup and its list of runs stay last.
-    check(T("Backup is its section after Notifications and When a bot is working, built for more to follow"), opened?.sections?.join(",") === "notify,chat,backup", opened);
+    check(T("Backup is its section after About you, Notifications and When a bot is working, built for more to follow"), opened?.sections?.join(",") === "about,notify,chat,backup", opened);
     check(T("the window takes the focus on its title; the chat stays where it was underneath, out of reach"), opened?.focus === "Settings" && opened.chatHidden === "visible" && opened.inert === true, opened);
     check(T("the window has a close control"), opened?.back === "Close settings", opened);
     await houseRules(T("the page with no key"));
@@ -295,10 +295,11 @@ export default async function section() {
     await settled(PAGE);
     const order = [];
     // Job 4: the controls of the Notifications section, which stands above Backup now, are passed over;
-    // so is the one stop of "When a bot is working" (steering), which stands between them.
+    // so is the one stop of "When a bot is working" (steering), which stands between them, and About
+    // you (engine 0.33.0), first on the page.
     for (let i = 0; i < 24 && order.length < 6; i++) {
       await key("Tab");
-      if (await ev(`!!document.activeElement?.closest(".pb-notify, .pb-followup")`)) continue;
+      if (await ev(`!!document.activeElement?.closest(".pb-notify, .pb-followup, .pb-about")`)) continue;
       order.push(await ev(`(() => { const a = document.activeElement; const s = getComputedStyle(a); return (a.id || a.className.split(" ").filter((c) => c.startsWith("pb-backup") || c.startsWith("pb-appsettings")).join(".") || a.tagName) + (s.outlineStyle !== "none" && parseFloat(s.outlineWidth) >= 2 ? "" : "!noring"); })()`));
     }
     // Step 7b: the window's close, then its section list (one stop), then the section.

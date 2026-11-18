@@ -1166,6 +1166,11 @@ a.pb-msg-file:focus-visible { outline: 2px solid var(--focus); outline-offset: 2
 .pb-followup-other { margin: 0; max-width: 480px; }
 .pb-followup-problem { display: grid; margin: 0; }
 .pb-followup-problem .pb-swap { display: grid; }
+/* "About you" (engine 0.33.0): the note every bot gets, a text box with the count (or what is wrong)
+   on one line that keeps its room, and Save at the right. */
+.pb-about-input { min-height: 144px; }
+.pb-about-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-2); }
+.pb-about-note { min-width: 0; min-height: 20px; }
 /* "Your devices": oldest first, a new one at the bottom. The name, "This device" beside it, one line
    under it, and a quiet Forget at the right. */
 .pb-notify-devices { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
@@ -1235,6 +1240,10 @@ a.pb-msg-file:focus-visible { outline: 2px solid var(--focus); outline-offset: 2
 .pb-set7-row[data-na] .pb-set7-row-label { color: var(--ink-muted); }
 .pb-set7-enabled { padding-bottom: var(--space-2); }
 .pb-set7-select { max-width: 240px; }
+/* Chat titles: the chosen model's provider mark beside the picker; the row keeps its size when the mark changes. */
+.pb-set7-model-row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.pb-set7-model-row .pb-set7-select { flex: 1 1 auto; min-width: 0; }
+.pb-set7-model-mark { flex: none; }
 
 /* Providers: one card each, its state in one line, the newest version and Update in the next. */
 .pb-set7-checked { display: flex; align-items: center; gap: var(--space-3); min-height: 32px; }

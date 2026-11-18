@@ -200,7 +200,12 @@ export function mainTools(host: TeamHost, models: string): BotTool[] {
           })
           .optional(),
         health_check_seconds: z.number().int().min(0).max(86_400).optional().describe("How often Pobots looks at Claude Code and Codex, in seconds: 0 never, else at least 30."),
-        title_model: z.string().min(1).max(100).optional().describe("The Claude model that names chats, by id, for example claude-haiku-5-5."),
+        title_model: z.string().min(1).max(100).optional().describe("The model that names chats, by id: a Claude model such as claude-haiku-5-5 (the default), or a GPT model such as gpt-6-luna, which names them through Codex and so spends no Claude usage. get_settings lists both."),
+        about_you: z
+          .string()
+          .max(4000)
+          .optional()
+          .describe("About you: a short note about the person (who they are, what they do, what matters to them, their responsibilities, how they like to be talked to) that every bot gets. The whole new text; an empty text clears it. Never anything secret."),
         calendar_internal_domains: z
           .array(z.string().max(200))
           .max(20)

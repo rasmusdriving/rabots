@@ -570,6 +570,14 @@ export async function setFollowUp(followUp: FollowUp): Promise<void> {
   if (store.chatEvents === seen) store.setChat(chat);
 }
 
+/** Saves "About you" (protocol 24). Answers with the text as the engine keeps it (trimmed). */
+export async function setAboutYou(text: string): Promise<string> {
+  const seen = store.aboutYouEvents;
+  const { aboutYou } = await engine().request("aboutYou.set", { text });
+  if (store.aboutYouEvents === seen) store.setAboutYou(aboutYou);
+  return aboutYou;
+}
+
 // ------------------------------------------------------------ notifications when the page is not open
 
 /** Puts an answer's whole state into the store, unless a "notify.changed" that came meanwhile is newer. */

@@ -78,6 +78,7 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
     access: access.optional(),
     look: look.optional(),
     mayMessage: botIds.optional(),
+    welcome: z.boolean().optional(),
   }),
   "bot.update": z.object({
     botId: id,
@@ -179,6 +180,8 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
   "message.unqueue": z.object({ botId: id, itemId: id }),
   "thread.queued": z.object({ threadId: id }),
   "chat.set": z.object({ followUp: z.enum(["steer", "queue"]) }),
+  // The engine says the limit (4,000) in plain words; this only stops a huge message.
+  "aboutYou.set": z.object({ text: z.string().max(20_000) }),
   "attachment.discard": z.object({ id: z.string().min(1).max(64) }),
   "helper.stop": z.object({ botId: id, itemId: id }),
   "turn.interrupt": z.object({ botId: id }),

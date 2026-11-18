@@ -171,6 +171,7 @@ import { restWaitGone, restWaitView, seedRestoredWait } from "./mock-restoredwai
 import { CODING_SEES, MockSees } from "./mock-sees";
 import { MockActivity } from "./mock-activity";
 import { MockCalendar } from "./mock-calendar";
+import { MockFirstStart } from "./mock-firststart";
 import {
   type MockScene,
   SCENES,
@@ -314,6 +315,7 @@ export class MockEngine implements EngineClient {
   private sees!: MockSees;
   /** The calendar connection and meeting cards (ui/engine/mock-calendar.ts, engine 0.25.0). */
   private calendar!: MockCalendar;
+  private firstStart!: MockFirstStart;
   /** The chat settings (protocol 14). */
   chat: ChatSettings = { followUp: "steer" };
   /** A newer card from Pobots is sent before the older one is withdrawn. */
@@ -404,6 +406,9 @@ export class MockEngine implements EngineClient {
     this.calendar = new MockCalendar(this, flags.get("calendar") ?? undefined);
     window.pobotsCalendar = this.calendar.levers();
     if (flags.get("calendar") === "1" && scene !== "first-run") this.calendar.seed();
+    // A new install's first start and About you (&aboutyou=1, protocol 24).
+    this.firstStart = new MockFirstStart(this, flags.get("aboutyou"));
+    window.pobotsFirstStart = this.firstStart.levers();
     window.pobotsMock = {
       botWrites: (botId, path, text) => this.botWrites(botId, path, text),
       expire: (cardId) => this.expire(cardId),
@@ -926,6 +931,7 @@ export class MockEngine implements EngineClient {
     "calendar.get": (p) => this.calendar.handlers["calendar.get"](p),
     "calendar.set": (p) => this.calendar.handlers["calendar.set"](p),
     "calendar.test": (p) => this.calendar.handlers["calendar.test"](p),
+    "aboutYou.set": (p) => this.firstStart.handlers["aboutYou.set"](p),
   };
 
   // ------------------------------------------------------------ helpers
@@ -935,7 +941,7 @@ export class MockEngine implements EngineClient {
   }
 
   private snapshot(): Snapshot {
-    return structuredClone({ status: this.status, bots: this.bots, cards: this.cards, models: this.models(), machines: MACHINES, upcoming: this.upcomingList, channels: this.channels.map(publicChannel), browser: this.browser.state(), backup: this.backup.state(), notify: this.notify.state(), chat: this.chat, settings: this.settings7.view(), providers: this.settings7.providers(), todos: this.todos.state(), calendar: this.calendar.handlers["calendar.get"]({}).calendar });
+    return structuredClone({ status: this.status, bots: this.bots, cards: this.cards, models: this.models(), machines: MACHINES, upcoming: this.upcomingList, channels: this.channels.map(publicChannel), browser: this.browser.state(), backup: this.backup.state(), notify: this.notify.state(), chat: this.chat, settings: this.settings7.view(), providers: this.settings7.providers(), todos: this.todos.state(), calendar: this.calendar.handlers["calendar.get"]({}).calendar, aboutYou: this.firstStart.text });
   }
 
   /**
@@ -1211,6 +1217,7 @@ export class MockEngine implements EngineClient {
       { path: "memory/MEMORY.md", before: null, after: "# Memory\n\nNothing yet.\n" },
     ], undefined, true);
     this.emit({ event: "bot.added", data: { bot } });
+    if (p.welcome) this.firstStart.welcome(bot.id);
     return { bot };
   }
 

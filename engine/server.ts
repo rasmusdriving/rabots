@@ -1152,6 +1152,8 @@ export class EngineServer {
         return engine.queuedOf((params as Methods["thread.queued"]["params"]).threadId);
       case "chat.set":
         return engine.chatSet(params as Methods["chat.set"]["params"]);
+      case "aboutYou.set":
+        return engine.aboutYouSet((params as Methods["aboutYou.set"]["params"]).text);
       case "sees.inventory":
         return engine.seesInventory(params as Methods["sees.inventory"]["params"]);
       case "attachment.discard":

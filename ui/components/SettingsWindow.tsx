@@ -5,9 +5,11 @@
 // health check interval) and its usage view (apps/web/src/components/usage/UsageLimitsPooled.tsx: per
 // provider and window the % left in big, a bar per account, the reset time).
 import { useEffect, useState, type ReactNode } from "react";
-import type { ChatTimingKey, ProviderId, ProviderState, ProvidersState, UsageAccount, UsageProvider, UsageWindow } from "../../shared/protocol";
+import type { ChatTimingKey, Harness, ModelInfo, ProviderId, ProviderState, ProvidersState, UsageAccount, UsageProvider, UsageWindow } from "../../shared/protocol";
 import { messageOf } from "../engine/types";
 import { useNow, useSaver, type SaveState } from "../lib/hooks";
+import { groupModels, offeredModels } from "../lib/models";
+import { PROVIDERS } from "../lib/providers";
 import { clockTime } from "../lib/words";
 import { addUsageHub, checkProviders, readUsage, removeUsageHub, setSettings, updateProviders } from "../state/actions";
 import { useAppState } from "../state/store";
@@ -270,10 +272,22 @@ function TimingRow({ which, row, value, def, isDefault }: { which: ProviderId; r
 function TitleModelSection() {
   const settings = useAppState((s) => s.settings);
   const allModels = useAppState((s) => s.models);
-  const models = allModels.filter((m) => m.harness === "claude");
+  const status = useAppState((s) => s.status);
   const [state, save] = useSaver();
   if (!settings) return null;
-  const list = models.some((m) => m.id === settings.titleModel) ? models : [...models, { id: settings.titleModel, label: settings.titleModel, harness: "claude" as const, efforts: [], defaultEffort: "low" as const }];
+  // Claude and ChatGPT models, as the bot picker offers them: a GPT model while Codex is ready, and the chosen one always (18 Nov 2026).
+  const models = offeredModels(allModels, status, settings.titleModel);
+  const known = models.find((m) => m.id === settings.titleModel);
+  const list = known ? models : [...models, { id: settings.titleModel, label: settings.titleModel, harness: (/^gpt-/.test(settings.titleModel) ? "codex" : "claude") as Harness, efforts: [], defaultEffort: "low" as const }];
+  const groups = groupModels(list);
+  const chosen: Harness = list.find((m) => m.id === settings.titleModel)?.harness ?? "claude";
+  const provider = PROVIDERS[chosen];
+  const options = (ms: ModelInfo[]) =>
+    ms.map((m) => (
+      <option key={m.id} value={m.id}>
+        {m.label}
+      </option>
+    ));
   return (
     <section className="pb-section pb-set7-titles" aria-labelledby="set7-titles">
       <div className="pb-section-head">
@@ -289,14 +303,23 @@ function TitleModelSection() {
         <label className="pb-field-label" htmlFor="set7-title-model">
           Made by
         </label>
-        <select id="set7-title-model" className="pb-input pb-select pb-set7-select" value={settings.titleModel} onChange={(e) => void save(() => setSettings({ titleModel: e.target.value }))}>
-          {list.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-        <span className="pb-hint">The default is Haiku 5.5, the cheapest. At low effort, without thinking.</span>
+        <div className="pb-set7-model-row">
+          {provider && (
+            <span className="pb-helper-mark pb-set7-model-mark" data-provider={chosen} title={provider.name} aria-hidden="true">
+              <provider.Mark />
+            </span>
+          )}
+          <select id="set7-title-model" className="pb-input pb-select pb-set7-select" value={settings.titleModel} onChange={(e) => void save(() => setSettings({ titleModel: e.target.value }))}>
+            {groups.length > 1
+              ? groups.map((g) => (
+                  <optgroup key={g.harness} label={g.label}>
+                    {options(g.models)}
+                  </optgroup>
+                ))
+              : options(list)}
+          </select>
+        </div>
+        <span className="pb-hint">The default is Haiku 5.5, the cheapest Claude model. A ChatGPT model names chats through Codex, so it uses none of your Claude usage; when Codex cannot, Haiku 5.5 does. Always at low effort.</span>
       </div>
       <ProblemLine text={state.phase === "error" ? state.message : ""} />
     </section>

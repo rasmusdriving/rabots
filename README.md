@@ -34,7 +34,9 @@ npm start
 
 - its data folder, `~/Library/Application Support/Pobots` (the database, `config.json`, logs),
 - its bots folder, `~/Pobots/bots`, with one folder per bot (its job description, memory and files),
-- nothing else: the window asks for your first bot's name. The first bot is the main bot, which can make and change the others for you.
+- nothing else.
+
+The window then shows one screen, "Welcome to Pobots": name your main bot (it says Po until you change it), pick its model, and create it. The main bot can make and change your other bots for you. It starts by itself: it greets you and asks a few questions, a couple at a time, about who you are, what you do, what matters to you, your responsibilities and how you like to be talked to. From your answers it writes a short note, "About you", that every bot gets. You can read and change it in Settings, General, About you, or ask the main bot to change it. Pobots keeps the note in its database on your Mac and never writes it to a log; the bots read it with their instructions.
 
 `npm run deps` instead of `npm install` keeps the packages in another folder (`POBOTS_DEPS_DIR`, by default `~/.local/share/pobots`) and links them in. It is only useful when the repository sits on an external or synced drive.
 

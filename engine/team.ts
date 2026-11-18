@@ -276,6 +276,7 @@ export type ChangeSettingsArgs = {
   };
   health_check_seconds?: number;
   title_model?: string;
+  about_you?: string;
   calendar_internal_domains?: string[];
   providers?: { claude?: boolean; codex?: boolean };
   notifications?: { needs?: boolean; note?: boolean; finished?: boolean };

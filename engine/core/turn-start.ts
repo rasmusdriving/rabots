@@ -10,6 +10,7 @@ import { saveChannelMessage } from "./channels.js";
 import { codexInstructions, LATE_CODEX_TOOLS, messageFraming, teamPrompt, TOOL_NAMES } from "../team.js";
 import { managerFraming } from "../task-manager-tools.js";
 import { calendarPrompt } from "./calendar-settings.js";
+import { aboutYouPrompt } from "./first-start.js";
 import { answerNote } from "../todos.js";
 import { freshRunNote, mainRunNote } from "../triggers.js";
 import { channelText } from "../channels.js";
@@ -293,7 +294,8 @@ export async function ensureSession(eng: Engine, rt: BotRuntime, forceFresh = fa
   const f = rt.folder.file;
   // The calendar paragraph for a bot with the switch on (engine 0.25.0).
   const calendar = calendarPrompt(eng, rt);
-  const team = calendar ? `${teamPrompt(f.role, harness)}\n\n${calendar}` : teamPrompt(f.role, harness);
+  // About you, the person's own note (engine 0.33.0), for every bot's own session.
+  const team = [teamPrompt(f.role, harness), calendar, aboutYouPrompt(eng)].filter(Boolean).join("\n\n");
   // The bot's choice (docs/sees.md). Claude: the settings, with the names last read when it needs them.
   // Codex: the thread config from the servers Codex lists for the bot's folder, worked out once here so
   // the paragraph can name what is off (docs/build/step-gpt-bot-sees.md). Failing to work it out never

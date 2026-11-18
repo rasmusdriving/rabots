@@ -8,6 +8,7 @@ import type { ToolResult } from "../claude/session.js";
 import { writeBotFile } from "../bots.js";
 import { EngineError } from "../errors.js";
 import { cleanDomains, setInternalDomains } from "./calendar-settings.js";
+import { ABOUT_YOU_MAX, aboutYou, setAboutYou } from "./first-start.js";
 
 /** The quiet line a bot's change of settings leaves in its chat: what changed, from what to what (core/notes.ts). */
 export function noteChanges(eng: Engine, rt: BotRuntime, changes: string[]): void {
@@ -37,17 +38,26 @@ export function getSettingsFor(eng: Engine): string {
   const prov = p.providers.map(
     (x) => `- ${x.label} (${x.id}): ${x.enabled ? "on" : "off"}, ${x.ready ? "ready" : "not ready"}, version ${x.version ?? "unknown"}${x.latest ? `, newest ${x.latest}` : ""}${x.updateAvailable ? ", an update is available (run_pobots_task update_providers)" : ""}.`,
   );
-  const claudeModels = eng.modelList().filter((m) => m.harness === "claude").map((m) => `${m.id} (${m.label})`);
+  const listed = (h: "claude" | "codex") => eng.modelList().filter((m) => m.harness === h).map((m) => `${m.id} (${m.label})`);
+  const claudeModels = listed("claude");
+  const gptModels = listed("codex");
   return [
     `Message sent while a bot works (follow_up_default): ${eng.chat.followUp}. Each bot's own choice (bot_follow_up): ${bots.join("; ")}.`,
     `Fresh starts (chats), Claude bots: ${t("claude")}.`,
     `Fresh starts (chats), Codex bots: ${t("codex")}.`,
     `Pobots looks at the providers every ${v.healthCheckSeconds} seconds (health_check_seconds, 0 is never).`,
     `Providers:\n${prov.join("\n")}`,
-    `Chat titles are made by ${v.titleModel} (title_model). Claude models: ${claudeModels.join(", ")}.`,
+    `Chat titles are made by ${v.titleModel} (title_model). Claude models: ${claudeModels.join(", ") || "none"}. GPT models, through Codex: ${gptModels.join(", ") || "none"}.`,
     `Notifications: needs ${kinds.needs}, note ${kinds.note}, finished ${kinds.finished}.`,
+    aboutYouLine(eng),
     `Usage hubs: ${v.hubs.length ? v.hubs.map((h) => h.url).join(", ") : "none"} (added and removed by the person in the app only).`,
   ].join("\n");
+}
+
+/** About you for get_settings: the text itself, since the main bot keeps it up to date. */
+function aboutYouLine(eng: Engine): string {
+  const text = aboutYou(eng);
+  return text ? `About you (about_you), the note every bot gets:\n${text}` : "About you (about_you): not written yet.";
 }
 
 /** change_settings (main bot): no card; a quiet line in its chat tells the person what changed (decided 14 Nov 2026). */
@@ -58,6 +68,7 @@ export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSetti
     const target = args.bot_follow_up ? eng.findBot(args.bot_follow_up.bot) : undefined;
     if (args.bot_follow_up && !target) return problem("There is no bot with that name or id.");
     const patch: SettingsPatch = {};
+    if (args.about_you !== undefined && args.about_you.trim().length > ABOUT_YOU_MAX) return problem(`About you is too long. Keep it under ${ABOUT_YOU_MAX.toLocaleString("en-US")} characters.`);
     if (args.chats) {
       const which: ProviderId[] = args.chats.provider === "both" ? ["claude", "codex"] : [args.chats.provider];
       const values: Record<string, number | boolean | null> = {};
@@ -92,6 +103,10 @@ export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSetti
         eng.opts.emit("bot.updated", { bot: eng.toBot(target) });
         changes.push(`${f.name}, a message sent while it works: ${next ?? "the Pobots default"} (was ${was})`);
       }
+    }
+    if (args.about_you !== undefined) {
+      const line = setAboutYou(eng, args.about_you);
+      if (line) changes.push(line);
     }
     if (args.notifications) {
       const before = eng.notifier.state().kinds;

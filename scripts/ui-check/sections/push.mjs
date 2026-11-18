@@ -328,7 +328,7 @@ export default async function section() {
     await openSettings();
     let w = await ev(nWords);
     const order = await ev(`({ sections: $$(".pb-appsettings-section").map((s) => s.dataset.section), backupBelow: $('[data-section="backup"]').getBoundingClientRect().top >= $('[data-section="notify"]').getBoundingClientRect().bottom, intro: $(".pb-notify > .pb-section-text").textContent, title: $(".pb-notify > .pb-section-title").textContent })`);
-    check(T("Notifications is the first section of Pobots settings, Backup below it (When a bot is working between them)"), order?.sections?.join(",") === "notify,chat,backup" && order.backupBelow && order.title === "Notifications", order);
+    check(T("Notifications comes after About you in Pobots settings, Backup below it (When a bot is working between them)"), order?.sections?.join(",") === "about,notify,chat,backup" && order.backupBelow && order.title === "Notifications", order);
     check(T("the section says what it does and that a notification never says what the chat says"), order?.intro === words.INTRO, order?.intro);
     check(T("where the browser cannot (the mock in a plain browser): it says so, and offers nothing to press"), w?.here === "cannot" && w.line === LINE.cannot && !w.act, w);
     check(T("the three switches: needs and notes on, finished off"), w?.kinds?.join(",") === "needs:true,note:true,finished:false", w?.kinds);
