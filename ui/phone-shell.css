@@ -155,12 +155,6 @@
   .pb-shell[data-phone] :is(.pb-set7-check, .pb-set7-refresh, .pb-set7-update, .pb-set7-reset-btn, .pb-set7-hub-remove, .pb-set7-hub-add) { height: 40px; position: relative; }
   .pb-shell[data-phone] :is(.pb-set7-check, .pb-set7-refresh, .pb-set7-update, .pb-set7-reset-btn, .pb-set7-hub-remove, .pb-set7-hub-add)::after { content: ""; position: absolute; inset: -2px; }
   .pb-shell[data-phone] .app-appsettings .pb-switch { box-sizing: content-box; border: 12px solid transparent; margin: -12px; background-clip: padding-box; }
-  .pb-shell[data-phone] .pb-set7-meter { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-1); }
-  .pb-shell[data-phone] .pb-set7-meter-head { flex-direction: row; align-items: baseline; justify-content: space-between; }
-  .pb-shell[data-phone] .pb-set7-bar { grid-template-columns: minmax(0, 1fr) 40px; row-gap: 2px; }
-  .pb-shell[data-phone] .pb-set7-bars[data-several] .pb-set7-bar { grid-template-columns: 22px minmax(0, 1fr) 40px; }
-  .pb-shell[data-phone] .pb-set7-bar-reset { grid-column: 1 / -1; }
-  .pb-shell[data-phone] .pb-set7-bars[data-several] .pb-set7-bar-reset { grid-column: 2 / -1; }
   /* The icon row at the foot of the Bots screen: each 44 px to tap. */
   .pb-shell[data-phone] .app-side .pb-foot-icons { flex-direction: row; height: 48px; padding: 0 var(--space-2); }
   .pb-shell[data-phone] .app-side .pb-foot-space { display: block; }

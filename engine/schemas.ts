@@ -1,7 +1,7 @@
 // Checks the params of every request before the engine acts on them.
 import { z } from "zod";
 import type { MethodName, Methods } from "../shared/protocol.js";
-import { BOT_COLORS, EYE_GAPS, EYE_SHAPES } from "../shared/protocol.js";
+import { BOT_COLORS, EYE_GAPS, EYE_SHAPES, USAGE_RANGES } from "../shared/protocol.js";
 
 const effort = z.enum(["low", "medium", "high", "xhigh", "max"]);
 const access = z.enum(["asks-first", "edits-freely", "decides-itself", "full-access"]);
@@ -208,6 +208,7 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
   "settings.set": z.object({ patch: settingsPatch }),
   "providers.check": z.object({}).optional(),
   "providers.update": z.object({}).optional(),
+  "usage.overview": z.object({ range: z.enum(USAGE_RANGES), refresh: z.boolean().optional() }),
   "usage.read": z.object({ refresh: z.boolean().optional() }).optional(),
   "activity.day": z.object({ day: z.string().max(20).optional() }).optional(),
   "usage.hub.add": z.object({ url: z.string().max(2000), key: z.string().max(5000) }),

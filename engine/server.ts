@@ -40,6 +40,7 @@ import { EngineError, toErrorBody } from "./errors.js";
 import { ENGINE_HEADER } from "./lock.js";
 import { log } from "./log.js";
 import { personActionAfter, personActionBefore, whereFrom } from "./core/person-actions.js";
+import { readUsageOverview } from "./core/usage-history/service.js";
 import type { PersonVia } from "./activity-store.js";
 import { isMethod, parseParams } from "./schemas.js";
 import { HOOK_DEDUPE_MAX, HOOK_MAX_BYTES, HOOK_READ_MS } from "./triggers.js";
@@ -1233,6 +1234,8 @@ export class EngineServer {
         return engine.providersCheck();
       case "providers.update":
         return engine.providersUpdate();
+      case "usage.overview":
+        return readUsageOverview(engine, params as Methods["usage.overview"]["params"]);
       case "usage.read":
         return engine.usageRead(params as Methods["usage.read"]["params"]);
       case "activity.day":
