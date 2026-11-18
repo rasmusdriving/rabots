@@ -47,8 +47,9 @@ function startEngine(): Promise<EngineEndpoint> {
 
     // Electron's own binary doubles as Node, so the engine needs no separate runtime.
     // --data-dir and --bots-dir are passed on, so a check can run the app on temporary folders.
+    // --shell tells the engine the window started it, so a public install can open the window again after an update.
     const passOn = ["data-dir", "bots-dir"].flatMap((name) => (flag(name) ? [`--${name}=${flag(name)}`] : []));
-    const child = spawn(process.execPath, [join(__dirname, "..", "engine", "main.mjs"), "--port=0", ...passOn], {
+    const child = spawn(process.execPath, [join(__dirname, "..", "engine", "main.mjs"), "--port=0", "--shell", ...passOn], {
       env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
       stdio: ["ignore", "pipe", "pipe"],
     });

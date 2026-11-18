@@ -28,6 +28,7 @@ import {
   type SettingsFile,
 } from "./settings.js";
 import { readClaudeUsage, readCodexUsage, readHub, type CliproxyHub } from "./usage.js";
+import type { SelfUpdate } from "./self-update.js";
 import { writeConfigPart } from "./config.js";
 import { CONTEXT_DEFAULTS } from "./config.js";
 
@@ -77,6 +78,8 @@ export interface SettingsHubOptions {
   clock?: () => number;
   /** Runs `op read <ref>` for a hub key kept in 1Password. Tests pass a stand-in. */
   opRead?: (ref: string) => Promise<string | undefined>;
+  /** Pobots's own update on a public install (engine 0.34.0, engine/self-update.ts). */
+  self?: SelfUpdate;
 }
 
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -301,7 +304,8 @@ export class SettingsHub {
   // ------------------------------------------------------------ providers
 
   providers(): ProvidersState {
-    return { ...this.providersState, providers: this.providerStates(), update: this.update ? { ...this.update, results: [...this.update.results] } : null };
+    const pobots = this.o.self?.view();
+    return { ...this.providersState, providers: this.providerStates(), update: this.update ? { ...this.update, results: [...this.update.results] } : null, ...(pobots ? { pobots } : {}) };
   }
 
   private providerStates(): ProviderState[] {
@@ -336,6 +340,7 @@ export class SettingsHub {
     this.firstTimer = setTimeout(() => void this.check(false), this.o.timings?.firstCheckMs ?? FIRST_CHECK_MS);
     this.firstTimer.unref?.();
     this.startHealth();
+    this.o.self?.start();
   }
 
   private startHealth(): void {
@@ -350,6 +355,7 @@ export class SettingsHub {
     this.stopped = true;
     clearInterval(this.healthTimer);
     clearTimeout(this.firstTimer);
+    this.o.self?.stop();
   }
 
   /** Looks at the providers: Codex again, Claude's version, and the newest versions (at most hourly unless `force`). */
@@ -365,6 +371,8 @@ export class SettingsHub {
           const v = await installedVersion(c.executable, c.env, this.runner);
           if (v && v !== c.version) this.host.setClaude({ ...c, version: v });
         }
+        // Pobots itself (a public install only): its own look beside these, at most once a minute when forced.
+        const selfLook = force ? this.o.self?.check(true) : undefined;
         for (const def of PROVIDERS) {
           if (!this.file.enabled[def.id]) continue;
           const seen = this.latest[def.id];
@@ -373,6 +381,7 @@ export class SettingsHub {
           const v = await latestVersion(updatePlan(def.id, setup.executable), this.fetcher);
           this.latest[def.id] = { ...(v ? { version: v } : seen?.version ? { version: seen.version } : {}), at: this.clock() };
         }
+        await selfLook;
       } catch (err) {
         log.warn("Could not look at the providers", err);
       } finally {
@@ -389,15 +398,52 @@ export class SettingsHub {
     return !!this.update && !this.update.endedAt;
   }
 
-  /** The update button: answers at once; the run goes on and tells every window as it goes. */
-  startUpdate(): ProvidersState {
-    if (this.updating) throw new EngineError("conflict", "An update is already running.");
-    const todo = this.providerStates().filter((p) => p.updateAvailable);
-    if (!todo.length) throw new EngineError("conflict", "Claude Code and Codex are up to date. Press Check now to look again.");
-    this.update = { startedAt: iso(this.clock()), phase: "waiting", line: this.waitLine(), results: [] };
-    this.tellUpdate();
-    void this.runUpdate(todo.map((p) => p.id));
+  /**
+   * The update button: Claude Code and Codex when they have updates, then Pobots itself on a public
+   * install (`what` narrows it, for the main bot's tools). Answers at once; the run goes on and tells
+   * every window as it goes. Refuses with one plain sentence, changing nothing.
+   */
+  async startUpdate(what: { providers?: boolean; pobots?: boolean; askedBy?: string } = { providers: true, pobots: true }): Promise<ProvidersState> {
+    const self = this.o.self;
+    if (this.updating || self?.running) throw new EngineError("conflict", "An update is already running.");
+    const todo = what.providers ? this.providerStates().filter((p) => p.updateAvailable) : [];
+    const pobots = !!what.pobots && !!self?.view()?.available;
+    if (!todo.length && !pobots) {
+      if (what.pobots && !what.providers) throw new EngineError("conflict", (await self?.refusal()) ?? "This Pobots updates another way.");
+      throw new EngineError("conflict", self?.view() ? "Pobots, Claude Code and Codex are up to date. Press Check now to look again." : "Claude Code and Codex are up to date. Press Check now to look again.");
+    }
+    // Pobots is asked first: a folder that cannot move forward refuses the whole press, before anything runs.
+    if (pobots) {
+      const no = await self!.refusal();
+      if (no) throw new EngineError("conflict", no);
+    }
+    if (todo.length) {
+      this.update = { startedAt: iso(this.clock()), phase: "waiting", line: this.waitLine(), results: [] };
+      this.tellUpdate();
+      void this.runUpdate(todo.map((p) => p.id));
+    }
+    if (pobots) self!.begin(todo.length ? this.updateDone : undefined, what.askedBy);
     return this.providers();
+  }
+
+  /** Why Pobots's own update could not run now, or undefined (the main bot asks before its card). */
+  pobotsRefusal(): Promise<string | undefined> {
+    return this.o.self ? this.o.self.refusal() : Promise.resolve("This Pobots updates another way.");
+  }
+
+  /** Resolves once it is known whether this is a public install (for tests and checks). */
+  selfKnown(): Promise<void> {
+    return this.o.self?.detect() ?? Promise.resolve();
+  }
+
+  /** The promise of Pobots's own running update, for tests. */
+  selfSettled(): Promise<void> {
+    return this.o.self?.settled() ?? Promise.resolve();
+  }
+
+  /** Tells every window that Pobots's own update state changed. */
+  selfChanged(): void {
+    this.tellUpdate();
   }
 
   /** The promise of the running update, for tests. */

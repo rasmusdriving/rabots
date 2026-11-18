@@ -166,8 +166,8 @@ export function mainTools(host: TeamHost, models: string): BotTool[] {
     {
       name: TOOL_NAMES.getSettings,
       description:
-        "See Pobots' own settings: what a message sent while a bot works does, when bots start fresh for each provider, how often Pobots looks at Claude Code and Codex, the providers and their versions, the model that names chats, notifications and their devices, the backup and the usage meters.",
-      shape: { fresh: z.boolean().optional().describe("true: look at the providers and read usage again first.") },
+        "See Pobots' own settings: what a message sent while a bot works does, when bots start fresh for each provider, how often Pobots looks at Claude Code and Codex, the providers and their versions, Pobots' own version and whether a new Pobots is available, the model that names chats, notifications and their devices, the backup and the usage meters.",
+      shape: { fresh: z.boolean().optional().describe("true: look at the providers, for a new Pobots, and read usage again first.") },
       handler: async (args) => ok(await host.getSettings(args as { fresh?: boolean })),
     },
     {
@@ -222,12 +222,12 @@ export function mainTools(host: TeamHost, models: string): BotTool[] {
     {
       name: TOOL_NAMES.runPobotsTask,
       description:
-        "Do one thing for Pobots now: back_up_now; update_providers (updates Claude Code and Codex once every bot is calm, so after your turn); test_notification (to a device from get_settings). The person gets a note for a backup or an update.",
+        "Do one thing for Pobots now: back_up_now; update_providers (updates Claude Code and Codex once every bot is calm, so after your turn); update_pobots (when the person asks to update Pobots and get_settings fresh says a new Pobots is available: asks the person on a card, then updates Pobots itself and restarts it once every bot is calm; you are woken afterwards to tell them which version runs); test_notification (to a device from get_settings). The person gets a note for a backup or an update.",
       shape: {
-        task: z.enum(["back_up_now", "update_providers", "test_notification"]),
+        task: z.enum(["back_up_now", "update_providers", "update_pobots", "test_notification"]),
         device: z.string().max(100).optional().describe("For test_notification: the device's label or id. Leave out when there is one."),
       },
-      handler: async (args) => host.runPobotsTask(args as PobotsTaskArgs),
+      handler: (args, signal) => host.runPobotsTask(args as PobotsTaskArgs, signal),
     },
     {
       name: TOOL_NAMES.activityLog,

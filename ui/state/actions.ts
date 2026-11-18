@@ -5,6 +5,7 @@ import { EngineError, type EngineClient, type EngineEvent, type UploadRequest } 
 import { rememberOpener } from "../lib/opener";
 import { openOutside } from "../lib/outside";
 import { forgetUpdateReload } from "../lib/update";
+import { reloadForNewVersion } from "../lib/pobots-update";
 import { isPhone } from "../lib/phone";
 import { deeper } from "./phone-view";
 import { phoneEntriesLeaving, startScreens } from "./screens";
@@ -18,6 +19,9 @@ export function connect(engine: EngineClient): void {
   client = engine;
   engine.start({
     ready: (snapshot: Snapshot) => {
+      // A public install that updated itself: a page in a browser loads the new build once (engine 0.34.0).
+      const was = store.get();
+      if (reloadForNewVersion({ version: was.status?.engineVersion, pobots: !!was.providers?.pobots }, snapshot)) return;
       forgetUpdateReload();
       store.snapshot(snapshot);
       // After a reconnect, read again the newest page of every chat the window has open, so

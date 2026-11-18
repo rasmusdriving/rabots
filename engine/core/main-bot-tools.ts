@@ -1,7 +1,7 @@
 // The main bot's tools for Pobots' own settings: reading and changing them. Making, changing and retiring bots is in bot-changes.ts.
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
-import type { ProviderId, SettingsPatch } from "../../shared/protocol.js";
+import type { ProviderId, ProvidersState, SettingsPatch } from "../../shared/protocol.js";
 import { noteChange } from "./notes.js";
 import { type ChangeSettingsArgs, ok, problem } from "../team.js";
 import type { ToolResult } from "../claude/session.js";
@@ -47,11 +47,20 @@ export function getSettingsFor(eng: Engine): string {
     `Fresh starts (chats), Codex bots: ${t("codex")}.`,
     `Pobots looks at the providers every ${v.healthCheckSeconds} seconds (health_check_seconds, 0 is never).`,
     `Providers:\n${prov.join("\n")}`,
+    pobotsLine(eng.engineVersion, p.pobots),
     `Chat titles are made by ${v.titleModel} (title_model). Claude models: ${claudeModels.join(", ") || "none"}. GPT models, through Codex: ${gptModels.join(", ") || "none"}.`,
     `Notifications: needs ${kinds.needs}, note ${kinds.note}, finished ${kinds.finished}.`,
     aboutYouLine(eng),
     `Usage hubs: ${v.hubs.length ? v.hubs.map((h) => h.url).join(", ") : "none"} (added and removed by the person in the app only).`,
   ].join("\n");
+}
+
+/** Pobots's own version for get_settings; on a public install also whether a newer one is there (engine 0.34.0). */
+function pobotsLine(version: string, s: ProvidersState["pobots"]): string {
+  if (!s) return `Pobots: version ${version}. It is updated another way here, not with run_pobots_task.`;
+  const run = s.run ? ` ${s.run.endedAt ? "Last update" : "Updating now"}: ${s.run.line}` : "";
+  const state = s.available ? `Pobots ${s.latest} is available${s.canRestart ? " (run_pobots_task update_pobots asks the person on a card)" : ", but this Pobots cannot restart itself, so the person updates it by hand"}.` : s.checkedAt ? "Up to date." : "Not looked for a newer version yet (get_settings fresh looks).";
+  return `Pobots: version ${s.current}. ${state}${s.problem ? ` ${s.problem}` : ""}${run}`;
 }
 
 /** About you for get_settings: the text itself, since the main bot keeps it up to date. */

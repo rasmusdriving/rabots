@@ -52,6 +52,12 @@ npm run service:uninstall
 
 `npm start` then joins the running service instead of starting its own engine.
 
+## Updating
+
+Press Update in Pobots when it says a new version is available. A round arrow comes at the foot of the list of bots, and Settings, Providers says "Pobots 0.34.1 is available". Pobots then waits until your bots are done, brings the new version into this folder, builds it beside the running one, and restarts. The window comes back by itself after about a minute. If the new version does not start, the version before comes back, with your data as it was.
+
+Pobots looks for a new version at start and every four hours, with a plain `git fetch` from this repository (no account or token). It updates only when this folder has no changes of its own and can move forward without a merge; otherwise it says so and changes nothing. It restarts itself when it runs from `npm start` or as the background service. Started another way, it shows that a new version is out, and you update with `git pull` and `npm start`.
+
 ## Settings
 
 Most settings are changed in the app (the settings window) or by asking the main bot. A few that belong to the machine live in `config.json` in the data folder. All of them are optional. See [docs/configuration.md](docs/configuration.md).

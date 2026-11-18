@@ -105,7 +105,7 @@ export function toolsFor(eng: Engine, rt: BotRuntime): BotTool[] {
     changeSettings: (args) => changeSettingsFor(eng, rt, args),
     getBot: (args) => getBotFor(eng, rt, args),
     botFiles: async (args) => botFilesFor(eng, rt, args),
-    runPobotsTask: (args) => runPobotsTaskFor(eng, rt, args),
+    runPobotsTask: (args, signal) => runPobotsTaskFor(eng, rt, args, signal),
     activityLog: (args) => activityLogFor(eng, args),
     changeWhatISee: (args) => changeWhatISeeFor(eng, rt, args),
     addTodo: (args) => addTodoFor(eng, rt, args),
@@ -288,6 +288,7 @@ function pobotsToolWords(eng: Engine, tool: string, input: Record<string, unknow
       const t = str(input.task);
       if (t === "back_up_now") return { done: "Started a backup", running: "Starting a backup", failed: "Could not start a backup" };
       if (t === "update_providers") return { done: "Started an update of the providers", running: "Starting an update of the providers", failed: "Could not start an update of the providers" };
+      if (t === "update_pobots") return { done: "Asked to update Pobots", running: "Asking to update Pobots", failed: "Could not update Pobots" };
       return { done: "Sent a test notification", running: "Sending a test notification", failed: "Could not send a test notification" };
     }
     case TOOL_NAMES.changeWhatISee:

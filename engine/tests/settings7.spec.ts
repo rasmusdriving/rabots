@@ -223,10 +223,10 @@ describe("step 7b: the providers", () => {
     const s = await turnOf(engine, sessions, bot.id);
     s.emit({ type: "session", sessionId: "sess-1" });
     s.emit({ type: "turn-start", own: true });
-    const started = engine.providersUpdate();
+    const started = await engine.providersUpdate();
     assert.equal(started.providers.update?.phase, "waiting");
     assert.match(started.providers.update!.line, /Waiting for Po to finish/);
-    assert.throws(() => engine.providersUpdate(), code("conflict"));
+    await assert.rejects(() => engine.providersUpdate(), code("conflict"));
     await new Promise((r) => setTimeout(r, 120));
     assert.equal(ran.length, 0, "nothing runs while a bot works");
     s.emit({ type: "text-full", key: "t", text: "done" });
