@@ -59,7 +59,6 @@ export function CardQuestions({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string>();
   const list = questions ?? [];
-  const waiting = list.some((q) => q.state === "queued" || q.state === "answering");
   const threadRef = useRef<HTMLOListElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const last = list.at(-1);
@@ -78,7 +77,7 @@ export function CardQuestions({
 
   const send = () => {
     const t = text.trim();
-    if (!t || sending || waiting || disabled) return;
+    if (!t || sending || disabled) return;
     setSending(true);
     setError(undefined);
     // The box empties at once, so his words never stand twice (in the box and in the card); they
@@ -136,7 +135,7 @@ export function CardQuestions({
           maxLength={2000}
           disabled={disabled}
         />
-        <button className="pb-btn pb-btn-sm" type="submit" disabled={disabled || sending || waiting || !text.trim()}>
+        <button className="pb-btn pb-btn-sm" type="submit" disabled={disabled || sending || !text.trim()}>
           {ASK_WORDS.ask}
         </button>
       </form>

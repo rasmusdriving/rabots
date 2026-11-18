@@ -1,9 +1,7 @@
 // The settings window's engine side (step 7b): the settings, the providers and their update, and
 // the usage meters. The engine core (engine.ts) hands it what it needs through SettingsHost, so the
 // rules about bots (who is calm, closing their harness processes) stay in one place.
-import { execFile } from "node:child_process";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { opRead } from "./op-read.js";
 import type { ChatTiming, ChatTimingKey, Events, EventName, ModelInfo, PobotsSettings, ProviderId, ProvidersState, ProviderState, ProviderUpdateRun, SettingsPatch, UsageProvider, UsageState } from "../shared/protocol.js";
 import type { ClaudeSetup } from "./claude/detect.js";
 import { CODEX_NOT_INSTALLED, CODEX_NOT_SIGNED_IN, type CodexSetup } from "./codex/detect.js";
@@ -559,15 +557,6 @@ function hostOf(url: string): string {
   } catch {
     return url;
   }
-}
-
-/** Reads an op:// reference with 1Password's command line. Never logs or returns anything but the value. */
-function opRead(ref: string): Promise<string | undefined> {
-  return new Promise((resolve) => {
-    // The service's own path is bare: look where the command line tools usually are too.
-    const PATH = [process.env.PATH, join(homedir(), ".local", "bin"), "/opt/homebrew/bin", "/usr/local/bin"].filter(Boolean).join(":");
-    execFile("op", ["read", "--no-newline", ref], { timeout: 20_000, maxBuffer: 64 * 1024, env: { ...process.env, PATH } }, (err, stdout) => resolve(err ? undefined : String(stdout).trim() || undefined));
-  });
 }
 
 const num = (n: number) => n.toLocaleString("en-US");

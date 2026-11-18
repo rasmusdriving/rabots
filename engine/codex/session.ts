@@ -608,6 +608,7 @@ export class CodexSession {
       case "mcpToolCall": {
         if (item.error) isError = true;
         const result = asLoose(item.result);
+        if (result.isError === true) isError = true;
         text = Array.isArray(result.content)
           ? (result.content as unknown[]).map(asLoose).filter((c) => c.type === "text").map((c) => str(c.text)).join("\n")
           : item.error

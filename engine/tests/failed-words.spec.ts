@@ -74,6 +74,35 @@ describe("failed words", () => {
     store.close();
   });
 
+  test("a failed connector step uses failed words, but built-in steps keep their labels", async () => {
+    const { engine, sessions, events, store } = setup();
+    const bot = engine.createBot({ name: "Po", model: "claude-haiku-5-5", access: "edits-freely" });
+    engine.sendMessage({ botId: bot.id, text: "Test the activity lines." });
+    await settle();
+    const s = sessions.at(-1)!;
+    s.emit({ type: "session", sessionId: "sess-labels" });
+    s.emit({ type: "turn-start", own: true });
+    for (const [name, input, isError] of [
+      ["mcp__claude_ai_Microsoft_365__outlook_email_search", { query: "example" }, true],
+      ["mcp__docs__search", {}, false],
+      ["Bash", { command: "false" }, true],
+      ["Read", { file_path: "notes.md" }, true],
+      ["Edit", { file_path: "draft.md" }, true],
+    ] as const) {
+      s.emit({ type: "tool-start", toolUseId: name, name, input });
+      s.emit({ type: "tool-end", toolUseId: name, isError, text: "Example response" });
+    }
+    assert.deepEqual(activities(events).map((row) => [row.label, row.status]), [
+      ["Could not use outlook email search in Microsoft 365", "failed"],
+      ["Used search in docs", "done"],
+      ["Ran a command", "failed"],
+      ["Read notes.md", "failed"],
+      ["Edited draft.md", "failed"],
+    ]);
+    engine.shutdown();
+    store.close();
+  });
+
   test("every tool the engine registers has failed words of its own", async () => {
     const { engine, sessions, store } = setup(undefined, () => true, {});
     const po = engine.createBot({ name: "Po", model: "claude-haiku-5-5", access: "edits-freely" });
@@ -147,8 +176,7 @@ describe("failed words", () => {
     const w = engine.toolWords("mcp__pobots__brand_new_tool", {});
     assert.equal(w.failed, "Could not use brand new tool");
     assert.equal(w.whyOnFail, true);
-    // Other servers' tools and the harness's own keep their words (out of scope).
-    assert.equal(engine.toolWords("mcp__m365__outlook_search", {}).failed, undefined);
+    // Built-in tools keep their current words.
     assert.equal(engine.toolWords("Bash", { command: "ls" }).failed, undefined);
     engine.shutdown();
     store.close();

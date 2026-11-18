@@ -6,9 +6,7 @@
 //
 // It makes a few small model calls on the cheapest model. Nothing touches the real data.
 //
-// The nightly backup (step 16) makes no model calls. It backs up into a folder of its own under
-// OneDrive's Pobot/test-copy (so the Mac's real upload state is read) and removes it at the end; it
-// touches nothing else in OneDrive. Its key pairs are made in the temporary folder and deleted.
+// The nightly backup (step 16) uses real restic on an isolated local folder and makes no model calls.
 //
 // Notifications (step 17) never reach a real push service: the engine is started with
 // --push-relay pointing at a small server inside this check, which gets the bytes instead.
@@ -37,7 +35,7 @@
 //   --only=workers     step workers: a worker with two jobs shortens itself in between; a worker of a kind
 //   --only=maintools   the main bot sets up another bot with its tools, at once, with notes and no card (scripts/app-check/sections/maintools.mjs)
 //   CHROMIUM=/path/to/chrome-headless-shell overrides the browser
-import { chmodSync, existsSync, rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   arg,
@@ -49,9 +47,6 @@ import {
   dataDir,
   botsDir,
   shots,
-  backupDir,
-  backupReady,
-  keysDir,
   results,
   failed,
   check,
@@ -86,15 +81,11 @@ function tidyWork(passed) {
   if (passed) rmSync(work, { recursive: true, force: true });
   else keepOnly(work, ["shots", "data", "bots"]);
 }
-// Stopped (Ctrl-C, SIGTERM): the browser and the engine stop, the OneDrive folder and the temp folder are tidied.
+// Stopped (Ctrl-C, SIGTERM): the browser and the engine stop, and the temp folder is tidied.
 onStop(async () => {
   console.log("\nStopped. Cleaning up.");
   browser.kill();
   await stopEngine();
-  if (backupReady && existsSync(backupDir)) {
-    chmodSync(backupDir, 0o700);
-    rmSync(backupDir, { recursive: true, force: true });
-  }
   await sleep(300);
   tidyWork(false);
 });
@@ -110,6 +101,8 @@ try {
     await connectBrowser();
     await cmd("Page.enable");
     await (await import("./app-check/sections/usage-page.mjs")).default();
+  } else if (only === "backup") {
+    await (await import("./app-check/sections/backup.mjs")).default();
   } else {
     let endpoint = await startEngine();
     await connectBrowser();
@@ -141,13 +134,13 @@ try {
     // What every section uses (lib.mjs). A section that restarts the engine writes the new address back.
     Object.assign(run, { endpoint, side, snap, cheap });
 
-    if (only === "backup" || only === "push" || only === "steer" || only === "titles" || only === "chat7" || only === "workers" || STEP7C.includes(only) || OWN_FILE.includes(only)) side.close();
+    if (only === "push" || only === "steer" || only === "titles" || only === "chat7" || only === "workers" || STEP7C.includes(only) || OWN_FILE.includes(only)) side.close();
 
     // Every section lives in a file of its own under app-check/sections/, named as in SECTIONS
     // (app-check/lib.mjs), and they run in that order. A new section: add its name there and a file
     // there whose default function holds its checks.
     for (const name of SECTIONS) {
-      if (only && only !== name) continue;
+      if (name === "backup" || (only && only !== name)) continue;
       await (await import(`./app-check/sections/${name}.mjs`)).default();
     }
   }
@@ -163,13 +156,6 @@ try {
   const gone = await deleteCodexThreads();
   if (codexThreads.size) check("the Codex threads this check made are deleted", !gone.failed.length, gone.failed.length ? gone.failed.join("; ") : `${gone.deleted} deleted`);
   rmSync(profile, { recursive: true, force: true });
-  // The key pairs and the check's own backup folder go, whatever happened.
-  rmSync(keysDir, { recursive: true, force: true });
-  if (backupReady && existsSync(backupDir)) {
-    chmodSync(backupDir, 0o700);
-    rmSync(backupDir, { recursive: true, force: true });
-    check("the check's own backup folder in OneDrive is removed", !existsSync(backupDir));
-  }
   console.log(failed ? "\nSome checks failed." : `\nAll ${results.length} checks passed.`);
   if (keep || failed || arg("shots")) console.log(`Pictures: ${shots}`);
   if (keep || failed) console.log(`Kept: ${work}\n  data dir: ${dataDir}\n  bots dir: ${botsDir}`);

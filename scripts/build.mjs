@@ -56,7 +56,7 @@ const builders = {
       format: "esm",
       target: "node22",
     });
-    // Not bundled: the engine runs it with osascript (engine/backup.ts). It ships beside main.mjs, so
+    // Not bundled: the engine runs it with osascript (engine/core/backup-restic.ts). It ships beside main.mjs, so
     // the service's copy on the internal drive has it too.
     cpSync(at("engine", "upload-state.js"), join(dist, "engine", "upload-state.js"));
   },

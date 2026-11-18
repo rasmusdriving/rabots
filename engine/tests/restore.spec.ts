@@ -12,7 +12,6 @@ import { describe, test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 import { lockStream, parsePublicKeyLine } from "../backup-format.js";
-import { Backup, BACKUP_NAME } from "../backup.js";
 import { Store } from "../store.js";
 import { standInKeys } from "./backup-keys.js";
 import { tempDir } from "./helpers.js";
@@ -168,33 +167,17 @@ describe("restore.mjs: what it unpacks", () => {
     assert.equal(readFileSync(join(t.botsDir, "kaja", "AGENTS-copy.md"), "utf8"), "the job");
     assert.ok(lstatSync(join(t.dataDir, "pobots.db")).isFile());
   });
-  test("a backup the engine makes, with links in a bot's folder, restores with the links as links, never followed", async () => {
-    const outside = join(tempDir("pobots-outside-"), "secret.txt");
+  test("format 1 restores links inside a bot as links and never follows them", async () => {
+    const outside = join(tempDir("pobots-outside-"), "fixture.txt");
     writeFileSync(outside, "outside the backup");
-    const botsDir = tempDir("pobots-bots-");
-    mkdirSync(join(botsDir, "kaja", "notes"), { recursive: true });
-    writeFileSync(join(botsDir, "kaja", "bot.json"), "{}");
-    writeFileSync(join(botsDir, "kaja", "notes", "a.md"), "a note");
-    symlinkSync(outside, join(botsDir, "kaja", "secret-link"));
-    symlinkSync("notes", join(botsDir, "kaja", "notes-link"));
-    linkSync(join(botsDir, "kaja", "notes", "a.md"), join(botsDir, "kaja", "a-again.md"));
-    const cloud = tempDir("pobots-cloud-");
-    const b = new Backup({
-      dataDir: tempDir(),
-      botsDir,
-      config: { folder: cloud, time: "03:00", publicKey: keys.publicLine, publicKeySavedAt: "2026-11-01T00:00:00Z" },
-      engineVersion: "0.1.0",
-      clock: () => Date.parse("2026-11-14T09:00:00Z"),
-      tz: "Europe/Stockholm",
-      readUploadState: async () => ({ exists: true, uploaded: true }),
-      timings: { pollMs: 5, holdMs: 10, limitMs: 200 },
-      host: { snapshotDb: async (p) => new Store(p).close(), bots: () => [], changed: () => undefined, showCard: () => undefined, clearCard: () => undefined },
-    });
-    b.runNow();
-    await b.idle();
-    const name = readdirSync(cloud).find((n) => BACKUP_NAME.test(n));
-    assert.ok(name, "the engine made a file");
-    const file = join(cloud, name);
+    const file = await locked([
+      ...base(),
+      { name: "bots/kaja/bot.json", data: "{}" },
+      { name: "bots/kaja/notes/a.md", data: "a note" },
+      { name: "bots/kaja/secret-link", type: "2", link: outside },
+      { name: "bots/kaja/notes-link", type: "2", link: "notes" },
+      { name: "bots/kaja/a-again.md", type: "1", link: "bots/kaja/notes/a.md" },
+    ]);
     const c = restore(["--check", file]);
     assert.equal(c.status, 0, c.stderr);
     const t = target();

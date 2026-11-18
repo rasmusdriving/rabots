@@ -157,10 +157,10 @@ export interface MockLevers {
   backupStale(): void;
   /** The id of the backup's card on the rail, or null. */
   backupCard(): string | null;
-  /** The OneDrive folder is there and can be written, or not. */
+  /** The backup folder is usable, or not. */
   backupFolder(ok: boolean, problem?: string): void;
-  /** Every text the window sent with "backup.setKey", in order. */
-  backupKeyTexts(): string[];
+  /** Every text the window sent with "backup.setPasswordRef", in order. */
+  backupReferenceTexts(): string[];
   /** A newer card from Pobots comes after the older one is withdrawn (as the engine does it), or before. */
   backupCardOrder(order: "withdraw-first" | "add-first"): void;
   /** Notifications as the engine holds them: the switches and the devices. */

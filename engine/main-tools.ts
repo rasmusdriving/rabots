@@ -179,7 +179,7 @@ export function mainTools(host: TeamHost, models: string): BotTool[] {
     {
       name: TOOL_NAMES.changeSettings,
       description:
-        "Change Pobots' own settings when the person asks you to. No card: the person is told what you changed, from what to what. Only what you give changes. The backup key, usage hubs and turning notifications on for a device stay with the person in the app. Call get_settings first to see the values.",
+        "Change Pobots' own settings when the person asks you to. No card: the person is told what you changed, from what to what. Only what you give changes. The backup password reference, usage hubs and turning notifications on for a device stay with the person in the app. Call get_settings first to see the values.",
       shape: {
         follow_up_default: z.enum(["steer", "queue"]).optional().describe("What a message the person sends while a bot works does for every bot without a choice of its own: steer (goes into the running turn) or queue (waits until it is done)."),
         bot_follow_up: z

@@ -12,7 +12,6 @@ import { TIDY_REFUSAL } from "../engine.js";
 import { gitAvailable } from "../history.js";
 import { buildTools, type TeamHost } from "../team.js";
 import { type Ev, type FakeSession, settle, setup } from "./fake.js";
-import { standInKeys } from "./backup-keys.js";
 import { tempDir } from "./helpers.js";
 
 const text = (r: ToolResult) => r.content.map((c) => c.text).join("\n");
@@ -292,11 +291,11 @@ describe("the main bot's tools: triggers and Pobots", () => {
   test("get_settings shows the backup, devices and usage; run_pobots_task says why a backup cannot run and starts an update with the stand-in", async () => {
     const w = await world();
     const s = text(await w.ps.tool("get_settings", {}));
-    assert.match(s, /Backup: no key set, so no backup runs/);
+    assert.match(s, /Add a 1Password reference in Settings/);
     assert.match(s, /Notification devices: none\./);
     assert.match(s, /Usage: /);
     assert.match(text(await w.ps.tool("get_settings", { fresh: true })), /Backup: /);
-    assert.match(text(await w.ps.tool("run_pobots_task", { task: "back_up_now" })), /No backup key is set/);
+    assert.match(text(await w.ps.tool("run_pobots_task", { task: "back_up_now" })), /No backup password reference is set|Install restic/);
     assert.match(text(await w.ps.tool("run_pobots_task", { task: "test_notification" })), /No device takes notifications/);
     // No provider has an update in the stand-in: said plainly, nothing runs.
     const up = await w.ps.tool("run_pobots_task", { task: "update_providers" });
@@ -315,7 +314,7 @@ describe("times in the engine's own time zone (the tester's walk: the backup an 
     const w = await world({
       clock: () => at,
       timeZone: "Europe/Stockholm",
-      backupConfig: { folder: tempDir("pobots-cloud-"), time: "03:00" },
+      backupConfig: { folder: tempDir("pobots-cloud-"), time: "03:00", executable: process.execPath },
       settingsHub: {
         fetcher: async () => ({ ok: false, status: 404, text: async () => "" }),
         runner: async () => ({ ok: false, out: "" }),
@@ -323,7 +322,7 @@ describe("times in the engine's own time zone (the tester's walk: the backup an 
         readCodex: async () => ({ id: "x", via: "This Mac", windows: [] }),
       },
     });
-    w.engine.setBackupKey(standInKeys().publicLine);
+    w.engine.setBackupPasswordRef("op://Example/Pobots/password");
     const isoTime = /\d{4}-\d\d-\d\dT\d\d:\d\d/;
     const s = text(await w.ps.tool("get_settings", { fresh: true }));
     assert.match(s, /^It is now Sunday 15 Nov 2026 15:50 \(time zone Europe\/Stockholm\)/);

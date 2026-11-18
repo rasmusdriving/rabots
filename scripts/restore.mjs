@@ -23,6 +23,8 @@
 // followed. When putting the backup in place fails, half copies are removed, every move is undone and
 // checked, and the script names the folders, what failed and whether a stopped service was started.
 //
+// For restic, pass the repository folder with --password-ref="op://<vault>/<item>/password"
+// and optionally --snapshot=<id> (default latest). --check lists completed snapshots.
 // Needs Node 22.18 or newer (it imports engine/backup-format.ts with Node's own type stripping).
 import { spawn, spawnSync } from "node:child_process";
 import { closeSync, cpSync, createReadStream, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync, writeSync } from "node:fs";
@@ -34,6 +36,7 @@ import { Transform, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import { createGunzip } from "node:zlib";
+import { chooseSnapshot, openRepository, unpackSnapshot } from "./restore-restic.mjs";
 import { BackupFormatError, fingerprintOfKey, MAX_HEADER, readHeader, readPrivateKey, unlockStream } from "../engine/backup-format.ts";
 
 const repo = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -113,18 +116,19 @@ function parseArgs(argv) {
   for (const a of argv) {
     if (!a.startsWith("--") || known.has(a)) continue;
     const name = a.slice(2).split("=")[0];
-    if (!["data-dir", "bots-dir", "label", "install-dir", "confirm"].includes(name)) refuse(`"${a}" is not something this script knows.`);
+    if (!["data-dir", "bots-dir", "label", "install-dir", "confirm", "password-ref", "snapshot", "restic"].includes(name)) refuse(`"${a}" is not something this script knows.`);
   }
-  if (modes.length !== 1) refuse("Say what to do: --check, --test-copy, --real or --folders, and the backup file.");
-  if (files.length !== 1) refuse("Give exactly one backup file.");
-  return { mode: modes[0], file: resolve(files[0]), dataDir: value("data-dir"), botsDir: value("bots-dir"), label: value("label"), installDir: value("install-dir"), confirm: value("confirm") };
+  if (modes.length !== 1) refuse("Say what to do: --check, --test-copy, --real or --folders, and a backup file or repository folder.");
+  if (files.length !== 1) refuse("Give exactly one backup file or repository folder.");
+  return { mode: modes[0], file: resolve(files[0]), dataDir: value("data-dir"), botsDir: value("bots-dir"), label: value("label"), installDir: value("install-dir"), confirm: value("confirm"), passwordRef: value("password-ref"), snapshot: value("snapshot"), restic: value("restic") };
 }
 
 const real = (p) => {
   try {
     return realpathSync(p);
   } catch {
-    return resolve(p);
+    const parent = dirname(p);
+    return parent === p ? resolve(p) : join(real(parent), p.slice(parent.length).replace(/^\//, ""));
   }
 };
 const samePlace = (a, b) => resolve(a) === resolve(b) || real(a) === real(b);
@@ -770,6 +774,22 @@ export async function serviceAfterFailure(target, failure, wasRunning, start = s
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const target = targetFor(args);
+  if (existsSync(args.file) && statSync(args.file).isDirectory()) {
+    const repo = await openRepository(args);
+    if (args.mode === "check") {
+      say(`This password opens the repository. ${repo.list.length} completed Pobots snapshots:`);
+      for (const snapshot of repo.list) say(`${snapshot.id}  ${whenText(snapshot.time)}`);
+      if (args.snapshot !== undefined) chooseSnapshot(repo.list, args.snapshot);
+      return;
+    }
+    if ([target.dataDir, target.botsDir].some((dir) => within(dir, args.file) || within(args.file, dir))) {
+      refuse("The repository and the restore folders must be separate.");
+    }
+    const snapshot = chooseSnapshot(repo.list, args.snapshot);
+    say(`Restoring snapshot ${snapshot.id} made ${whenText(snapshot.time)}.`);
+    return restoreInto(args, target, (tmp) => unpackSnapshot(repo, snapshot, tmp), 2);
+  }
+  if (args.passwordRef !== undefined || args.snapshot !== undefined || args.restic !== undefined) refuse("Restic options require a repository folder.");
   const header = headerOf(args.file);
   say(`Backup made ${whenText(header.createdAt)} by Pobots ${header.engineVersion ?? "(unknown version)"}, locked to the key ${header.keyFingerprint}.`);
   const key = await readKeyFromStdin();
@@ -784,23 +804,41 @@ async function main() {
     return;
   }
 
+  checkVersion(target, header.engineVersion);
+  return restoreInto(args, target, async (tmp) => { await unpack(args.file, key, tmp); return tmp; }, 1);
+}
+
+function checkVersion(target, version) {
   const installed = engineVersionFor(target);
-  if (header.engineVersion && compareVersions(header.engineVersion, installed) > 0) {
-    refuse(`This backup was made by Pobots ${header.engineVersion}, which is newer than ${target.what}'s ${installed}. Update Pobots first, then restore.`);
+  if (version && compareVersions(version, installed) > 0) {
+    refuse(`This backup was made by Pobots ${version}, which is newer than ${target.what}'s ${installed}. Update Pobots first, then restore.`);
   }
+}
+
+async function restoreInto(args, target, extract, format) {
   if (target.mode === "folders" && engineRuns(target.dataDir)) refuse("A Pobots is running on that data folder. Stop it first.");
   if (target.mode === "real") askConfirmation(args);
 
   const tmp = mkdtempSync(join(tmpdir(), "pobots-restore-"));
   try {
     say("Unlocking and unpacking...");
-    await unpack(args.file, key, tmp);
-    const manifest = checkUnpacked(tmp);
+    const source = await extract(tmp);
+    const manifest = checkUnpacked(source);
+    if (manifest.format !== format) refuse("The backup's manifest has the wrong format.");
+    checkVersion(target, manifest.engineVersion);
+    if (format === 2) {
+      for (const bot of manifest.bots ?? []) {
+        if (typeof bot?.id !== "string" || !bot.id || /[\/]/.test(bot.id) || [".", ".."].includes(bot.id)
+          || !lstatSync(join(source, "bots", bot.id), { throwIfNoEntry: false })?.isDirectory()) {
+          refuse("A bot listed in the manifest is missing a plain folder. Nothing was restored.");
+        }
+      }
+    }
     say(`The backup is whole: ${(manifest.bots ?? []).length} bots, ${manifest.counts?.items ?? "?"} chat items, the database checks out.`);
     const wasRunning = target.mode !== "folders" ? await stopService(target) : false;
     let result;
     try {
-      result = putInPlace(target, tmp);
+      result = putInPlace(target, source);
     } catch (err) {
       if (!(err instanceof PutFailed)) throw err;
       if (target.mode === "folders") throw new Failed(err.message);

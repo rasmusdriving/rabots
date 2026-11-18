@@ -41,7 +41,7 @@
 import type { UsageOverviewRead, UsageRange } from "./usage-overview.js";
 export * from "./usage-overview.js";
 
-export const PROTOCOL_VERSION = 26;
+export const PROTOCOL_VERSION = 27;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -112,48 +112,29 @@ export interface AttachmentUploadResult {
 
 // ---------------------------------------------------------------- the nightly backup
 
-/**
- * The nightly backup as the engine knows it. Every night the engine packs all chats (the database),
- * every bot's folder and the settings into one file, locks it to the person's public key and puts
- * it in a folder that a cloud drive syncs (OneDrive). The engine never holds the private key: only
- * the person's password manager does. Without a saved public key no backup runs.
- */
+/** The nightly backup and the most recent runs of this restic repository. */
 export interface BackupState {
-  /** The saved public key, or absent when none is set. `fingerprint` is "SHA256:..." as `ssh-keygen -l` prints it. */
-  key?: { fingerprint: string; bits: number; savedAt: string };
-  /** Where the files go. `ok` is false when the folder is not there or cannot be written, with why in `problem`. */
-  folder: { path: string; ok: boolean; problem?: string };
-  /** Daily time on the engine's clock, "03:00". */
+  passwordRef?: string;
+  resticInstalled: boolean;
+  folder: { path: string; ok: boolean; iCloud: boolean; problem?: string };
   time: string;
-  /** How many nights are kept. */
   keep: number;
-  /** ISO time of the next run, when a key is set. */
   nextAt?: string;
-  /** True while a backup is being made or its arrival is being checked. */
   running: boolean;
-  /** The newest run that was saved or unconfirmed (a file exists). */
   lastGood?: BackupRun;
-  /** Recent runs, newest first, at most 14. */
   history: BackupRun[];
+  repositoryBytes?: number;
+  snapshots?: number;
 }
 
 export interface BackupRun {
-  /** ISO time the run began. */
   at: string;
-  /**
-   * "saved": the file is in the folder and the Mac reports it as uploaded to the cloud drive.
-   * "unconfirmed": the file is in the folder, but the Mac has not reported it as uploaded.
-   * "failed": no file was made.
-   */
-  status: "saved" | "unconfirmed" | "failed";
-  /** By hand ("Back up now") or by the nightly clock. */
+  /** "made" while checking upload; a failed run may still have made a snapshot. */
+  status: "made" | "saved" | "unconfirmed" | "failed";
   by: "night" | "you";
-  /** File name in the folder. */
-  file?: string;
+  snapshot?: string;
   bytes?: number;
-  /** One plain sentence when not saved: "OneDrive did not take the file. Is OneDrive running and signed in on the Mac?" */
   problem?: string;
-  /** Files left out because they were too large, by path inside the bots' folder. */
   leftOut?: string[];
 }
 
@@ -1307,13 +1288,9 @@ export interface Methods {
   /** Answers a card. The card is removed with a "card.removed" event. */
   "card.resolve": { params: { cardId: string; decision: CardDecision }; result: Record<string, never> };
 
-  /**
-   * Checks and saves the public key the backups are locked to: one line starting with "ssh-rsa", of
-   * at least 3072 bits. Refuses with one plain sentence ("bad_request") when it is something else,
-   * and never keeps or logs what was pasted then. Saving a key starts no backup by itself.
-   */
-  "backup.setKey": { params: { publicKey: string }; result: { backup: BackupState } };
-  /** Starts a backup now. "conflict" while one runs, when no key is set, or while the engine is stopping. The result arrives with "backup.changed". */
+  /** Saves a 1Password reference. An empty string clears it. */
+  "backup.setPasswordRef": { params: { passwordRef: string }; result: { backup: BackupState } };
+  /** Starts a backup now; changes arrive with "backup.changed". */
   "backup.run": { params: Record<string, never>; result: { backup: BackupState } };
 
   /** Switches kinds of notification on or off, for all devices. Saved with the settings. */
@@ -1373,7 +1350,7 @@ export interface Events {
   "bot.added": { bot: Bot };
   /** A bot was retired and left the roster. Its cards are withdrawn with "card.removed". */
   "bot.removed": { botId: string };
-  /** The nightly backup changed: a key was saved, a run began or ended. Always the whole state. */
+  /** The nightly backup changed: a reference was saved, a run began or ended. Always the whole state. */
   "backup.changed": { backup: BackupState };
   /** Notifications changed: a switch, a device, or a send was recorded. Always the whole state. */
   "notify.changed": { notify: NotifyState };

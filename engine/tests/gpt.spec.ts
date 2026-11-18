@@ -172,12 +172,28 @@ describe("a bot on a GPT model", () => {
     w2.store.close();
   });
 
+  test("a Codex MCP result with isError gets failed words; a nonzero command keeps its label", async () => {
+    const w = codexWorld();
+    await w.engine.recheckCodex();
+    const bot = w.engine.createBot({ name: "Gee", model: "gpt-6-luna", effort: "low" });
+    w.engine.sendMessage({ botId: bot.id, text: "[[mcp-fail]]" });
+    w.engine.sendMessage({ botId: bot.id, text: "[[command-fail]]" });
+    await waitFor(() => stateOf(w.events, bot.id) === "done", 8000, "both turns ended");
+    const steps = inThread(w.events, bot.mainThreadId).filter((row) => row.kind === "activity").filter((row) => row.status === "failed");
+    assert.deepEqual(steps.map((row) => [row.label, row.status]), [
+      ["Could not use search in docs", "failed"],
+      ["Ran a command", "failed"],
+    ]);
+    w.engine.shutdown();
+    w.store.close();
+  });
+
   test("a slow own tool (a question for the person) is answered early; the card outlives the turn; the answer comes in a turn of its own", async () => {
     const w = codexWorld({ timings: { codexToolSoftMs: 150 } });
     await w.engine.recheckCodex();
     const bot = w.engine.createBot({ name: "Gee", model: "gpt-6-luna", effort: "low" });
     w.engine.sendMessage({ botId: bot.id, text: '[[tool:ask_human]]{"question":"Which colour?"}' });
-    await waitFor(() => botTexts(w.events, bot.mainThreadId).length === 1, 8000, "the early answer");
+    await waitFor(() => botTexts(w.events, bot.mainThreadId)[0]?.includes("This is still going") === true, 8000, "the streamed early answer");
     assert.match(botTexts(w.events, bot.mainThreadId)[0]!, /tool said: This is still going/);
     await waitFor(() => stateOf(w.events, bot.id) === "done", 5000, "done");
     const q = openCards(w.events) as Card[];

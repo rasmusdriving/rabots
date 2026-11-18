@@ -566,7 +566,7 @@ export class MockEngine implements EngineClient {
       backupStale: () => this.backup.stale(),
       backupCard: () => this.cards.find((x) => x.kind === "system" && x.topic === "backup")?.id ?? null,
       backupFolder: (ok, problem) => this.backup.setFolder(ok, problem),
-      backupKeyTexts: () => [...this.backup.keyTexts],
+      backupReferenceTexts: () => [...this.backup.referenceTexts],
       backupCardOrder: (order) => {
         this.addFirst = order === "add-first";
       },
@@ -909,7 +909,7 @@ export class MockEngine implements EngineClient {
       this.resolveCard(p.cardId, p.decision);
       return {};
     },
-    "backup.setKey": (p) => this.backup.handlers["backup.setKey"](p),
+    "backup.setPasswordRef": (p) => this.backup.handlers["backup.setPasswordRef"](p),
     "backup.run": (p) => this.backup.handlers["backup.run"](p),
     "notify.setKinds": (p) => this.notify.handlers["notify.setKinds"](p),
     "notify.subscribe": (p) => this.notify.handlers["notify.subscribe"](p),

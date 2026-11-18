@@ -64,7 +64,7 @@ export default async function section() {
       await ask(card, "Is Thursday better for the customer?");
       const waiting = await until(`(() => { const c = ${card}; const t = ${thread("c")}; return t.length === 1 && t[0].wait ? { t, value: ${box("c")}.value, off: c.querySelector(".pb-cq-form .pb-btn").disabled } : null; })()`);
       check(T("Enter sends: his question stands in the card with the waiting line, and the box is empty"), waiting?.t[0].q === "Is Thursday better for the customer?" && waiting.t[0].wait === "Onboardings is answering" && waiting.value === "", waiting);
-      check(T("the waiting line keeps one line's height, and Ask waits for the answer"), waiting?.t[0].waitH === 20 && waiting.off === true, waiting);
+      check(T("the waiting line keeps one line's height and Ask needs a new draft"), waiting?.t[0].waitH === 20 && waiting.off === true, waiting);
       const kept = await ev(`(() => { const c = ${card}; const r = c.getBoundingClientRect(); return { top: Math.round(r.top), btns: [...c.querySelectorAll(".pb-card-actions .pb-btn")].map((b) => Math.round(b.getBoundingClientRect().top - r.top)) }; })()`);
       check(T("the card and its own buttons keep their place"), kept?.top === start?.top && JSON.stringify(kept?.btns) === JSON.stringify(start?.btns), { start, kept });
       await shot(`card-questions-${theme}-${width}-card-waiting`);
@@ -77,12 +77,16 @@ export default async function section() {
       const shift = await ev(`({ value: ${box(card)}.value, n: ${thread(card)}.length, h: Math.round(${box(card)}.getBoundingClientRect().height) })`);
       check(T("Shift+Enter makes a new line in the box, which keeps its height, and sends nothing"), shift?.value === "Who else\nattends?" && shift.n === 1 && shift.h === start?.inputH, shift);
 
+      check(T("Ask stays ready with a new draft while the bot answers"), !(await ev(`(${card}).querySelector(".pb-cq-form .pb-btn").disabled`)));
+      await key("Enter");
+      const queued = await until(`(() => { const t = ${thread(card)}; return t.length === 2 ? t : null; })()`);
+      check(T("a second question appears at once with its own queued state"),
+        queued?.[0].wait === "Onboardings is answering" && queued?.[1].wait === "Onboardings answers when it is free", queued);
       await ev(`window.pobotsCardQuestions.hold(false)`);
       const answered = await until(`(() => { const t = ${thread(card)}; return t[0]?.a ? t : null; })()`, 6000);
       check(T("the answer lands in the card under his question"), /^Good question\./.test(answered?.[0].a ?? "") && answered[0].wait === null, answered);
-      await key("Enter");
       const two = await until(`(() => { const t = ${thread(card)}; return t.length === 2 && t[1].a ? t : null; })()`, 6000);
-      check(T("a second question is answered too, in order"), two?.[0].q === "Is Thursday better for the customer?" && two[1].q === "Who else\nattends?", two);
+      check(T("a second question is answered too, in order"), two?.[0].q === "Is Thursday better for the customer?" && two[0].a.includes(two[0].q) && two[1].q === "Who else\nattends?" && two[1].a.includes(two[1].q), two);
       const after = await ev(`(() => { const c = ${card}; const r = c.getBoundingClientRect(); return { top: Math.round(r.top), btns: [...c.querySelectorAll(".pb-card-actions .pb-btn")].map((b) => Math.round(b.getBoundingClientRect().top - r.top)), wide: document.scrollingElement.scrollWidth - innerWidth }; })()`);
       check(T("the card's own buttons still have not moved, and nothing is wider than the screen"), after?.top === start?.top && JSON.stringify(after?.btns) === JSON.stringify(start?.btns) && after.wide <= 0, { start, after });
 
@@ -106,9 +110,12 @@ export default async function section() {
       await ask(dlg, "Which board is the usual one?");
       const tw = await until(`(() => { const t = ${thread(dlg)}; return t.length === 1 && t[0].wait ? t : null; })()`);
       check(T("the question stands in the to-do with the waiting line in the bot's name"), tw?.[0].q === "Which board is the usual one?" && tw[0].wait === `${win?.bot} is answering` && tw[0].waitH === 20, { tw, bot: win?.bot });
+      await ask(dlg, "Who reads the board?");
+      const tw2 = await until(`(() => { const t = ${thread(dlg)}; return t.length === 2 ? t : null; })()`);
+      check(T("another to-do question is visible while the first is being answered"), tw2?.[1].wait === `${win?.bot} answers when it is free`, tw2);
       await ev(`window.pobotsCardQuestions.hold(false)`);
-      const ta = await until(`(() => { const t = ${thread(dlg)}; return t[0]?.a ? t : null; })()`, 6000);
-      check(T("the answer lands in the to-do"), !!ta?.[0].a, ta);
+      const ta = await until(`(() => { const t = ${thread(dlg)}; return t[1]?.a ? t : null; })()`, 6000);
+      check(T("both answers land under the right to-do question"), ta?.every((q) => q.a?.includes(q.q)), ta);
       await sleep(300);
       const win1 = await ev(`(() => { const d = ${dlg}; return { top: Math.round(d.getBoundingClientRect().top), acts: Math.round(d.querySelector(".pb-todo-actions").getBoundingClientRect().top), scrollTop: Math.round(d.scrollTop) }; })()`);
       check(T("the window keeps its top and its buttons keep their place while the thread grows"), win1?.top === win0?.top && (win1.acts === win0?.acts || win1.scrollTop > 0), { win0, win1 });

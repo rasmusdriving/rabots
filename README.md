@@ -19,6 +19,7 @@ Pobots is a personal tool, built by one person for their own Mac and used every 
 - macOS and [Node.js](https://nodejs.org) 24 or newer, with npm.
 - [Claude Code](https://docs.claude.com/en/docs/claude-code), installed and signed in (`claude` works in a terminal). Pobots finds it in the usual places, or set `claude.executable` in `config.json`.
 - Optional, for bots on GPT models: [Codex](https://github.com/openai/codex), installed and signed in with your ChatGPT account (`codex` works in a terminal).
+- Optional, for encrypted nightly backups: [restic](https://restic.net/) (`brew install restic`) and the 1Password CLI. See [the backup setup](docs/backup.md).
 - Optional, to open Pobots from your other devices and your phone: [Tailscale](https://tailscale.com).
 
 ## Install and start

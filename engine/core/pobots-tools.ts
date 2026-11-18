@@ -1,6 +1,6 @@
 // Pobots as a whole, for the main bot (docs/main-bot.md): get_settings with the backup, the
 // notification devices and the usage meters, and run_pobots_task (back up now, update the providers,
-// update Pobots itself on a public install behind a card (engine 0.34.0), a test notification). The backup key, usage hubs and turning notifications on for a device stay with
+// update Pobots itself on a public install behind a card (engine 0.34.0), a test notification). The backup password reference, usage hubs and turning notifications on for a device stay with
 // the person: none of them is reachable here, and no key, address or token is ever told.
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
@@ -33,13 +33,15 @@ export async function getSettingsFresh(eng: Engine, args: UsageToolArgs): Promis
 
 function backupWords(eng: Engine): string {
   const b = eng.backup.state();
-  const last = b.lastGood ? `Last good ${localWhen(eng, b.lastGood.at)} (${b.lastGood.status}${b.lastGood.by === "you" ? ", by hand" : ""})` : "No good one yet";
   const latest = b.history[0];
-  const failed = latest && latest.status === "failed" ? ` The newest run failed: ${latest.problem ?? "no reason given"}.` : "";
+  const last = latest
+    ? `Last run ${localWhen(eng, latest.at)}: ${latest.status === "saved" ? "saved to iCloud" : latest.status}${latest.bytes === undefined ? "" : `, ${latest.bytes} bytes added`}.${latest.problem ? ` ${latest.problem}` : ""}`
+    : "No backups yet.";
   return [
-    `Backup: ${b.key ? `key set (${b.key.fingerprint})` : "no key set, so no backup runs (the person sets the key in the app)"}.`,
-    `Folder ${b.folder.ok ? "ok" : `not usable: ${b.folder.problem ?? "unknown"}`}. Every night at ${b.time}, ${b.keep} nights kept.`,
-    `${b.running ? "Running now. " : ""}${b.nextAt ? `Next ${localWhen(eng, b.nextAt)}. ` : ""}${last}.${failed}`,
+    `Backup: ${b.resticInstalled ? "restic installed" : "Install restic: brew install restic"}. ${b.passwordRef ? "1Password reference set" : "Add a 1Password reference in Settings, General, Backup"}.`,
+    `${b.folder.iCloud ? "iCloud Drive" : "Local folder"}: ${b.folder.path || "not set"}.${b.folder.problem ? ` ${b.folder.problem}` : ""}`,
+    `Every night at ${b.time}, ${b.keep} nightly snapshots kept. ${b.snapshots ?? 0} in the repository${b.repositoryBytes === undefined ? "" : `, ${b.repositoryBytes} bytes total`}.`,
+    `${b.running ? "Running now. " : ""}${b.nextAt ? `Next ${localWhen(eng, b.nextAt)}. ` : ""}${last}`,
   ].join(" ");
 }
 
@@ -82,10 +84,12 @@ export async function runPobotsTaskFor(eng: Engine, rt: BotRuntime, args: Pobots
   try {
     switch (args.task) {
       case "back_up_now": {
-        if (!eng.backup.state().key) return problem("No backup key is set, so nothing can be backed up. The person sets the key in the app (Settings, General, Backup); that stays with them.");
+        const state = eng.backup.state();
+        if (!state.resticInstalled) return problem("Install restic: brew install restic");
+        if (!state.passwordRef) return problem("No backup password reference is set. The person adds it in Settings, General, Backup.");
         const b = eng.runBackup().backup;
         noteChange(eng, rt, "pobots", "Pobots", ["started a backup of every chat, every bot's folder and the settings"]);
-        return ok(`${b.running ? "A backup is being made now." : "The backup was started."} If it fails the person gets a card; get_settings shows how it went.`);
+        return ok(`${b.running ? "A backup is being made now." : "The backup was started."} get_settings shows how it went.`);
       }
       case "update_providers": {
         const p = (await eng.providersUpdate({ providers: true })).providers;

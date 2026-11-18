@@ -69,7 +69,7 @@ import { FALLBACK_MODELS, labelFor, mapModels, modelFor } from "./claude/models.
 import { type CodexSetup } from "./codex/detect.js";
 import { codexLabel, codexModelFor, harnessOfModel, looksLikeCodex, modelHasFast } from "./codex/models.js";
 import { type SessionSettings } from "./claude/session.js";
-import { Backup, type BackupTimings, type UploadReader } from "./backup.js";
+import { Backup, type BackupOptions } from "./core/backup-restic.js";
 import { SHORTEN_STUCK_MS, SHORTEN_WAIT_MS } from "./shorten.js";
 import { BACKUP_TIME, chatConfig, CONTEXT_DEFAULTS, fullAt, NOTIFY_DEFAULTS, writeConfigPart, type ContextSettings, type EngineConfig } from "./config.js";
 import { SettingsHub, type SettingsHubOptions } from "./settings-hub.js";
@@ -121,7 +121,7 @@ import { activityDayFor } from "./core/activity-day.js";
 export { HELPER_LAST_MAX, helperLine, helperTitle, insideDir, waitingWords } from "./core/words.js";
 export { TIDY_PROMPT, TIDY_REFUSAL } from "./core/runtime.js";
 
-export const ENGINE_VERSION = "0.35.0";
+export const ENGINE_VERSION = "0.36.0";
 
 /** How long a bot waits for another bot's answer before the answer is sent later as a message. */
 const ASK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -262,7 +262,7 @@ export interface EngineOptions {
   titleMaker?: TitleMaker;
   titleTimings?: { backfillStartMs?: number; backfillEveryMs?: number };
   /** The nightly backup's stand-ins and shorter waits, for tests. */
-  backup?: { readUploadState?: UploadReader; timings?: Partial<BackupTimings>; link?: (from: string, to: string) => Promise<void>; copy?: (from: string, to: string, signal: AbortSignal) => Promise<void>; maxFileBytes?: number };
+  backup?: BackupOptions;
 }
 
 /** What a webhook call comes to. The server turns it into an HTTP answer. */
@@ -342,7 +342,7 @@ export class Engine {
   readonly machine: Machine;
   /** The bots' browser (engine/browser.ts). */
   readonly browser: BrowserHub;
-  /** The nightly backup (engine/backup.ts). */
+  /** The nightly backup (engine/core/backup-restic.ts). */
   readonly backup: Backup;
   /** Notifications when the page is not open (engine/notify.ts). */
   readonly notifier: Notifier;
@@ -410,11 +410,7 @@ export class Engine {
       engineVersion: ENGINE_VERSION,
       clock: this.clock,
       tz: this.tz,
-      readUploadState: opts.backup?.readUploadState,
-      timings: opts.backup?.timings,
-      link: opts.backup?.link,
-      copy: opts.backup?.copy,
-      maxFileBytes: opts.backup?.maxFileBytes,
+      ...opts.backup,
       host: {
         snapshotDb: (path) => this.store.snapshotTo(path),
         bots: () => this.order.map((id) => ({ id, name: this.bots.get(id)!.folder.file.name })),
@@ -1197,9 +1193,9 @@ export class Engine {
 
   // ------------------------------------------------------------ the nightly backup
 
-  /** "backup.setKey": checks and saves the public key. What was pasted is never kept or logged when it is refused. */
-  setBackupKey(publicKey: string): Methods["backup.setKey"]["result"] {
-    return { backup: this.backup.setKey(publicKey) };
+  /** Saves the 1Password reference; never receives a password. */
+  setBackupPasswordRef(passwordRef: string): Methods["backup.setPasswordRef"]["result"] {
+    return { backup: this.backup.setPasswordRef(passwordRef) };
   }
 
   /** "backup.run": starts a backup now. */

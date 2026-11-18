@@ -24,7 +24,7 @@ export const TESTBED = {
   installDir: join(home, ".local", "share", "pobots-test"),
   // The test copy's nightly backups go to a folder of its own, never the real Pobots' "Pobot" folder,
   // so it can never remove or replace the real one's files (docs/build/step-backup.md).
-  backupFolder: join(home, "Library", "CloudStorage", "OneDrive-Personal", "Pobot", "test-copy"),
+  backupFolder: join(home, "Library", "Mobile Documents", "com~apple~CloudDocs", "Pobots Backup Test"),
 };
 const realConfig = join(home, "Library", "Application Support", "Pobots", "config.json");
 
@@ -53,12 +53,12 @@ function writeConfig() {
   } catch {
     // First install, or after a reset.
   }
-  // The backup: always the test copy's own folder. Its own saved key is kept; the real one's never taken.
+  // The backup: always the test copy's own folder. Do not take a reference from the real config.
   const ownKey = own.backup && typeof own.backup === "object" ? own.backup : {};
   const backup = {
     folder: TESTBED.backupFolder,
-    ...(typeof ownKey.publicKey === "string" ? { publicKey: ownKey.publicKey } : {}),
-    ...(typeof ownKey.publicKeySavedAt === "string" ? { publicKeySavedAt: ownKey.publicKeySavedAt } : {}),
+    ...(typeof ownKey.passwordRef === "string" ? { passwordRef: ownKey.passwordRef } : {}),
+    ...(typeof ownKey.passwordRefSavedAt === "string" ? { passwordRefSavedAt: ownKey.passwordRefSavedAt } : {}),
   };
   // Notifications: every title says "Test copy: ", so a card a test bot raises here is never taken
   // for one of the real Pobots. The test copy's own switches and subject are kept; the real one's never taken.
@@ -70,8 +70,6 @@ function writeConfig() {
   };
   const config = { claude: real.claude ?? {}, ...(real.codex ? { codex: real.codex } : {}), remote: real.remote ?? { allowedLogins: [] }, ...(own.context ? { context: own.context } : {}), backup, notify };
   writeFileSync(join(TESTBED.dataDir, "config.json"), JSON.stringify(config, null, 2) + "\n", { mode: 0o600 });
-  // Made only inside an existing "Pobot" folder: the test copy never creates folders elsewhere in OneDrive.
-  if (existsSync(dirname(TESTBED.backupFolder)) && !existsSync(TESTBED.backupFolder)) mkdirSync(TESTBED.backupFolder);
 }
 
 function wipe() {

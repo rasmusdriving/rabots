@@ -190,8 +190,8 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
   "taskManager.stop": z.object({ botId: id, managerId: id }),
   "taskManager.end": z.object({ botId: id, managerId: id }),
   "card.resolve": z.object({ cardId: id, decision }),
-  // Generous, so a wrong paste (even a whole private key) gets the engine's plain refusal, not a shape error.
-  "backup.setKey": z.object({ publicKey: z.string().max(200_000) }),
+  // Only the 1Password reference crosses the protocol.
+  "backup.setPasswordRef": z.object({ passwordRef: z.string().max(512) }),
   "backup.run": z.object({}).optional(),
   // Notifications: shapes and sizes; the engine checks the push service and the keys and refuses in plain words.
   "notify.setKinds": z.object({ kinds: z.object({ needs: z.boolean().optional(), note: z.boolean().optional(), finished: z.boolean().optional() }).strict() }),

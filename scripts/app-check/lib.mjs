@@ -54,13 +54,11 @@ for (const d of [dataDir, botsDir, shots]) mkdirSync(d, { recursive: true });
 // The engine config: use the person's Claude env file when there is one (only its path is written).
 // POBOTS_CLAUDE_ENV_FILE names another one; an absent file is simply left out.
 export const envFile = process.env.POBOTS_CLAUDE_ENV_FILE || join(homedir(), ".claude", "cliproxy.env");
-// The backup folder of this check: its own, under OneDrive's Pobot/test-copy, removed at the end.
-export const oneDrivePobot = join(homedir(), "Library", "CloudStorage", "OneDrive-Personal", "Pobot");
-export const backupDir = join(oneDrivePobot, "test-copy", `app-check-${new Date().toISOString().replace(/[:.]/g, "-")}`);
-export const backupReady = existsSync(oneDrivePobot);
-if (backupReady) mkdirSync(backupDir, { recursive: true });
-export const keysDir = join(work, "keys");
-writeFileSync(join(dataDir, "config.json"), JSON.stringify({ claude: existsSync(envFile) ? { envFile } : {}, backup: { folder: backupReady ? backupDir : "" } }));
+export const backupDir = join(work, "backup");
+writeFileSync(join(dataDir, "config.json"), JSON.stringify({
+  ...(only !== "backup" && existsSync(envFile) ? { claude: { envFile } } : {}),
+  ...(only === "backup" ? { backup: { folder: backupDir } } : {}),
+}));
 
 export const results = [];
 export let failed = false;
