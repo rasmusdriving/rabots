@@ -2,6 +2,8 @@
 // chose, scoped to it. Cards and to-dos name it ("<title>, for <bot>") and their answers come back
 // to it; message_bot reaches its own bot and the bots it was allowed; show_artifact puts the page in
 // its thread. Its approvals and questions never hold the bot.
+import { aheadTool } from "./ahead-settings.js";
+import { aheadToolFor } from "./ahead-tool.js";
 import { away, vacationRefusal } from "./vacation.js";
 import { followUpWords, takePlace } from "./card-questions.js";
 import { randomUUID } from "node:crypto";
@@ -62,6 +64,8 @@ export function managerTools(eng: Engine, rt: BotRuntime, tm: TaskManager): BotT
   const tools = buildTools("bot", full, { harness: tm.harness, models: eng.modelList() })
     .filter((t) => allowed.has(t.name))
     .map((t) => (t.name === TOOL_NAMES.startHelper ? { ...t, description: workerWords(t.description, tm.maxWorkers) } : t));
+  // Protocol 31: a task manager has its bot's Ahead level; its items are the bot's.
+  if (aheadTool(eng, rt)) tools.push(aheadToolFor(eng, rt, { threadId: tm.ownThread }));
   if (tm.harness !== "codex") return tools;
   return tools.map((t) => ({ ...t, handler: (args: Record<string, unknown>, signal?: AbortSignal) => managerLateCall(eng, rt, tm, t.name, args, signal, t.handler) }));
 }

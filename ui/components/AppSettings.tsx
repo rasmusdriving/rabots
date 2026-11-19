@@ -38,6 +38,7 @@ import { ChatsSection, ProvidersSection } from "./SettingsWindow";
 import { UsageSection } from "./usage/UsageSection";
 import { PhoneBack } from "./PhoneBack";
 import { CalendarSection } from "./CalendarSection";
+import { AheadSettingsSection } from "./ahead/AheadSettingsSection";
 import { ActivityView } from "./ActivityView";
 import { AboutYouSection } from "./AboutYouSection";
 import { ConnectionsSection } from "./ConnectionsSection";
@@ -71,6 +72,7 @@ const WINDOW_SECTIONS: { id: SettingsSection; label: string; render: () => React
   { id: "chats", label: "Chats", render: () => <div className="pb-settings"><ChatsSection /></div> },
   { id: "providers", label: "Providers", render: () => <div className="pb-settings"><ProvidersSection /></div> },
   { id: "calendar", label: "Calendar", render: () => <div className="pb-settings"><CalendarSection /></div> },
+  { id: "ahead", label: "Ahead", render: () => <div className="pb-settings"><AheadSettingsSection /></div> },
   { id: "usage", label: "Usage", render: () => <UsageSection /> },
   { id: "connections", label: "Connections", render: () => <div className="pb-settings"><ConnectionsSection /></div> },
   // Protocol 22: a day's activity, read only, as T3 Code lists its Diagnostics page among its settings.
@@ -471,9 +473,10 @@ function ThisDevice({ push }: { push: PushView }) {
   );
 }
 
-/** "What to tell you": three switches, for all devices. Each changes at once and saves itself. */
+/** "What to tell you": three switches (five while Ahead is on), for all devices. Each changes at once and saves itself. */
 function Kinds({ notify }: { notify: NotifyState }) {
   const [state, saved] = useSaver();
+  const aheadOn = useAppState((s) => !!s.ahead?.enabled);
   /** What he switched to while the engine has not answered yet. */
   const [want, setWant] = useState<Partial<Record<NotifyKind, boolean>>>({});
   const toggle = (kind: NotifyKind, on: boolean) => {
@@ -497,7 +500,7 @@ function Kinds({ notify }: { notify: NotifyState }) {
       </div>
       <p className="pb-notify-kinds-note">{KINDS_NOTE}</p>
       <ul className="pb-notify-kinds">
-        {KINDS.map(({ kind, label, hint }) => (
+        {KINDS.filter((k) => !k.ahead || aheadOn).map(({ kind, label, hint }) => (
           <li key={kind}>
             <label className="pb-notify-kind">
               <span className="pb-notify-kind-text">
@@ -511,7 +514,7 @@ function Kinds({ notify }: { notify: NotifyState }) {
                 type="checkbox"
                 role="switch"
                 data-kind={kind}
-                checked={want[kind] ?? notify.kinds[kind]}
+                checked={want[kind] ?? notify.kinds[kind] ?? false}
                 aria-label={label}
                 aria-describedby={`notify-kind-${kind}`}
                 onChange={(e) => toggle(kind, e.target.checked)}

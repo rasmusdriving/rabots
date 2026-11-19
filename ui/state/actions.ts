@@ -737,3 +737,11 @@ export async function testCalendar(): Promise<void> {
   const { calendar } = await engine().request("calendar.test", {});
   if (store.calendarEvents === seen) store.setCalendar(calendar);
 }
+
+/**
+ * Protocol 31: a plain engine call for a feature that keeps its calls in a module of its own
+ * (ui/components/ahead/ahead-state.ts), so this file does not grow with each one.
+ */
+export function engineRequest<M extends keyof Methods>(method: M, params: Methods[M]["params"]): Promise<Methods[M]["result"]> {
+  return engine().request(method, params);
+}

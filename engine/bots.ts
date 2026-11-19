@@ -42,6 +42,8 @@ export interface BotFile {
   maySteer?: boolean;
   /** Has the calendar tools (16 Nov 2026). Absent: on for the main bot, off for the others. */
   calendar?: boolean;
+  /** Protocol 31: what it may do on Ahead. Absent: off (the main bot always has everything). */
+  ahead?: "off" | "items" | "time";
   /** Step 7b: the bot's own choice for a message sent while it works. Absent: the Pobots default. */
   followUp?: FollowUp;
   /** What the bot sees of the person's own Claude Code setup (docs/sees.md). Absent: everything. */
@@ -174,6 +176,7 @@ export function normalizeBotFile(raw: unknown, id: string, machine: string): Bot
       : [],
     ...(r.maySteer === true ? { maySteer: true } : {}),
     ...(typeof r.calendar === "boolean" ? { calendar: r.calendar } : {}),
+    ...(r.ahead === "off" || r.ahead === "items" || r.ahead === "time" ? { ahead: r.ahead } : {}),
     ...(r.followUp === "steer" || r.followUp === "queue" ? { followUp: r.followUp } : {}),
     ...withSees(cleanSees(r.sees)),
     ...(r.role !== "main" && typeof r.vacationSince === "string" && Number.isFinite(Date.parse(r.vacationSince)) ? { vacationSince: r.vacationSince } : {}),
@@ -207,6 +210,7 @@ export function writeBotFile(dir: string, file: BotFile): void {
     mayMessage: file.mayMessage,
     ...(file.maySteer ? { maySteer: true } : {}),
     ...(file.calendar !== undefined ? { calendar: file.calendar } : {}),
+    ...(file.ahead !== undefined ? { ahead: file.ahead } : {}),
     ...(file.followUp ? { followUp: file.followUp } : {}),
     ...(file.sees ? { sees: file.sees } : {}),
     ...(file.vacationSince ? { vacationSince: file.vacationSince } : {}),

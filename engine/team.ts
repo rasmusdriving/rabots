@@ -243,6 +243,7 @@ export type UpdateBotArgs = {
   may_message?: string[];
   may_steer?: boolean;
   calendar?: boolean;
+  ahead?: "off" | "items" | "time";
   job?: string;
   color?: BotColor;
   eyes?: EyeShape;
@@ -284,8 +285,10 @@ export type ChangeSettingsArgs = {
   title_model?: string;
   about_you?: string;
   calendar_internal_domains?: string[];
+  ahead?: boolean;
+  ahead_time?: { work_start?: string; work_end?: string; work_days?: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun">; minutes_per_day?: number };
   providers?: { claude?: boolean; codex?: boolean };
-  notifications?: { needs?: boolean; note?: boolean; finished?: boolean };
+  notifications?: { needs?: boolean; note?: boolean; finished?: boolean; yourTime?: boolean; dayReady?: boolean };
 };
 
 export type StartHelperArgs = {
@@ -315,6 +318,8 @@ export interface ToolContext {
   models: ModelInfo[];
   /** Step workers: the kinds of worker in the bot's folder when the session started. */
   kinds?: { name: string; description?: string; problem?: string }[];
+  /** Protocol 31: Ahead is on. Off, the main bot's change_settings leaves out what only matters while it is on. */
+  ahead?: boolean;
 }
 
 /** The kinds as start_helper's description names them, in a few words each. */
@@ -647,7 +652,7 @@ export function buildTools(role: "main" | "bot", host: TeamHost, ctx: ToolContex
     ...helperTools(host, main),
     ...taskManagerTools(host, main, models),
   ];
-  if (main) tools.push(...mainTools(host, models), ...linkTools(host));
+  if (main) tools.push(...mainTools(host, models, ctx.ahead === true), ...linkTools(host));
   // A bot that is not the main bot changes what it sees itself, on either harness (docs/sees.md).
   else tools.push(changeWhatISeeTool(host, ctx.harness));
   return tools;

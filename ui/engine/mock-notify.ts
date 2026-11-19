@@ -65,7 +65,7 @@ export class MockNotify {
   readonly subscribes: { asked: boolean; label: string; replaces?: string; service: Service | null; deviceId: string }[] = [];
 
   constructor(private readonly emit: (e: { event: "notify.changed"; data: Events["notify.changed"] }) => void, seed: string | null) {
-    this.s = { publicKey: PUBLIC_KEY, kinds: { needs: true, note: true, finished: false }, devices: [] };
+    this.s = { publicKey: PUBLIC_KEY, kinds: { needs: true, note: true, finished: false, yourTime: false, dayReady: false }, devices: [] };
     this.seed(seed ?? "devices");
   }
 

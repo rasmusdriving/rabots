@@ -10,6 +10,7 @@ import { store, useAppState } from "../state/store";
 import { countWord, MACHINE_CONNECTED, MACHINE_WORD, STATE_WORD } from "../lib/words";
 import { BrowserIcon, Face, ForwardIcon, GearIcon, Mark, PlusIcon, SpeechIcon, UpdateIcon, UsageIcon } from "./bits";
 import { VacationShelf } from "./VacationShelf";
+import { AheadRosterRow } from "./ahead/AheadRosterRow";
 import { useRailExit, useRailLeaving } from "./rail-leaving";
 import { UpdateDialog } from "./SettingsWindow";
 import { anyUpdateRunning, labelsWords, updateTodo } from "../lib/pobots-update";
@@ -48,6 +49,7 @@ export function Roster({ covered = false }: { covered?: boolean } = {}) {
       </div>
       {phone && <NeedsRow />}
       <div className="pb-side-group app-scroll">
+        <AheadRosterRow phone={phone} />
         <div className="pb-side-head">
           <div className="pb-side-title" id="bots-title">
             Bots

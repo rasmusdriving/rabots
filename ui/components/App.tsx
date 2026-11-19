@@ -4,7 +4,8 @@
 import { useEffect, type CSSProperties } from "react";
 import { usePhone } from "../lib/phone";
 import { useRailWidth } from "../lib/rail-width";
-import { shareOf, store, useAppState } from "../state/store";
+import { AHEAD_PAGE, shareOf, store, useAppState } from "../state/store";
+import { AheadPage } from "./ahead/AheadPage";
 import { AddBotSheet } from "./AddBot";
 import { AppSettingsPage } from "./AppSettings";
 import { ArtifactPane, usePanelLayout, type PanelMode } from "./ArtifactPane";
@@ -23,6 +24,7 @@ export function App({ pickerOpenAtStart = false }: { pickerOpenAtStart?: boolean
   const bots = useAppState((s) => s.bots);
   const openBotId = useAppState((s) => s.openBotId);
   const channel = useAppState((s) => (s.openChannelId ? s.channels.find((c) => c.id === s.openChannelId) : undefined));
+  const ahead = useAppState((s) => s.openChannelId === AHEAD_PAGE && !!s.ahead?.enabled);
   const panel = useAppState((s) => s.panel);
   const share = useAppState(shareOf);
   const appSettings = useAppState((s) => s.appSettings);
@@ -58,7 +60,7 @@ export function App({ pickerOpenAtStart = false }: { pickerOpenAtStart?: boolean
   // the rail stay where they are underneath, so closing shows them exactly as they were.
   // The browser is not one bot's: it stays beside any bot's page and a channel's.
   // The settings window (step 7b) floats over everything, which stays where it is underneath, out of reach.
-  const open = panel && (panel.kind === "browser" || (!channel && panel.botId === bot.id)) ? panel : null;
+  const open = panel && (panel.kind === "browser" || (!channel && !ahead && panel.botId === bot.id)) ? panel : null;
   const mode: PanelMode | undefined = !open ? undefined : layout.narrow ? "narrow" : open.full ? "full" : "side";
   // The rail's width, when the person chose one (step rail-resize); otherwise app.css's default.
   const style =
@@ -72,14 +74,16 @@ export function App({ pickerOpenAtStart = false }: { pickerOpenAtStart?: boolean
       <div className="app-drag" aria-hidden="true" />
       <Roster covered={appSettings} />
       {/* Under the settings window everything stays where it is, out of reach. */}
-      {channel ? (
+      {ahead ? (
+        <AheadPage covered={appSettings} />
+      ) : channel ? (
         <ChannelPage key={channel.id} channel={channel} covered={appSettings} />
       ) : (
         <ChatPanel bot={bot} pickerOpenAtStart={pickerOpenAtStart} covered={appSettings || mode === "full" || mode === "narrow"} />
       )}
       <Rail covered={!!mode || appSettings} />
       {!mode && !appSettings && rail.can && <RailHandle rail={rail} />}
-      {open && mode && <ArtifactPane bot={bot} panel={open} mode={mode} layout={layout} backName={channel?.name ?? bot.name} />}
+      {open && mode && <ArtifactPane bot={bot} panel={open} mode={mode} layout={layout} backName={ahead ? "Ahead" : (channel?.name ?? bot.name)} />}
       {appSettings && <AppSettingsPage />}
       <Floating />
     </div>
@@ -132,24 +136,27 @@ function Floating() {
  */
 function PhoneApp({ bot, screen, tab, pickerOpenAtStart }: { bot: Bot; screen: PhoneScreen; tab: BotTab; pickerOpenAtStart: boolean }) {
   const channel = useAppState((s) => (s.openChannelId ? s.channels.find((c) => c.id === s.openChannelId) : undefined));
+  const ahead = useAppState((s) => s.openChannelId === AHEAD_PAGE && !!s.ahead?.enabled);
   const panel = useAppState((s) => s.panel);
   const appSettings = useAppState((s) => s.appSettings);
   const share = useAppState(shareOf);
   const layout = usePanelLayout(share);
-  const open = !appSettings && panel && (panel.kind === "browser" || (screen === "bot" && !channel && panel.botId === bot.id)) ? panel : null;
-  const sheet = appSettings ? "settings" : open ? open.kind : screen === "bot" && !channel && tab !== "chat" ? "page" : undefined;
+  const open = !appSettings && panel && (panel.kind === "browser" || (screen === "bot" && !channel && !ahead && panel.botId === bot.id)) ? panel : null;
+  const sheet = appSettings ? "settings" : open ? open.kind : screen === "bot" && !channel && !ahead && tab !== "chat" ? "page" : undefined;
   const covered = (part: PhoneScreen) => screen !== part || (!!sheet && sheet !== "page");
   return (
     <div className="pb-shell app-shell" data-phone="" data-phone-screen={screen} data-phone-sheet={sheet} data-artifact={open ? "narrow" : undefined} data-page={appSettings ? "settings" : undefined}>
       <Roster covered={covered("bots")} />
-      {channel ? (
+      {ahead ? (
+        <AheadPage covered={covered("bot")} />
+      ) : channel ? (
         <ChannelPage key={channel.id} channel={channel} covered={covered("bot")} />
       ) : (
         <ChatPanel bot={bot} pickerOpenAtStart={pickerOpenAtStart} covered={covered("bot")} />
       )}
       {appSettings && <AppSettingsPage />}
       <Rail covered={covered("needs")} />
-      {open && <ArtifactPane bot={bot} panel={open} mode="narrow" layout={layout} backName={backName(screen, channel?.name ?? bot.name)} />}
+      {open && <ArtifactPane bot={bot} panel={open} mode="narrow" layout={layout} backName={backName(screen, ahead ? "Ahead" : (channel?.name ?? bot.name))} />}
       <Floating />
     </div>
   );

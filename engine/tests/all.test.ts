@@ -89,3 +89,6 @@ await import("./link-wire.spec.js");
 await import("./links.spec.js");
 
 await import("./vacation.spec.js");
+await import("./ahead.spec.js");
+await import("./ahead-screen.spec.js");
+await import("./ahead-time.spec.js");

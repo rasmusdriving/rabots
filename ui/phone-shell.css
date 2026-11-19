@@ -164,6 +164,10 @@
   .pb-shell[data-phone] .app-channel > .app-phone-bar { padding: max(var(--space-2), env(safe-area-inset-top)) var(--space-2) 0 var(--space-1); }
   .pb-shell[data-phone] .app-channel .pb-channel-head { padding-top: var(--space-2); }
   .pb-shell[data-phone] .app-channel-scroll { padding-bottom: max(var(--space-5), env(safe-area-inset-bottom)); }
+  /* Ahead (protocol 31): a screen of its own, as a channel's page. */
+  .pb-shell[data-phone] .app-ahead > .app-phone-bar { padding: max(var(--space-2), env(safe-area-inset-top)) var(--space-2) 0 var(--space-1); }
+  .pb-shell[data-phone] .app-ahead .pb-ahead-head { padding-top: var(--space-2); }
+  .pb-shell[data-phone] .app-ahead-scroll { padding-bottom: max(var(--space-5), env(safe-area-inset-bottom)); }
 
   /* ------------------------------------------------------------ an artifact or the browser, a sheet
      The panel fills the screen. Its top line takes two lines: the way back, "Needs you" and the small

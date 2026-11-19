@@ -1,4 +1,5 @@
 // Bots: making, changing, switching, retiring and stopping a bot; its files, its history of changes, and its saved rules.
+import { aheadTool } from "./ahead-settings.js";
 import { closeAllSessions } from "./aside.js";
 import type { Engine } from "../engine.js";
 import type { Bot, BotChange, BotFile as ProtocolBotFile, Harness, Methods, SavedRule } from "../../shared/protocol.js";
@@ -134,6 +135,13 @@ export async function updateBot(eng: Engine, params: Methods["bot.update"]["para
   const calendarBefore = f.calendar ?? f.role === "main";
   if (p.calendar !== undefined) f.calendar = p.calendar;
   const calendarChanged = (f.calendar ?? f.role === "main") !== calendarBefore;
+  // Protocol 31: the Ahead permission. The main bot always has everything, so it keeps no setting.
+  const aheadBefore = aheadTool(eng, rt);
+  if (p.ahead !== undefined && f.role !== "main") {
+    if (p.ahead === "off") delete f.ahead;
+    else f.ahead = p.ahead;
+  }
+  const aheadChanged = aheadTool(eng, rt) !== aheadBefore;
   if (nextModel !== undefined) {
     f.model = nextModel;
     f.harness = nextHarness;
@@ -193,7 +201,7 @@ export async function updateBot(eng: Engine, params: Methods["bot.update"]["para
   // message. A Codex thread is resumed with the new thread settings (docs/build/step-gpt-bot-sees.md).
   if (seesChanged) eng.refreshSession(rt);
   // The calendar tools come or go with a new session, from the next turn.
-  if (calendarChanged) eng.refreshSession(rt);
+  if (calendarChanged || aheadChanged) eng.refreshSession(rt);
   const bot = eng.toBot(rt);
   tellModelsIfChanged(eng, modelsBefore);
   eng.opts.emit("bot.updated", { bot });

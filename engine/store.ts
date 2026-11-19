@@ -6,6 +6,7 @@ import { chmodSync } from "node:fs";
 import { LinkStore } from "./core/link-store.js";
 import { ChannelPostStore, makeChannelPostTables } from "./channel-posts-store.js";
 import { CalendarStore, makeCalendarTables } from "./calendar-store.js";
+import { AheadStore, makeAheadTables } from "./core/ahead-store.js";
 import { ActivityStore, makePersonActionTable } from "./activity-store.js";
 import type { Artifact, Card, Channel, ChannelMessage, ChannelRoute, Harness, Item, Schedule, Todo, Trigger, TriggerRun } from "../shared/protocol.js";
 import type { TodoRow } from "./todos.js";
@@ -403,6 +404,8 @@ export class Store {
   readonly calendar: CalendarStore;
   /** The activity log's reads and the person's own actions (engine 0.28.0). */
   readonly activity: ActivityStore;
+  /** Ahead's items (engine 0.39.0). */
+  readonly ahead: AheadStore;
 
   /** `fullText: false` leaves the full-text index out, as on a SQLite without it. For tests. */
   constructor(path: string, opts: { fullText?: boolean } = {}) {
@@ -429,6 +432,8 @@ export class Store {
     this.calendar = new CalendarStore(this.db);
     makePersonActionTable(this.db);
     this.activity = new ActivityStore(this.db);
+    makeAheadTables(this.db);
+    this.ahead = new AheadStore(this.db);
     this.chatIndex = opts.fullText === false ? false : this.makeChatIndex();
   }
 

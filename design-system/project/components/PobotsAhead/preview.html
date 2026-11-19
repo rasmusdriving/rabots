@@ -1,0 +1,68 @@
+<!-- @dsCard group="Pages" height=560 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ahead</title></head>
+<body class="body" style="background:var(--ground);color:var(--ink);margin:var(--space-4)">
+<div class="pb-ahead-page">
+  <div class="pb-ahead-controls">
+    <div class="pb-seg" role="group" aria-label="Ahead view">
+      <button type="button" aria-pressed="true">Agenda</button>
+      <button type="button" aria-pressed="false">Week</button>
+    </div>
+    <button type="button" class="pb-btn pb-btn-sm">Add</button>
+  </div>
+  <p class="pb-ahead-since small"><span class="pb-ahead-change-dot" aria-hidden="true"></span>1 new, 1 moved since yesterday 17:10</p>
+  <section class="pb-ahead-carry" aria-labelledby="carry-preview">
+    <div class="pb-ahead-carry-head">
+      <h2 id="carry-preview" class="label">Carrying</h2>
+      <div class="pb-ahead-carry-labels" role="group" aria-label="Label">
+        <button type="button" class="pb-ahead-chip" aria-pressed="true">Sample project</button>
+        <button type="button" class="pb-ahead-chip" aria-pressed="false">Reports</button>
+      </div>
+    </div>
+    <button type="button" class="pb-ahead-carry-row" aria-pressed="true">
+      <span class="pb-avatar pb-avatar-sm" data-state="idle"><span class="pb-eyes"><i></i><i></i></span></span>
+      <span class="pb-ahead-carry-body">
+        <span class="pb-ahead-carry-name">Mira</span>
+        <span class="small pb-ahead-carry-counts"><span>3 on Ahead</span><span>2 due this week</span><span class="pb-ahead-carry-wait">1 waiting on you</span></span>
+      </span>
+    </button>
+    <button type="button" class="pb-ahead-carry-row" aria-pressed="false">
+      <span class="pb-ahead-you"></span>
+      <span class="pb-ahead-carry-body">
+        <span class="pb-ahead-carry-name">You</span>
+        <span class="small pb-ahead-carry-counts"><span>1 on Ahead</span><span>1 due this week</span></span>
+      </span>
+    </button>
+  </section>
+  <section class="pb-ahead-day">
+    <div class="pb-ahead-day-head"><h3>From earlier</h3><span>1 item whose day passed</span></div>
+    <div class="pb-ahead-rows">
+      <button type="button" class="pb-ahead-row"><span class="pb-ahead-when">17 Nov</span><span class="pb-ahead-mark"><span class="pb-avatar pb-avatar-sm" data-state="idle"><span class="pb-eyes"><i></i><i></i></span></span></span><span class="pb-ahead-body"><span class="pb-ahead-title"><span class="pb-ahead-change-dot" aria-hidden="true"></span>Call back about the report</span><span class="pb-ahead-meta"><span class="pb-ahead-tag">Will do</span>Moved from Monday · Mira</span></span></button>
+    </div>
+  </section>
+  <section class="pb-ahead-day">
+    <div class="pb-ahead-day-head"><h3>Today</h3><span>19 Nov</span></div>
+    <div class="pb-ahead-rows">
+      <div class="pb-ahead-row" data-tone="meeting" role="group"><span class="pb-ahead-when">10:00<span class="pb-ahead-end">10:30</span></span><span class="pb-ahead-mark"><span class="pb-ahead-meeting"></span></span><span class="pb-ahead-body"><span class="pb-ahead-title">Weekly sync</span></span></div>
+      <button type="button" class="pb-ahead-row"><span class="pb-ahead-when">15:00</span><span class="pb-ahead-mark"><span class="pb-avatar pb-avatar-sm" data-state="idle"><span class="pb-eyes"><i></i><i></i></span></span></span><span class="pb-ahead-body"><span class="pb-ahead-title"><span class="pb-ahead-change-dot" aria-hidden="true"></span>Send the sample summary</span><span class="pb-ahead-meta"><span class="pb-ahead-tag">Will do</span>New · Mira · Sample project</span></span></button>
+      <button type="button" class="pb-ahead-row" data-tone="closed"><span class="pb-ahead-when"></span><span class="pb-ahead-mark"><span class="pb-avatar pb-avatar-sm" data-state="idle"><span class="pb-eyes"><i></i><i></i></span></span></span><span class="pb-ahead-body"><span class="pb-ahead-title">Answer from the example team</span><span class="pb-ahead-meta"><span class="pb-ahead-tag">Waiting</span>Mira · Done</span></span></button>
+    </div>
+  </section>
+  <section class="pb-ahead-day">
+    <div class="pb-ahead-day-head"><h3>Saturday</h3><span>21 Nov</span></div>
+    <div class="pb-ahead-rows">
+      <button type="button" class="pb-ahead-row"><span class="pb-ahead-when"></span><span class="pb-ahead-mark"><span class="pb-avatar pb-avatar-sm" data-state="idle"><span class="pb-eyes"><i></i><i></i></span></span></span><span class="pb-ahead-body"><span class="pb-ahead-title">Check the import file</span><span class="pb-ahead-meta"><span class="pb-ahead-tag" data-for="you">For you</span>To-do from Mira</span></span></button>
+      <button type="button" class="pb-ahead-row"><span class="pb-ahead-when">08:30</span><span class="pb-ahead-mark"><span class="pb-ahead-you"></span></span><span class="pb-ahead-body"><span class="pb-ahead-title">Dentist</span><span class="pb-ahead-meta"><span class="pb-ahead-tag">Note</span>You</span></span></button>
+    </div>
+  </section>
+  <section class="pb-ahead-day">
+    <button type="button" class="pb-ahead-fold" aria-expanded="false">Later · 2 items</button>
+  </section>
+  <section class="pb-ahead-day">
+    <button type="button" class="pb-ahead-fold" aria-expanded="false">Done this week · 1</button>
+  </section>
+  <div class="pb-ahead-held-slot"><div class="pb-ahead-held" role="status">1 new · <button type="button">Show</button></div></div>
+</div>
+</body>
+</html>

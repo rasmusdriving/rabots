@@ -37,8 +37,8 @@ export function CardQuestions({
   botId?: string;
   onAsk(text: string): Promise<void>;
   disabled?: boolean;
-  /** "card" on the rail, "todo" in the to-do's window. */
-  place: "card" | "todo";
+  /** On the rail, in the to-do window, or in an Ahead item sheet. */
+  place: "card" | "todo" | "ahead";
 }) {
   const key = `ask:${id}`;
   const [text, setText] = useState(() => carried<string>(key) ?? "");

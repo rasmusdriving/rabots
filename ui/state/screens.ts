@@ -18,7 +18,7 @@ import { useSyncExternalStore } from "react";
 import { isPhone, PHONE_QUERY } from "../lib/phone";
 import { afterMove, holdForMove, LAYER_STATE_KEY, layersOf, moveLanded, MOVE_LANDS_MS } from "../lib/phone-back";
 import { BEFORE_KEY, deeper, depth, depthIn, DEPTH_KEY, parentOf, sameView, viewIn, VIEW_KEY, type PhoneScreen, type PhoneView } from "./phone-view";
-import { historyStateWith, store, withAppSettingsMark, type AppState, type HelperStacks, type Panel } from "./store";
+import { AHEAD_PAGE, historyStateWith, store, withAppSettingsMark, type AppState, type HelperStacks, type Panel } from "./store";
 
 /** What shows now, as the store holds it. */
 export function viewOf(s: AppState): PhoneView {
@@ -125,7 +125,7 @@ function apply(v: PhoneView): void {
   try {
     const s = store.get();
     const bot = v.bot && s.bots.some((b) => b.id === v.bot) ? v.bot : undefined;
-    const channel = v.channel && s.channels.some((c) => c.id === v.channel) ? v.channel : undefined;
+    const channel = v.channel && (s.channels.some((c) => c.id === v.channel) || (v.channel === AHEAD_PAGE && !!s.ahead?.enabled)) ? v.channel : undefined;
     const screen = v.screen === "bot" && !bot && !channel ? "bots" : v.screen;
     store.showPhoneView({ screen, bot, channel, tab: bot ? (v.tab ?? "chat") : undefined, settings: !!v.settings });
     store.setPanel(panelOf(v, s.panel));

@@ -66,7 +66,7 @@ function writeConfig() {
   // for one of the real Pobots. The test copy's own switches and subject are kept; the real one's never taken.
   const ownNotify = own.notify && typeof own.notify === "object" && !Array.isArray(own.notify) ? own.notify : {};
   const notify = {
-    ...Object.fromEntries(["needs", "note", "finished"].filter((k) => typeof ownNotify[k] === "boolean").map((k) => [k, ownNotify[k]])),
+    ...Object.fromEntries(["needs", "note", "finished", "yourTime", "dayReady"].filter((k) => typeof ownNotify[k] === "boolean").map((k) => [k, ownNotify[k]])),
     ...(typeof ownNotify.subject === "string" ? { subject: ownNotify.subject } : {}),
     titlePrefix: "Test copy: ",
   };

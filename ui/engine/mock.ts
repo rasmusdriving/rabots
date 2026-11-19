@@ -174,6 +174,7 @@ import { CODING_SEES, MockSees } from "./mock-sees";
 import { mockUsageOverview } from "./mock-usage";
 import { MockActivity } from "./mock-activity";
 import { MockCalendar } from "./mock-calendar";
+import { MockAhead } from "./mock-ahead";
 import { MockFirstStart } from "./mock-firststart";
 import {
   type MockScene,
@@ -320,6 +321,8 @@ export class MockEngine implements EngineClient {
   private sees!: MockSees;
   /** The calendar connection and meeting cards (ui/engine/mock-calendar.ts, engine 0.25.0). */
   private calendar!: MockCalendar;
+  /** Ahead (ui/engine/mock-ahead.ts, protocol 31). */
+  private ahead!: MockAhead;
   private firstStart!: MockFirstStart;
   /** The chat settings (protocol 14). */
   chat: ChatSettings = { followUp: "steer" };
@@ -413,6 +416,8 @@ export class MockEngine implements EngineClient {
     this.calendar = new MockCalendar(this, flags.get("calendar") ?? undefined);
     window.pobotsCalendar = this.calendar.levers();
     if (flags.get("calendar") === "1" && scene !== "first-run") this.calendar.seed();
+    this.ahead = new MockAhead(this, scene === "first-run" ? undefined : (flags.get("ahead") ?? undefined));
+    window.pobotsAhead = this.ahead.levers();
     // A new install's first start and About you (&aboutyou=1, protocol 24).
     this.firstStart = new MockFirstStart(this, flags.get("aboutyou"));
     window.pobotsFirstStart = this.firstStart.levers();
@@ -950,6 +955,11 @@ export class MockEngine implements EngineClient {
     "calendar.get": (p) => this.calendar.handlers["calendar.get"](p),
     "calendar.set": (p) => this.calendar.handlers["calendar.set"](p),
     "calendar.test": (p) => this.calendar.handlers["calendar.test"](p),
+    "ahead.view": (p) => this.ahead.handlers["ahead.view"](p),
+    "ahead.settings.set": (p) => this.ahead.handlers["ahead.settings.set"](p),
+    "ahead.act": (p) => this.ahead.handlers["ahead.act"](p),
+    "ahead.add": (p) => this.ahead.handlers["ahead.add"](p),
+    "ahead.seen": (p) => this.ahead.handlers["ahead.seen"](p),
     "aboutYou.set": (p) => this.firstStart.handlers["aboutYou.set"](p),
   };
 
@@ -960,7 +970,7 @@ export class MockEngine implements EngineClient {
   }
 
   private snapshot(): Snapshot {
-    return structuredClone({ status: this.status, bots: this.bots, cards: this.cards.filter((c) => c.kind === "system" || !this.bot(c.botId).vacationSince), models: this.models(), machines: MACHINES, upcoming: this.upcomingList, channels: this.channels.map(publicChannel), browser: this.browser.state(), backup: this.backup.state(), connections: this.connections.list(), notify: this.notify.state(), chat: this.chat, settings: this.settings7.view(), providers: this.settings7.providers(), todos: this.todos.state().filter((t) => !this.bot(t.botId).vacationSince), calendar: this.calendar.handlers["calendar.get"]({}).calendar, aboutYou: this.firstStart.text });
+    return structuredClone({ status: this.status, bots: this.bots, cards: this.cards.filter((c) => c.kind === "system" || !this.bot(c.botId).vacationSince), models: this.models(), machines: MACHINES, upcoming: this.upcomingList, channels: this.channels.map(publicChannel), browser: this.browser.state(), backup: this.backup.state(), connections: this.connections.list(), notify: this.notify.state(), chat: this.chat, settings: this.settings7.view(), providers: this.settings7.providers(), todos: this.todos.state().filter((t) => !this.bot(t.botId).vacationSince), calendar: this.calendar.handlers["calendar.get"]({}).calendar, ahead: this.ahead.settings, aboutYou: this.firstStart.text });
   }
 
   /**
@@ -1002,6 +1012,11 @@ export class MockEngine implements EngineClient {
       } else if (noHint.has(m.id)) delete out.fastHint;
       return out;
     });
+  }
+
+  /** The open to-dos, for Ahead's dated rows (mock-ahead.ts). */
+  todosState() {
+    return this.todos.state();
   }
 
   bot(id: string): Bot {
@@ -1090,12 +1105,15 @@ export class MockEngine implements EngineClient {
       mayMessage: [],
       maySteer: false,
       calendar: false,
+      ahead: "off",
       ...extra,
     };
     // As the engine: the calendar tools are on by default for the main bot (protocol 20).
     if (bot.role === "main" && extra.calendar === undefined) bot.calendar = true;
     // As the engine: the main bot always may steer other bots (protocol 17).
     if (bot.role === "main") bot.maySteer = true;
+    // As the engine: the main bot always has everything on Ahead (protocol 31).
+    if (bot.role === "main") bot.ahead = "time";
     this.threads.set(bot.mainThreadId, []);
     return bot;
   }
@@ -1275,6 +1293,7 @@ export class MockEngine implements EngineClient {
     };
     if (followUp === null) delete next.followUp;
     if (next.role === "main") next.maySteer = true;
+    if (next.role === "main") next.ahead = "time";
     // Protocol 16: what the bot sees, or (null) everything again.
     if (sees === null) delete next.sees;
     else if (sees) next.sees = sees;

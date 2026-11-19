@@ -64,7 +64,7 @@ export interface ConfigFile {
    * push service refuses the default); `titlePrefix` put in front of every title (the test copy's
    * "Test copy: ").
    */
-  notify?: { needs?: boolean; note?: boolean; finished?: boolean; subject?: string; titlePrefix?: string };
+  notify?: { needs?: boolean; note?: boolean; finished?: boolean; yourTime?: boolean; dayReady?: boolean; subject?: string; titlePrefix?: string };
   /**
    * The chat as a whole (protocol 14). `followUp`: what a message sent while a bot works does by
    * default, "steer" or "queue". Written by the engine when the person changes it in Pobots settings.
@@ -90,15 +90,15 @@ export function chatConfig(file: ConfigFile["chat"]): ChatSettings {
 
 /** Notifications as the engine uses them. */
 export interface NotifyConfig {
-  kinds: { needs: boolean; note: boolean; finished: boolean };
+  kinds: { needs: boolean; note: boolean; finished: boolean; yourTime: boolean; dayReady: boolean };
   /** The VAPID subject from config.json, when one is set. */
   subject?: string;
   /** In front of every title. "" on the real Pobots. */
   titlePrefix: string;
 }
 
-/** The switches when config.json says nothing: needs and note on, finished off. */
-export const NOTIFY_DEFAULTS: NotifyConfig["kinds"] = { needs: true, note: true, finished: false };
+/** The switches when config.json says nothing: needs and note on, finished and Ahead's two off. */
+export const NOTIFY_DEFAULTS: NotifyConfig["kinds"] = { needs: true, note: true, finished: false, yourTime: false, dayReady: false };
 
 /** The notifications' settings from what config.json held. */
 export function notifyConfig(file: ConfigFile["notify"]): NotifyConfig {
@@ -107,6 +107,8 @@ export function notifyConfig(file: ConfigFile["notify"]): NotifyConfig {
       needs: file?.needs ?? NOTIFY_DEFAULTS.needs,
       note: file?.note ?? NOTIFY_DEFAULTS.note,
       finished: file?.finished ?? NOTIFY_DEFAULTS.finished,
+      yourTime: file?.yourTime ?? NOTIFY_DEFAULTS.yourTime,
+      dayReady: file?.dayReady ?? NOTIFY_DEFAULTS.dayReady,
     },
     ...(file?.subject ? { subject: file.subject } : {}),
     titlePrefix: file?.titlePrefix ?? "",
@@ -452,7 +454,7 @@ export function loadConfigFile(dataDir: string): ConfigFile {
     else {
       const n = obj.notify as Record<string, unknown>;
       const keep: NonNullable<ConfigFile["notify"]> = {};
-      for (const k of ["needs", "note", "finished"] as const) {
+      for (const k of ["needs", "note", "finished", "yourTime", "dayReady"] as const) {
         if (typeof n[k] === "boolean") keep[k] = n[k];
         else if (n[k] !== undefined) log.warn(`"notify.${k}" in ${path} must be true or false. Using ${String(NOTIFY_DEFAULTS[k])}.`);
       }

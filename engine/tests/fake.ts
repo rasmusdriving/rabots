@@ -178,6 +178,9 @@ export function setup(
     // Step 7b: no test reaches the network, runs a program or calls a model unless it brings its own stand-in.
     settingsHub: { fetcher: async () => ({ ok: false, status: 404, text: async () => "" }), runner: async () => ({ ok: false, out: "" }), readClaude: async () => ({ id: "c", via: "This Mac", windows: [] }), readCodex: async () => ({ id: "x", via: "This Mac", windows: [] }) },
     titleMaker: async () => undefined,
+    // The old-chat title backfill waits 2 minutes; a test engine closed without shutdown would then read a
+    // closed store and fail a whole run that lasts longer than that. Tests that check it bring their own.
+    titleTimings: { backfillStartMs: 1e9 },
     ...rest,
     // The real browser is never used by these tests: off unless a test brings a stand-in.
     browser: rest.browser ?? null,

@@ -55,7 +55,7 @@ export default async function section() {
       await ev(`click($('.pb-setwin-tab[data-section="activity"]'))`);
       const first = await until(`$$(".pb-actday-row").length === 10 ? ${state} : null`);
       const tabs = await ev(`$$(".pb-setwin-tab").map((t) => t.textContent + (t.getAttribute("aria-selected") === "true" ? "*" : "")).join(",")`);
-      check(T("Activity is the last section, after Connections, and chosen"), tabs === "General,Chats,Providers,Calendar,Usage,Connections,Activity*", tabs);
+      check(T("Activity is the last section, after Connections, and chosen"), tabs === "General,Chats,Providers,Calendar,Ahead,Usage,Connections,Activity*", tabs);
       if (phone) {
         const inRow = await ev(`(() => { const n = $(".pb-setwin-nav").getBoundingClientRect(); const t = $('.pb-setwin-tab[data-section="activity"]').getBoundingClientRect(); return t.left >= n.left - 1 && t.right <= n.right + 1; })()`);
         check(T("the chosen tab is brought into the row of tabs"), inRow === true, inRow);

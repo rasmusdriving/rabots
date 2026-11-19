@@ -48,6 +48,10 @@ import type { PersonVia } from "./activity-store.js";
 import { isMethod, parseParams } from "./schemas.js";
 import { HOOK_DEDUPE_MAX, HOOK_MAX_BYTES, HOOK_READ_MS } from "./triggers.js";
 import { calendarState, checkConnection, setCalendar } from "./core/calendar-settings.js";
+import { aheadSeen, setAheadSettings } from "./core/ahead-settings.js";
+import { aheadView } from "./core/ahead-view.js";
+import { aheadAct, aheadAdd } from "./core/ahead-person.js";
+import { placeByPerson } from "./core/ahead-time.js";
 import { askOnCard, askOnTodo } from "./core/card-questions.js";
 import { endTaskManagerFrom, sendToTaskManager, stopTaskManagerFrom } from "./core/task-managers.js";
 
@@ -1192,6 +1196,16 @@ export class EngineServer {
         return engine.queuedOf((params as Methods["thread.queued"]["params"]).threadId);
       case "chat.set":
         return engine.chatSet(params as Methods["chat.set"]["params"]);
+      case "ahead.view":
+        return aheadView(engine, (params ?? {}) as Methods["ahead.view"]["params"]);
+      case "ahead.settings.set":
+        return { ahead: setAheadSettings(engine, params as Methods["ahead.settings.set"]["params"]) };
+      case "ahead.act":
+        return (params as Methods["ahead.act"]["params"]).place ? placeByPerson(engine, params as Methods["ahead.act"]["params"]) : aheadAct(engine, params as Methods["ahead.act"]["params"]);
+      case "ahead.add":
+        return aheadAdd(engine, params as Methods["ahead.add"]["params"]);
+      case "ahead.seen":
+        return { ahead: aheadSeen(engine, (params as Methods["ahead.seen"]["params"] | undefined)?.through) };
       case "aboutYou.set":
         return engine.aboutYouSet((params as Methods["aboutYou.set"]["params"]).text);
       case "sees.inventory":

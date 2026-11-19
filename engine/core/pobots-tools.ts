@@ -2,6 +2,7 @@
 // notification devices and the usage meters, and run_pobots_task (back up now, update the providers,
 // update Pobots itself on a public install behind a card (engine 0.34.0), a test notification). The backup password reference, usage hubs and turning notifications on for a device stay with
 // the person: none of them is reachable here, and no key, address or token is ever told.
+import { aheadSettingsWords } from "./ahead-settings.js";
 import { usageCreditRows } from "../../shared/usage-credits.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
@@ -29,7 +30,7 @@ export async function getSettingsFresh(eng: Engine, args: UsageToolArgs): Promis
   }
   // Every time below is on the engine's clock, in its time zone, like the trigger tools' words.
   const head = `It is now ${nowWords(eng.clock(), eng.tz)} (time zone ${eng.tz}); the times below are in that zone.`;
-  return [head, getSettingsFor(eng), backupWords(eng), devicesWords(eng), usageWords(eng), calendarSettingsWords(eng)].join("\n");
+  return [head, getSettingsFor(eng), backupWords(eng), devicesWords(eng), usageWords(eng), calendarSettingsWords(eng), aheadSettingsWords(eng)].join("\n");
 }
 
 function backupWords(eng: Engine): string {

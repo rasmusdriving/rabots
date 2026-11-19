@@ -1,12 +1,18 @@
 // The app's state: one immutable object, changed only here, read in React with useAppState.
 // The engine is the source of truth; this holds what the window has seen of it.
 import { useSyncExternalStore } from "react";
-import type { Artifact, BackupState, Bot, BrowserSpace, BrowserState, CalendarState, Card, Channel, ChannelMessage, ChatSettings, ChatTitle, ConnectionsState, EngineStatus, Events, HelperItem, Item, Machine, ModelInfo, NotifyState, PobotsSettings, ProvidersState, Snapshot, Todo, Trigger, TriggerRun, Upcoming, UsageState, UserItem } from "../../shared/protocol";
+import type { AheadSettings, Artifact, BackupState, Bot, BrowserSpace, BrowserState, CalendarState, Card, Channel, ChannelMessage, ChatSettings, ChatTitle, ConnectionsState, EngineStatus, Events, HelperItem, Item, Machine, ModelInfo, NotifyState, PobotsSettings, ProvidersState, Snapshot, Todo, Trigger, TriggerRun, Upcoming, UsageState, UserItem } from "../../shared/protocol";
 import type { ConnectionInfo, EngineEvent } from "../engine/types";
 import { engineHereAtStart } from "../lib/env";
 import { isPhone } from "../lib/phone";
 import { notePlace } from "../lib/place";
 import { viewIn, type PhoneScreen } from "./phone-view";
+
+/**
+ * Protocol 31: Ahead opens in the reading panel through the open channel's id, with this reserved
+ * value, so every "a page is open, not a bot's chat" check and the phone's history work as for a channel.
+ */
+export const AHEAD_PAGE = "@ahead";
 
 /** The quiet text tabs on a bot's page. Chat is the default. */
 export type BotTab = "chat" | "job" | "files" | "artifacts" | "triggers" | "history" | "settings";
@@ -285,8 +291,8 @@ export interface ThreadState {
 }
 
 /** Step 7b: the sections of the settings window. */
-export type SettingsSection = "general" | "chats" | "providers" | "calendar" | "usage" | "connections" | "activity";
-export const SETTINGS_SECTIONS: SettingsSection[] = ["general", "chats", "providers", "calendar", "usage", "connections", "activity"];
+export type SettingsSection = "general" | "chats" | "providers" | "calendar" | "ahead" | "usage" | "connections" | "activity";
+export const SETTINGS_SECTIONS: SettingsSection[] = ["general", "chats", "providers", "calendar", "ahead", "usage", "connections", "activity"];
 
 /** The history entry's mark of the section the settings window shows, so a reload keeps it. */
 const SETTINGS_SECTION_KEY = "pobotsSettingsSection";
@@ -392,6 +398,10 @@ export interface AppState {
   usage: UsageState | null;
   /** The calendar tools' connection (16 Nov 2026), as the engine last said. Null until first read. */
   calendar: CalendarState | null;
+  /** Protocol 31: the Ahead settings, as the engine last said. Null until the first snapshot. */
+  ahead: AheadSettings | null;
+  /** Protocol 31: counts "ahead.items" events; the Ahead page reads again when it changes. */
+  aheadVersion: number;
   /** Step 7b: each bot's titled chats, newest first, as far as read. */
   chatTitles: Record<string, { chats: ChatTitle[]; hasMore: boolean; loaded: boolean }>;
   /** The screen a phone shows. Kept in step with history by state/screens.ts; the laptop does not use it. */
@@ -481,6 +491,8 @@ export class Store {
     providers: null,
     usage: null,
     calendar: null,
+    ahead: null,
+    aheadVersion: 0,
     chatTitles: {},
   };
   private readonly listeners = new Set<Listener>();
@@ -545,7 +557,9 @@ export class Store {
       providers: s.providers ?? null,
       todos: s.todos ?? [],
       calendar: s.calendar ?? null,
-      openChannelId: (s.channels ?? []).some((c) => c.id === this.state.openChannelId) ? this.state.openChannelId : null,
+      ahead: s.ahead ?? null,
+      aheadVersion: this.state.aheadVersion + 1,
+      openChannelId: (s.channels ?? []).some((c) => c.id === this.state.openChannelId) || (this.state.openChannelId === AHEAD_PAGE && !!s.ahead?.enabled) ? this.state.openChannelId : null,
     });
   }
 
@@ -687,6 +701,7 @@ export class Store {
         this.set({ rulesTicks: { ...this.state.rulesTicks, [e.data.botId]: (this.state.rulesTicks[e.data.botId] ?? 0) + 1 } });
         return;
       case "trigger.changed": {
+        if (this.state.ahead?.enabled) this.set({ aheadVersion: this.state.aheadVersion + 1 });
         const list = this.state.triggers[e.data.botId];
         if (e.data.removedId) {
           const openTriggers = { ...this.state.openTriggers };
@@ -765,6 +780,13 @@ export class Store {
       case "calendar.changed":
         this.calendarEvents++;
         this.set({ calendar: e.data.calendar });
+        return;
+      // Protocol 31: Ahead. Switched off, its page closes.
+      case "ahead.changed":
+        this.set({ ahead: e.data.ahead, ...(!e.data.ahead.enabled && this.state.openChannelId === AHEAD_PAGE ? { openChannelId: null } : {}) });
+        return;
+      case "ahead.items":
+        this.set({ aheadVersion: this.state.aheadVersion + 1 });
         return;
       case "providers.changed":
         this.set({ providers: e.data.providers });

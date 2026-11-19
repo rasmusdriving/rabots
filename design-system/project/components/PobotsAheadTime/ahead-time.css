@@ -1,0 +1,28 @@
+/* Ahead, part B: the person's time. A "your time" row is an Ahead row with its end under the time;
+   while it runs the end reads "Now" and the row rests on a soft fill. The week note sits at the top.
+   Tokens only; the only motion is the row's own quiet background change. */
+
+.pb-ahead-yt { min-width: 0; }
+/* One line, cut with an ellipsis: a row that changes ("Moved to 23 Nov 08:00", "Late") keeps its box. */
+.pb-ahead-yt .pb-ahead-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-ahead-yt[data-now] .pb-ahead-row { background: var(--fill); }
+.pb-ahead-yt[data-now] .pb-ahead-end { color: var(--accent-text); font-weight: 600; opacity: 1; }
+
+/* The main bot's week note. */
+.pb-ahead-week-note { background: var(--fill); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); min-width: 0; }
+.pb-ahead-week-note-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pb-ahead-week-note-from { margin: var(--space-1) 0 0; font-size: 13px; line-height: 20px; color: var(--ink-faint); }
+
+/* Settings, Ahead, Your time. */
+.pb-ahead-hours { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-top: var(--space-3); min-width: 0; }
+.pb-ahead-hours-row { display: flex; align-items: center; gap: var(--space-2); color: var(--ink-muted); }
+.pb-ahead-minutes { max-width: 220px; }
+
+@media (max-width: 699px) {
+  .pb-ahead-hours .pb-time-input { width: 96px; font-size: 16px; }
+  .pb-ahead-hours .pb-day { height: 40px; }
+  .pb-ahead-minutes { font-size: 16px; }
+}
+
+/* The sheet's Pick a time: the date keeps room for its whole value; Move wraps below on a narrow phone. */
+[data-ahead-time-sheet] .pb-ahead-day-input { min-width: 150px; }
