@@ -65,7 +65,7 @@ export function removeArtifact(eng: Engine, params: Methods["artifact.remove"]["
  * The file an address under /page/<key>/ names, or nothing. An unknown or expired key, an artifact
  * taken off the list or of a retired bot, a link, and a file that is gone all give nothing.
  */
-export function pageRequest(eng: Engine, key: string, rest: string): PageFile {
+export function pageRequest(eng: Engine, key: string, rest: string, mode?: Parameters<typeof pageFile>[3]): PageFile {
   const no = { ok: false } as const;
   const k = eng.pageKeys.get(key);
   if (!k) return no;
@@ -76,7 +76,7 @@ export function pageRequest(eng: Engine, key: string, rest: string): PageFile {
   const rt = eng.bots.get(k.botId);
   const row = eng.store.getArtifact(k.artifactId);
   if (!rt || !row || row.removed || row.retired || row.kind !== "page" || !row.path) return no;
-  return pageFile(rt.folder.dir, row.path, rest);
+  return pageFile(rt.folder.dir, row.path, rest, mode);
 }
 
 /**

@@ -1,0 +1,62 @@
+/* The same keyed row stays through its fade, then gives its space back to the list. */
+.app-list.pb-vacation-list { gap: 0; }
+.pb-vacation-motion {
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  transition: grid-template-rows var(--dur-calm) var(--ease-out), opacity var(--dur-quick) var(--ease-soft);
+  min-inline-size: 0;
+}
+.pb-vacation-motion > .pb-vacation-inner { min-block-size: 0; min-inline-size: 0; }
+.pb-vacation-motion[data-collapsed], .pb-vacation-motion[data-leaving] { grid-template-rows: 0fr; opacity: 0; }
+.pb-vacation-motion[data-leaving] {
+  transition: opacity var(--dur-quick) var(--ease-soft), grid-template-rows var(--dur-calm) var(--ease-out) var(--dur-quick);
+}
+.pb-vacation-motion:is([data-collapsed], [data-leaving]) > .pb-vacation-inner { overflow: clip; }
+@starting-style {
+  .pb-vacation-motion[data-entering] { grid-template-rows: 0fr; opacity: 0; }
+}
+.pb-vacation-motion[data-entering] > .pb-vacation-inner { overflow: clip; }
+.pb-vacation-live-row { padding-block-end: calc(var(--space-1) / 2); }
+
+.pb-vacation-shelf { margin-block-start: var(--space-2); min-inline-size: 0; }
+.pb-vacation-shelf[data-empty] { margin-block-start: 0; }
+.pb-vacation-toggle {
+  display: flex; align-items: center; gap: var(--space-2); width: 100%;
+  justify-content: flex-start;
+  color: var(--ink-muted);
+}
+.pb-vacation-toggle svg { flex: none; transition: rotate var(--dur-quick) var(--ease-soft); }
+.pb-vacation-toggle[aria-expanded="false"] svg { rotate: -90deg; }
+.pb-vacation-count { margin-inline-start: auto; font-variant-numeric: tabular-nums; }
+.pb-vacation-row {
+  --vacation-quick-size: calc(var(--space-7) + var(--space-6));
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr);
+}
+.pb-vacation-row > .pb-row { grid-template-columns: auto minmax(0, 1fr); }
+.pb-vacation-quick {
+  position: absolute; inset-inline-end: var(--space-1); inset-block-start: 50%; translate: 0 -50%;
+  inline-size: var(--vacation-quick-size); padding-inline: var(--space-1);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-quick) var(--ease-soft);
+}
+/* Only make room for the action while it shows; the row keeps its height. */
+.pb-vacation-row:is(:hover, :focus-within) > .pb-row { padding-inline-end: calc(var(--vacation-quick-size) + var(--space-2)); }
+.pb-vacation-row:is(:hover, :focus-within) .pb-vacation-quick { opacity: 1; pointer-events: auto; }
+.pb-vacation-feedback { margin: var(--space-1) var(--space-3); overflow-wrap: anywhere; }
+.pb-vacation-chat { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+.pb-vacation-chat > p { margin: 0; }
+@media (max-width: 900px) {
+  .pb-shell:not([data-phone]) .pb-vacation-toggle { flex-wrap: wrap; justify-content: center; gap: var(--space-1); block-size: auto; padding-inline: var(--space-1); }
+  .pb-shell:not([data-phone]) .pb-vacation-count { margin-inline-start: 0; }
+  .pb-shell:not([data-phone]) .pb-vacation-row { display: block; padding: 0; }
+  .pb-shell:not([data-phone]) .pb-vacation-row > .app-vacation-row { grid-template-columns: auto; justify-content: center; padding-inline: var(--space-3); }
+  .pb-shell:not([data-phone]) :is(.pb-vacation-row .pb-row-text, .pb-vacation-quick) { display: none; }
+}
+[data-phone] :is(.pb-vacation-toggle, .pb-vacation-chat .pb-btn) { min-block-size: calc(var(--space-7) - var(--space-1)); }
+[data-phone] .pb-vacation-row { display: block; padding: 0; }
+[data-phone] .pb-vacation-row > .app-vacation-row { padding-inline: var(--space-3); }
+[data-phone] .pb-vacation-quick { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .pb-vacation-motion, .pb-vacation-motion[data-leaving], .pb-vacation-toggle svg, .pb-vacation-quick { transition: none; }
+}

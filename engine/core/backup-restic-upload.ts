@@ -18,6 +18,11 @@ export const UPLOAD_UNKNOWN = "macOS did not report the upload of these files.";
 export const UPLOAD_PENDING = "iCloud Drive did not confirm the upload in time.";
 export const UPLOAD_ERROR = "macOS reported an iCloud upload error. Check iCloud Drive on the Mac.";
 
+const polling: { now(): number; wait(ms: number, signal: AbortSignal): Promise<void> } = {
+  now: () => performance.now(),
+  wait: (ms: number, signal: AbortSignal) => setTimeout(ms, undefined, { signal }),
+};
+
 export function readMacUpload(paths: string[], signal: AbortSignal): Promise<UploadState[] | undefined> {
   if (process.platform !== "darwin") return Promise.resolve(undefined);
   const script = fileURLToPath(new URL("./upload-state.js", import.meta.url));
@@ -37,28 +42,34 @@ export function readMacUpload(paths: string[], signal: AbortSignal): Promise<Upl
 
 export async function confirmUpload(
   root: string, paths: string[], read: UploadReader, timing: BackupTimings, signal: AbortSignal,
+  clock = polling,
 ): Promise<string | undefined> {
   if (!paths.length) return UPLOAD_UNKNOWN;
-  const start = performance.now();
+  const deadline = clock.now() + timing.limitMs;
   let readySince: number | undefined;
-  const remaining = [...paths];
-  while (performance.now() - start <= timing.limitMs) {
+  // Keep only each batch's latest report, including if time runs out partway through a sweep.
+  const erroredBatches = new Set<number>();
+  const timedOut = () => erroredBatches.size ? UPLOAD_ERROR : UPLOAD_PENDING;
+  while (clock.now() <= deadline) {
     signal.throwIfAborted();
     let all = true;
-    for (let i = 0; i < remaining.length; i += 96) {
-      const batch = remaining.slice(i, i + 96).map((p) => join(root, p));
+    for (let i = 0; i < paths.length; i += 96) {
+      const batch = paths.slice(i, i + 96).map((p) => join(root, p));
       const readings = await read(batch, signal);
       signal.throwIfAborted();
       if (!readings) return UPLOAD_UNKNOWN;
-      if (readings.some((r) => r.uploadError)) return UPLOAD_ERROR;
-      if (readings.some((r) => !r.exists || r.ubiquitous !== true || typeof r.uploaded !== "boolean")) return UPLOAD_UNKNOWN;
-      if (readings.some((r) => !r.uploaded || r.uploading)) all = false;
-      if (performance.now() - start > timing.limitMs) return UPLOAD_PENDING;
+      const hasError = readings.some((r) => r.uploadError);
+      if (hasError) erroredBatches.add(i);
+      else erroredBatches.delete(i);
+      if (readings.some((r) => !r.uploadError && (!r.exists || r.ubiquitous !== true || typeof r.uploaded !== "boolean"))) return UPLOAD_UNKNOWN;
+      if (hasError || readings.some((r) => !r.uploaded || r.uploading)) all = false;
+      if (clock.now() > deadline) return timedOut();
     }
-    const now = performance.now();
+    const now = clock.now();
     readySince = all ? readySince ?? now : undefined;
     if (readySince !== undefined && now - readySince >= timing.holdMs) return;
-    await setTimeout(timing.pollMs, undefined, { signal });
+    if (now >= deadline) break;
+    await clock.wait(Math.min(timing.pollMs, deadline - now), signal);
   }
-  return UPLOAD_PENDING;
+  return timedOut();
 }

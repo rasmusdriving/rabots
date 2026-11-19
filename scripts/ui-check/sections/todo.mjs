@@ -67,9 +67,9 @@ export default async function section() {
       buttons: $$(".pb-todo-actions button", d).map((x) => [x.textContent, x.classList.contains("pb-btn-primary")]),
     }; })()`);
     check(T("a click opens the to-do's window: its title, why, who and when; the window holds the focus"), win?.role === "dialog" && win.title === "Send the Nordvik import summary" && win.why === "The import is done and Nordvik waits for the summary." && /^HubSpot tickets2 d agoby \w{3}$/.test(win.from) && win.focus, win);
-    check(T("every kind of block in the bot's order"), JSON.stringify(win?.kinds) === JSON.stringify(["pb-todo-text", "pb-todo-facts", "pb-todo-link", "pb-todo-copy", "pb-todo-picture", "pb-chip-file", "pb-todo-page", "pb-field", "pb-field"]), win?.kinds);
+    check(T("every kind of block in the bot's order"), JSON.stringify(win?.kinds) === JSON.stringify(["pb-todo-text", "pb-todo-facts", "pb-todo-link", "pb-todo-copy", "pb-todo-picture-block", "pb-chip-file", "pb-todo-page", "pb-field", "pb-field"]), win?.kinds);
     check(T("text as markdown, facts, a link that opens outside, a text to copy, a picture in a box of 200 px, a file that downloads, a page"),
-      win?.bold === "finished" && win.facts.length === 3 && win.facts[0] === "CustomerNordvik AB" && win.link === "https://example.com/tickets/48211" && win.linkTarget === "_blank" && win.copyLabel === "Email draft" && win.pictureH === 200 && win.file === "Import report.pdf" && win.page === "Onboarding status", win);
+      win?.bold === "finished" && win.facts.length === 3 && win.facts[0] === "CustomerNordvik AB" && win.link === "https://example.com/tickets/48211" && win.linkTarget === "_blank" && win.copyLabel === "Email draft" && win.pictureH === 200 && win.file === "import-report.pdf" && win.page === "Onboarding status", win);
     check(T("the choice starts on the bot's value; Dismiss, Mark done, then the bot's buttons with its primary last"),
       JSON.stringify(win?.lang) === JSON.stringify([["Swedish", "true"], ["English", "false"]]) && JSON.stringify(win.buttons) === JSON.stringify([["Dismiss", false], ["Mark done", false], ["Change the draft", false], ["I sent it", true]]), win);
     if (theme === "dark") {

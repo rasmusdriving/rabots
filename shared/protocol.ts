@@ -41,7 +41,7 @@
 import type { UsageOverviewRead, UsageRange } from "./usage-overview.js";
 export * from "./usage-overview.js";
 
-export const PROTOCOL_VERSION = 27;
+export const PROTOCOL_VERSION = 30;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -108,6 +108,34 @@ export interface Attachment {
 
 export interface AttachmentUploadResult {
   attachment: Attachment;
+}
+
+// ---------------------------------------------------------------- connections between Pobots
+export interface PobotsConnection {
+  id: string;
+  name: string;
+  state: "draft" | "waiting" | "connected" | "paused" | "unreached" | "expired";
+  expiresAt: string;
+  lastReached?: string;
+  lastMessage?: string;
+}
+
+export interface ConnectionsState {
+  hasPublicAddress: boolean;
+  connections: PobotsConnection[];
+}
+
+export type ConnectionChange =
+  | { action: "start"; name: string }
+  | { action: "code" | "pause" | "resume" | "remove"; id: string }
+  | { action: "connect"; id: string; code: string }
+  | { action: "rename"; id: string; name: string };
+
+export interface ConnectionChangeResult {
+  state: ConnectionsState;
+  id: string;
+  /** Public pairing code, only returned when starting or asking to see one. */
+  code?: string;
 }
 
 // ---------------------------------------------------------------- the nightly backup
@@ -273,6 +301,10 @@ export interface Bot {
   /** Id of the machine the bot lives on. */
   machine: string;
   state: BotState;
+  /** ISO 8601, present only while this bot is on vacation. */
+  vacationSince?: string;
+  /** Queued work or work in the background that sending this bot away would stop. */
+  vacationNeedsStop?: true;
   /** One line in plain words about what the bot is doing, written for the roster. May be empty. */
   activity: string;
   /**
@@ -438,6 +470,7 @@ export interface UserItem extends ItemBase {
     | { type: "you"; todo?: { id: string; title: string }; card?: { id: string; title: string }; question?: true }
     /** Protocol 21: `taskManager` is the title of the bot's task manager that wrote it (`botId` is its bot). */
     | { type: "bot"; botId: string; expectsReply: boolean; taskManager?: string }
+    | { type: "connection"; id: string; name: string; mode: "ask" | "tell" | "answer"; messageId: string }
     /**
      * From a trigger. `label` is its name at the time. `triggerId` and `runId` say which trigger and
      * which run. `result` is true when this is not the trigger's own message but what a fresh run
@@ -827,6 +860,8 @@ export interface Trigger {
    */
   where: "main" | "fresh";
   enabled: boolean;
+  /** The bot is on vacation; the switch is kept but the trigger cannot run. */
+  resting?: true;
   /** Schedules only. */
   schedule?: Schedule;
   /** Schedules only: when it fires next, ISO 8601. Absent when switched off or finished. */
@@ -1004,6 +1039,7 @@ export interface Snapshot {
   browser: BrowserState;
   /** The nightly backup. */
   backup: BackupState;
+  connections?: ConnectionsState;
   /** Notifications: the switches and the devices. */
   notify: NotifyState;
   /** Settings for the chat as a whole (protocol 14). */
@@ -1051,6 +1087,9 @@ export interface Methods {
     params: { botId: string; patch: Partial<Pick<Bot, "name" | "purpose" | "model" | "effort" | "fast" | "access" | "look" | "mayMessage" | "maySteer" | "calendar">> & { followUp?: FollowUp | null; sees?: BotSees | null } };
     result: { bot: Bot };
   };
+
+  /** Pauses or resumes a bot without archiving it. Running work requires explicit Stop. */
+  "bot.vacation": { params: { botId: string; vacation: boolean; stop?: boolean }; result: { bot: Bot; missedOnce: number } };
 
   /**
    * Retires a bot: stops it, moves its folder to the archive and takes it off the roster. Its
@@ -1290,6 +1329,8 @@ export interface Methods {
 
   /** Saves a 1Password reference. An empty string clears it. */
   "backup.setPasswordRef": { params: { passwordRef: string }; result: { backup: BackupState } };
+  "connection.list": { params: Record<string, never>; result: ConnectionsState };
+  "connection.set": { params: ConnectionChange; result: ConnectionChangeResult };
   /** Starts a backup now; changes arrive with "backup.changed". */
   "backup.run": { params: Record<string, never>; result: { backup: BackupState } };
 
@@ -1350,6 +1391,7 @@ export interface Events {
   "bot.added": { bot: Bot };
   /** A bot was retired and left the roster. Its cards are withdrawn with "card.removed". */
   "bot.removed": { botId: string };
+  "connection.changed": ConnectionsState;
   /** The nightly backup changed: a reference was saved, a run began or ended. Always the whole state. */
   "backup.changed": { backup: BackupState };
   /** Notifications changed: a switch, a device, or a send was recorded. Always the whole state. */
@@ -1404,7 +1446,7 @@ export interface Events {
    * Step 7c (protocol 15): a to-do left the list: answered (a button or fields), marked done or
    * dismissed by the person, removed by its bot, or its bot was retired.
    */
-  "todo.removed": { todoId: string; reason: "answered" | "done" | "dismissed" | "removed" | "retired" };
+  "todo.removed": { todoId: string; reason: "answered" | "done" | "dismissed" | "removed" | "retired" | "vacation" };
   /** `models` is the whole model list as it is now, sent along when a harness became ready or stopped being ready. */
   "status.updated": { status: EngineStatus; models?: ModelInfo[] };
 }
@@ -1588,6 +1630,10 @@ export interface UsageAccount {
   /** Where the reading came from: "This Mac", or the hub's host. */
   via: string;
   windows: UsageWindow[];
+  /** Codex usage credits. An absent balance is unknown. */
+  credits?: { balance?: number; hasCredits?: boolean; unlimited?: boolean; expiresAt?: string; resetsAt?: string };
+  /** Credits that reset the Codex rate limits, separate from the usage balance. */
+  resetCredits?: { availableCount: number; nextExpiresAt?: string };
   /** One plain sentence when this account could not be read. */
   problem?: string;
 }
@@ -1599,7 +1645,7 @@ export interface UsageProvider {
 }
 
 export interface UsageState {
-  /** "hub" when a usage hub is added (its accounts), else "providers" (Claude and Codex on this Mac). */
+  /** "hub" when a hub is configured, otherwise "providers". Each account names its own source in via. */
   source: "hub" | "providers";
   providers: UsageProvider[];
   checkedAt?: string;

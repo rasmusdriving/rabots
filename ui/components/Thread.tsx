@@ -412,7 +412,7 @@ function Blocks({ blocks, bot, bots, liveTidy, foldWork = false, thinking = "Thi
         ) : "tidy" in block ? (
           bot ? <FreshLine key={`tidy-${block.key}`} block={block} bot={bot} live={block.key === liveTidy} /> : null
         ) : (
-          <ThreadItem key={block.id} item={block} bots={bots} />
+          <ThreadItem key={block.id} item={block} bots={bots} botId={bot?.id} />
         ),
       )}
     </>
@@ -545,7 +545,7 @@ function Fold({ fold, bot, bots }: { fold: FoldBlock; bot: Bot; bots: Bot[] }) {
   );
 }
 
-function ThreadItem({ item, bots }: { item: Item; bots: Bot[] }) {
+function ThreadItem({ item, bots, botId }: { item: Item; bots: Bot[]; botId?: string }) {
   const inHelper = useContext(InHelper);
   switch (item.kind) {
     case "bot":
@@ -555,7 +555,7 @@ function ThreadItem({ item, bots }: { item: Item; bots: Bot[] }) {
       if (inHelper && item.from.type === "bot") return <HelperTask item={item} bot={inHelper.bot} depth={inHelper.depth} />;
       return <YourMessage item={item} bots={bots} />;
     case "notice":
-      return <Notice item={item} />;
+      return <Notice item={item} botId={botId} />;
     case "activity":
       return <Activity item={item} />;
     case "helper":

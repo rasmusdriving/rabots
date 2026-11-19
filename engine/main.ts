@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import type { EngineAnnouncement } from "../shared/protocol.js";
 import { detectClaude } from "./claude/detect.js";
 import { detectCodex } from "./codex/detect.js";
-import { parseFlags, resolveConfig } from "./config.js";
+import { defaultBotsDir, defaultDataDir, parseFlags, resolveConfig } from "./config.js";
 import { Engine, ENGINE_VERSION } from "./engine.js";
 import { removeLock, runningEngine, writeLock } from "./lock.js";
 import { log } from "./log.js";
@@ -23,6 +23,11 @@ import { Store } from "./store.js";
 
 async function main(): Promise<void> {
   const flags = parseFlags(process.argv.slice(2));
+  const testLinks = flags.connectionTestBase || flags.connectionTestPeer;
+  if (testLinks && (!flags.dataDir || !flags.botsDir || flags.dataDir === defaultDataDir() || flags.botsDir === defaultBotsDir() ||
+      !flags.port || flags.port === 47600 || (flags.connectionTestBase && flags.connectionTestBase !== `http://127.0.0.1:${flags.port}`))) {
+    throw new Error("Connection test mode needs its own data, bots and listening port.");
+  }
   const config = resolveConfig(flags);
   log.info(`Pobots engine ${ENGINE_VERSION} starting. Data in ${config.dataDir}, bots in ${config.botsDir}`);
 
@@ -59,6 +64,7 @@ async function main(): Promise<void> {
     claude,
     checkCodex: () => detectCodex(config.codex ?? {}),
     emit: (event, data) => server.broadcast(event, data),
+    ...(testLinks ? { links: { loopbackBase: flags.connectionTestBase, loopbackPeer: flags.connectionTestPeer } } : {}),
     ...(flags.pushRelay ? { notify: { relay: flags.pushRelay } } : {}),
     // The running build's folder: a public install updates itself from the clone it came from (engine/self-update.ts).
     selfUpdate: {

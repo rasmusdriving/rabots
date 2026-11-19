@@ -4,6 +4,7 @@
 // changing and removing its own webhooks. A webhook's address goes to the bot that made it or asks for
 // it again, so it can set up the sender (decision of 12 Nov 2026), in the tool's answer and nowhere
 // else: the person's line says who got which address, never the address itself.
+import { away } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
 import { describeSchedule, nowWords, whenWords } from "../schedule.js";
@@ -41,13 +42,14 @@ export function listTriggersFor(eng: Engine, rt: BotRuntime, args: { bot?: strin
   const own = target === rt;
   const name = target.folder.file.name;
   const at = eng.clock();
-  const head = `It is now ${nowWords(at, eng.tz)} (time zone ${eng.tz}).${own ? "" : ` These are the triggers of ${name}.`}`;
+  const resting = away(target);
+  const head = `It is now ${nowWords(at, eng.tz)} (time zone ${eng.tz}).${own ? "" : ` These are the triggers of ${name}.`}${resting ? " Its triggers are resting while it is on vacation." : ""}`;
   if (args.runs !== undefined && args.runs.trim()) return runsWords(eng, target, args.runs.trim(), head);
   const rows = eng.store.listTriggers(target.folder.id);
   if (!rows.length) return own ? `${head} You have no triggers yet.` : `${head} ${name} has no triggers yet.`;
   const lines = rows.map((row) => {
     const when = row.kind === "schedule" && row.schedule ? describeSchedule(row.schedule, eng.tz) : "When its webhook is called by another system";
-    const next = row.kind === "schedule" && row.enabled && row.nextAt ? ` Next run ${whenWords(Date.parse(row.nextAt), at, eng.tz)}.` : "";
+    const next = !resting && row.kind === "schedule" && row.enabled && row.nextAt ? ` Next run ${whenWords(Date.parse(row.nextAt), at, eng.tz)}.` : "";
     const last = eng.store.lastRun(row.id);
     const lastWords = last ? `${STATUS_WORDS[last.status]} ${whenWords(Date.parse(last.at), at, eng.tz)}${last.note ? `: ${last.note}` : ""}` : "none yet";
     const where = row.where === "main" ? (own ? "in your main chat" : "in its main chat") : "as a fresh run";

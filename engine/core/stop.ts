@@ -1,4 +1,5 @@
 // Stop: the person's Stop, and the holds that keep a stopped bot's old work from starting turns (docs/build/step-3b-stop.md).
+import { away } from "./vacation.js";
 import type { Engine, HarnessSession } from "../engine.js";
 import { type BotRuntime, type Helper, helperWork, type LiveTask, ownBackgroundTasks, unmatchedHelperTasks } from "./runtime.js";
 import { log } from "../log.js";
@@ -120,7 +121,7 @@ export function nextInLine(eng: Engine, rt: BotRuntime): UserItem | undefined {
 
 /** Starts the next message in line when the bot is free and it may start now. True when a turn started. */
 export function startNextInLine(eng: Engine, rt: BotRuntime): boolean {
-  if (rt.busy || eng.stopping) return false;
+  if (away(rt) || rt.busy || eng.stopping) return false;
   const next = nextInLine(eng, rt);
   // Never held for helpers of another thread: their session is set aside and goes on (core/aside.ts).
   if (!next) return false;

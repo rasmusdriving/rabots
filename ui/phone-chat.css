@@ -63,8 +63,8 @@
   /* ------------------------------------------------------------ a picture opened large
      Full screen on the window's ground, its name and Close at the top inside the safe area. Only the
      picture takes the fingers (touch-action), so the page's own zoom is blocked nowhere else. */
-  .pb-picture-scrim { padding: 0; background: var(--ground); place-items: stretch; }
-  .pb-picture-view { width: 100%; height: 100%; min-height: 0; max-width: none; padding: 0; gap: 0; background: var(--ground); box-shadow: none; border-radius: 0; }
+  .pb-picture-scrim { padding: 0; background: var(--ground); place-items: stretch; grid-template-columns: minmax(0, 1fr); }
+  .pb-picture-view { width: 100%; min-width: 0; height: 100%; min-height: 0; max-width: 100vw; padding: 0; gap: 0; background: var(--ground); box-shadow: none; border-radius: 0; }
   .pb-picture-view-head {
     flex: none; box-sizing: content-box; height: 44px;
     padding: env(safe-area-inset-top) max(var(--space-2), env(safe-area-inset-right)) 0 max(var(--space-4), env(safe-area-inset-left));

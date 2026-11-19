@@ -9,6 +9,7 @@ import type { TodoArgs } from "./todos.js";
 import type { UsageToolArgs } from "./core/usage-history/tool.js";
 import type { ActivityLogArgs } from "./core/activity-log.js";
 import { FOLLOW_UP_RULE, ok, problem, TOOL_NAMES } from "./tool-names.js";
+import { linkTools, type LinksToolsHost } from "./core/link-tools.js";
 import { mainTools } from "./main-tools.js";
 import { type HelperHost, helperTools } from "./helper-tools.js";
 import { TASK_MANAGER_PROMPT, type TaskManagerHost, taskManagerTools } from "./task-manager-tools.js";
@@ -132,6 +133,7 @@ export function helperInstructions(botName: string, browser: boolean): string {
 export const TODO_PROMPT = [
   "The person has a to-do list in Pobots, under Needs you. add_todo puts something there that they must do or decide and that can wait, such as input on a customer task or an email to send now that the work is done; update_todo changes it, remove_todo takes it off when it is settled, and list_todos shows yours.",
   "Build its window from blocks: text, facts, a link, a text to copy (such as the email draft), a file or picture from your folder, one of your pages, fields to fill and buttons. When the person acts on it you get their answer in your chat as a message from them.",
+  "Share a file with a Markdown link to its path in your folder or a to-do file block. The label is for reading; the file keeps its own name.",
   "Use ask_human only for an answer you need now, and notify_human only for something with nothing to act on; a to-do is for what can wait.",
   FOLLOW_UP_RULE,
   "Files the person attaches are saved in your folder under .attachments and kept for 14 days; copy a file elsewhere in your folder if you need it longer.",
@@ -151,7 +153,7 @@ export const BROWSER_PROMPT = [
 export const ARTIFACT_PROMPT = [
   "To show the person something to look at or use, such as a report, a chart or a mock-up, write one self-contained HTML file under artifacts/<short-name>/index.html in your folder and call show_artifact with its path: the person opens it as an artifact beside the chat. Call show_artifact again when you have changed it in a way worth telling.",
   "Build it the way a Claude artifact is built, so the same file can be published unchanged: a <title> of two to four words, scripts only from cdnjs.cloudflare.com, cdn.jsdelivr.net/npm, unpkg.com, cdn.tailwindcss.com or code.jquery.com at exact versions, stylesheets only from Google Fonts, everything else inline, readable in light and dark and at phone width.",
-  "The page cannot reach the network or Pobots, so put the data it shows in the file.",
+  "The page cannot reach the network or Pobots, so put the data it shows in the file. For a file beside it, link to its relative path with ?download.",
   "Publish to Claude with the Artifact tool only when the person asks for a link to share. For a document, a deck or another of Claude's own types, make it on Claude and give the person the link.",
 ].join(" ");
 
@@ -159,7 +161,7 @@ export const ARTIFACT_PROMPT = [
 export const ARTIFACT_PROMPT_GPT = [
   "To show the person something to look at or use, such as a report, a chart or a mock-up, write one self-contained HTML file under artifacts/<short-name>/index.html in your folder and call show_artifact with its path: the person opens it as an artifact beside the chat. Call show_artifact again when you have changed it in a way worth telling.",
   "Build it so it works sealed and offline: a <title> of two to four words, scripts only from cdnjs.cloudflare.com, cdn.jsdelivr.net/npm, unpkg.com, cdn.tailwindcss.com or code.jquery.com at exact versions, stylesheets only from Google Fonts, everything else inline, readable in light and dark and at phone width.",
-  "The page cannot reach the network or Pobots, so put the data it shows in the file.",
+  "The page cannot reach the network or Pobots, so put the data it shows in the file. For a file beside it, link to its relative path with ?download.",
   "You cannot publish to Claude. When the person wants a link to share, say that a bot on a Claude model can publish the same file.",
 ].join(" ");
 
@@ -172,7 +174,7 @@ export function messageFraming(fromName: string, kind: "ask" | "tell" | "answer"
   return `${base} ${fromName} is not waiting for an answer.`;
 }
 
-export interface TeamHost extends HelperHost, TaskManagerHost {
+export interface TeamHost extends HelperHost, TaskManagerHost, LinksToolsHost {
   listBots(): string;
   messageBot(args: MessageBotArgs, signal?: AbortSignal): Promise<ToolResult>;
   askHuman(args: { question: string; context?: string; choices?: string[]; allow_text?: boolean }, signal?: AbortSignal): Promise<ToolResult>;
@@ -231,6 +233,7 @@ export type CreateBotArgs = {
 
 export type UpdateBotArgs = {
   bot: string;
+  vacation?: boolean;
   name?: string;
   purpose?: string;
   model?: string;
@@ -402,7 +405,7 @@ const mainWebhookShape = {
 const todoBlock = z
   .object({
     type: z.enum(["text", "facts", "link", "copy", "file", "page", "field"]).describe(
-      "text: markdown in text. facts: label and value pairs in facts. link: label and url (https or mailto). copy: a text the person copies, such as an email draft, in text, with an optional label. file: a file or picture from your folder, by path (relative to your folder), with an optional label. page: one of your HTML pages (an artifact) by path, opened beside the chat. field: something the person fills: id, label, input (short, long or choice), choices for a choice, an optional placeholder and a value to start from.",
+      "text: markdown in text. facts: label and value pairs in facts. link: label and url (https or mailto). copy: a text the person copies, such as an email draft, in text, with an optional label. file: path in your folder. Optional display label; downloads keep the file name. page: one of your HTML pages (an artifact) by path, opened beside the chat. field: something the person fills: id, label, input (short, long or choice), choices for a choice, an optional placeholder and a value to start from.",
     ),
     text: z.string().max(20000).optional(),
     label: z.string().max(200).optional(),
@@ -644,7 +647,7 @@ export function buildTools(role: "main" | "bot", host: TeamHost, ctx: ToolContex
     ...helperTools(host, main),
     ...taskManagerTools(host, main, models),
   ];
-  if (main) tools.push(...mainTools(host, models));
+  if (main) tools.push(...mainTools(host, models), ...linkTools(host));
   // A bot that is not the main bot changes what it sees itself, on either harness (docs/sees.md).
   else tools.push(changeWhatISeeTool(host, ctx.harness));
   return tools;

@@ -46,6 +46,7 @@ export interface BotFile {
   followUp?: FollowUp;
   /** What the bot sees of the person's own Claude Code setup (docs/sees.md). Absent: everything. */
   sees?: BotSees;
+  vacationSince?: string;
 }
 
 export interface BotFolder {
@@ -175,6 +176,7 @@ export function normalizeBotFile(raw: unknown, id: string, machine: string): Bot
     ...(typeof r.calendar === "boolean" ? { calendar: r.calendar } : {}),
     ...(r.followUp === "steer" || r.followUp === "queue" ? { followUp: r.followUp } : {}),
     ...withSees(cleanSees(r.sees)),
+    ...(r.role !== "main" && typeof r.vacationSince === "string" && Number.isFinite(Date.parse(r.vacationSince)) ? { vacationSince: r.vacationSince } : {}),
   };
 }
 
@@ -207,6 +209,7 @@ export function writeBotFile(dir: string, file: BotFile): void {
     ...(file.calendar !== undefined ? { calendar: file.calendar } : {}),
     ...(file.followUp ? { followUp: file.followUp } : {}),
     ...(file.sees ? { sees: file.sees } : {}),
+    ...(file.vacationSince ? { vacationSince: file.vacationSince } : {}),
   };
   writeFileSync(tmp, JSON.stringify(out, null, 2) + "\n");
   renameSync(tmp, path);

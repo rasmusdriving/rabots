@@ -25,7 +25,7 @@ The words are "picture" and "file", never "attachment" in the interface, "upload
 - A file (`pb-msg-file`) is the chip without the remove control: the sheet, the name, the size. It downloads on a press. A file that is no longer on the Mac says so quietly, "This file is no longer on the Mac.", and is not a link.
 - A message with pictures and no text has no empty bubble.
 
-**The large view** (`pb-picture-view`). A press on a picture opens it large, as a dialog on the dimmed layer: an overlay card with the name and Close on top and the picture as large as the window allows, never larger than the picture itself. The preview the chat already has stands in at the final size until the full picture has loaded over it. Escape, Close and a click outside the picture close it, and the focus goes back to the picture. The chat underneath does not move.
+**The large view** (`pb-picture-view`). A press on a picture opens it large, as a dialog on the dimmed layer: an overlay card with the name, Download and Close on top and the picture as large as the window allows, never larger than the picture itself. The preview the chat already has stands in at the final size until the full picture has loaded over it. Escape, Close and a click outside the picture close it, and the focus goes back to the picture. The chat underneath does not move.
 
 Keyboard: everything is reached with Tab. In the composer the order is the chips (each one's Try again and remove), the text, Attach, the model, Send. Every control shows the 2px `focus` ring.
 

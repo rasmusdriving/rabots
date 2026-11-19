@@ -96,7 +96,7 @@ export class MockTodos {
   fileUrl(todoId: string, index: number): string | undefined {
     const b = this.todos.find((t) => t.id === todoId)?.blocks[index];
     if (!b || b.type !== "file") return undefined;
-    return b.picture ? sketch(960, 540, 200, b.name) : `data:application/octet-stream;base64,${btoa(`A sample of ${b.name}.\n`)}`;
+    return b.picture ? sketch(960, 540, 200, b.name) : `data:application/octet-stream,${encodeURIComponent(`A sample of ${b.name}.\n`)}`;
   }
 
   readonly handlers: { [M in TodoMethod]: (p: Methods[M]["params"]) => Methods[M]["result"] } = {

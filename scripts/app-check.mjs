@@ -97,10 +97,12 @@ const OWN_FILE = ["sees", "maintools", "cards-after-restart"];
 
 // ------------------------------------------------------------ the check
 try {
-  if (only === "usage-page") {
+  if (only === "usage-page" || only === "codex-limits") {
     await connectBrowser();
     await cmd("Page.enable");
-    await (await import("./app-check/sections/usage-page.mjs")).default();
+    await (await import(`./app-check/sections/${only}.mjs`)).default();
+  } else if (only === "vacation") {
+    await (await import("./app-check/sections/vacation.mjs")).default();
   } else if (only === "backup") {
     await (await import("./app-check/sections/backup.mjs")).default();
   } else {

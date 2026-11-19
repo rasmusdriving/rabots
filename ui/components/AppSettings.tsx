@@ -40,6 +40,7 @@ import { PhoneBack } from "./PhoneBack";
 import { CalendarSection } from "./CalendarSection";
 import { ActivityView } from "./ActivityView";
 import { AboutYouSection } from "./AboutYouSection";
+import { ConnectionsSection } from "./ConnectionsSection";
 import { BackupSection } from "./BackupSection";
 import { Swap } from "./Swap";
 
@@ -71,6 +72,7 @@ const WINDOW_SECTIONS: { id: SettingsSection; label: string; render: () => React
   { id: "providers", label: "Providers", render: () => <div className="pb-settings"><ProvidersSection /></div> },
   { id: "calendar", label: "Calendar", render: () => <div className="pb-settings"><CalendarSection /></div> },
   { id: "usage", label: "Usage", render: () => <UsageSection /> },
+  { id: "connections", label: "Connections", render: () => <div className="pb-settings"><ConnectionsSection /></div> },
   // Protocol 22: a day's activity, read only, as T3 Code lists its Diagnostics page among its settings.
   { id: "activity", label: "Activity", render: () => <div className="pb-settings"><ActivityView /></div> },
 ];

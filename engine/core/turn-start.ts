@@ -1,4 +1,6 @@
 // A turn's start: the message that starts it, the bot's session (made, resumed or fresh) and the hand-offs between sessions.
+import { EngineError } from "../errors.js";
+import { away, requirePresent } from "./vacation.js";
 import { leaveLive, takeAside } from "./aside.js";
 import type { Engine, HarnessSession } from "../engine.js";
 import { type BotRuntime, HarnessUnavailable, purposeOf, SWITCH_WORDS } from "./runtime.js";
@@ -23,6 +25,7 @@ import { SEES_ON_WORDS, seesSettings } from "../claude/sees.js";
 import { codexSeesParagraph } from "../codex/sees.js";
 import { codexSeesFor } from "./helper-sees.js";
 import { ClaudeSession, type SessionSettings } from "../claude/session.js";
+import { connectionText } from "./link-bot.js";
 import { canUseTool } from "./cards.js";
 import { noteKey } from "./restored-cards.js";
 import { questionTurnStarts } from "./card-questions.js";
@@ -39,6 +42,7 @@ export const FRESH_LINE =
   "Note from Pobots: this is a fresh session in the same chat. You wrote the note below for yourself before it started. Your memory folder holds the rest, and search_chat finds anything said earlier.";
 
 export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: { handed?: boolean } = {}): Promise<void> {
+  if (away(rt)) return;
   rt.busy = true;
   rt.current = item;
   rt.interruptRequested = false;
@@ -141,6 +145,11 @@ export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: 
     text = channelText({ sender: from.sender, channel: from.label, tag: from.tag, text: item.text, context: from.context ?? [], hasReplyUrl: !!ch?.replyUrl });
   }
 
+  if (from.type === "connection") {
+    const question = from.mode === "answer" ? eng.store.links.answerQuestion(from.id, item.id) : undefined;
+    text = connectionText(from, item.text, question);
+  }
+
   eng.setState(rt, "thinking", "Thinking");
   const current = rt.current;
   let pictures: Picture[] | undefined;
@@ -180,6 +189,7 @@ export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: 
     }
     session.send(text, [...(handoff ?? []), ...before], tidy ? { tidy: true } : pictures ? { pictures } : undefined);
   } catch (err) {
+    if (rt.current !== current || away(rt)) return;
     if (err instanceof HarnessUnavailable) {
       // A GPT bot while Codex is not there: blocked, with Codex's own sentence.
       log.warn(`Bot ${rt.folder.id}: ${err.message}`);
@@ -203,6 +213,8 @@ export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: 
  * instead of put to sleep, and a turn in its thread brings it back (core/aside.ts).
  */
 export async function ensureSession(eng: Engine, rt: BotRuntime, forceFresh = false): Promise<{ session: HarnessSession; handoff?: string[] }> {
+  requirePresent(rt);
+  const epoch = rt.epoch;
   const threadId = rt.turn?.threadId ?? rt.threadId;
   const freshRun = rt.turn?.fresh ?? false;
   const harness = rt.folder.file.harness;
@@ -218,6 +230,7 @@ export async function ensureSession(eng: Engine, rt: BotRuntime, forceFresh = fa
   }
   // What exists, read before anything else here when the bot's choice needs it (docs/sees.md, rule 6).
   const seesKnown = harness === "claude" && rt.folder.file.sees ? await eng.seesHub.ensureKnown(rt.folder.id, rt.folder.dir, rt.folder.file.sees) : undefined;
+  requirePresent(rt);
   let tools = toolsFor(eng, rt);
   let fingerprint = harness === "codex" ? toolFingerprint(tools) : undefined;
   // The list a Codex thread from before the late tools has (team.ts LATE_CODEX_TOOLS), when it differs.
@@ -336,6 +349,8 @@ export async function ensureSession(eng: Engine, rt: BotRuntime, forceFresh = fa
         }
       : {}),
   };
+  requirePresent(rt);
+  if (rt.epoch !== epoch) throw new EngineError("conflict", "The turn was stopped before its session started.");
   const make = eng.opts.createSession ?? ((s: SessionSettings, h: Harness) => (h === "codex" ? new CodexSession(s) : new ClaudeSession(s)));
   let session: HarnessSession;
   settings.onEvent = (e) => onHarnessEvent(eng, rt, session, e);
@@ -392,7 +407,9 @@ export function lastMessages(eng: Engine, rt: BotRuntime, max: number, budget: n
     let line: string | undefined;
     if (item.kind === "user") {
       if (item.from.type === "app") continue;
-      line = `${speaker(eng, item)}: ${[clip(item.text, 600), ...attachmentLines(item.attachments)].filter(Boolean).join(" ")}`;
+      const text = clip(item.text, 600);
+      line = `${speaker(eng, item)}: ${item.from.type === "connection"
+        ? JSON.stringify(text) : [text, ...attachmentLines(item.attachments)].filter(Boolean).join(" ")}`;
     } else if (item.kind === "bot" && item.text.trim()) {
       if (eng.store.isTidyTurn(item.turnId)) continue;
       line = `You: ${clip(item.text, 600)}`;
@@ -414,6 +431,8 @@ export function speaker(eng: Engine, item: ChatHit): string {
       return `${eng.nameOf(from.botId)} (another bot)`;
     case "trigger":
       return from.result ? `Result of the trigger ${from.label}` : `The trigger ${from.label}`;
+    case "connection":
+      return `Outside message from ${JSON.stringify(from.name)} in another Pobots`;
     case "channel":
       return `${from.sender} in the channel ${from.label}`;
     case "app":

@@ -88,15 +88,25 @@ export function httpOriginOf(endpoint: EngineEndpoint): string {
  * its Tailscale login, and never puts a token in an address.
  */
 /** Step 7c: the address of a file in a to-do's window, by the same rule as an attachment. */
-export function todoFileAddress(endpoint: EngineEndpoint, todoId: string, index: number, version: string): string {
+export function todoFileAddress(endpoint: EngineEndpoint, todoId: string, index: number, version: string, download = false): string {
   const u = new URL(`/api/todos/${encodeURIComponent(todoId)}/files/${index}`, httpOriginOf(endpoint));
   u.searchParams.set("v", version);
+  if (download) u.searchParams.set("download", "1");
   if (endpoint.token) u.searchParams.set("token", endpoint.token);
   return u.toString();
 }
 
-export function attachmentAddress(endpoint: EngineEndpoint, id: string, which: "preview" | "full"): string {
-  const u = new URL(`/api/attachments/${encodeURIComponent(id)}/${which}`, httpOriginOf(endpoint));
+export function attachmentAddress(endpoint: EngineEndpoint, id: string, which: "preview" | "full" | "download"): string {
+  const u = new URL(`/api/attachments/${encodeURIComponent(id)}/${which === "download" ? "full" : which}`, httpOriginOf(endpoint));
+  if (which === "download") u.searchParams.set("download", "1");
+  if (endpoint.token) u.searchParams.set("token", endpoint.token);
+  return u.toString();
+}
+
+/** A bot's file inventory, or a path to look up inside the named bot's folder. */
+export function botDownloadAddress(endpoint: EngineEndpoint, botId: string, path?: string): string {
+  const u = new URL(`/api/bots/${encodeURIComponent(botId)}/${path === undefined ? "downloads" : "download"}`, httpOriginOf(endpoint));
+  if (path !== undefined) u.searchParams.set("path", path);
   if (endpoint.token) u.searchParams.set("token", endpoint.token);
   return u.toString();
 }

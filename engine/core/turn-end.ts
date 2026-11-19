@@ -1,4 +1,5 @@
 // A turn's end: what follows it (next in line, waiting results, rest), and the fresh sessions with their tidy turns (docs/build/step-2d.md).
+import { away, requirePresent } from "./vacation.js";
 import { questionTurnEnds } from "./card-questions.js";
 import { sessionWork } from "./aside.js";
 import { flushNotes } from "./notes.js";
@@ -106,6 +107,11 @@ export function finishTurn(eng: Engine, rt: BotRuntime, outcome: { ok: boolean; 
     else if (failed && !turn.lastText) settleAsk(eng, turn.ask, { problem: `${name} ran into a problem and could not answer.` });
     else settleAsk(eng, turn.ask, { answer: turn.lastText || `${name} finished without writing an answer.` });
   }
+  const origin = rt.current?.from;
+  if (origin?.type === "connection" && origin.mode === "ask") {
+    eng.links.reply(origin.id, origin.messageId, interrupted ? "The other main bot was stopped before it answered."
+      : turn?.lastText || "The other main bot did not write an answer.");
+  }
   // Engine 0.31.0: his questions about a card get this turn's last message as their answer.
   questionTurnEnds(eng, rt, turn?.id, turn?.lastText ?? "");
   // A turn the harness began when a helper reported back: a bot that waited for the first answer hears this one too.
@@ -152,6 +158,7 @@ export function finishTurn(eng: Engine, rt: BotRuntime, outcome: { ok: boolean; 
 
 /** What follows any turn: the next message in line, a tidy turn when the session is nearly full, or rest. */
 export function afterTurn(eng: Engine, rt: BotRuntime, mainTurnEnded: boolean | undefined): void {
+  if (away(rt)) return;
   // A steered message the turn ended before taking up comes first: the harness is running it already.
   if (rt.ahead?.length && !eng.stopping && !rt.busy) {
     const ids = rt.ahead;
@@ -266,6 +273,7 @@ export function noteUsage(eng: Engine, rt: BotRuntime, u: TurnUsage): void {
 /** Idle in the sense of the rules: no turn, nothing in line, no card of its own waiting (notes do not count). */
 export function calm(eng: Engine, rt: BotRuntime): boolean {
   // Messages held by a Stop wait for the person, not for the bot: they do not keep it from being calm.
+  if (away(rt)) return true;
   if (rt.busy || liveQueue(eng, rt) || inBackground(rt) || rt.wakes.length || rt.lateCalls.size) return false;
   // A card that came back after a restart waits on no turn (engine 0.29.0).
   return ![...eng.cards.values()].some((p) => p.rt === rt && !p.restored && p.card.kind !== "note");
@@ -273,7 +281,7 @@ export function calm(eng: Engine, rt: BotRuntime): boolean {
 
 /** Begins a tidy turn in the main chat's session. Never twice, never during a turn. */
 export function beginTidy(eng: Engine, rt: BotRuntime, why: string): boolean {
-  if (!calm(eng, rt) || eng.stopping || !eng.harnessReady(rt) || !eng.bots.has(rt.folder.id)) return false;
+  if (away(rt) || !calm(eng, rt) || eng.stopping || !eng.harnessReady(rt) || !eng.bots.has(rt.folder.id)) return false;
   if (!eng.store.getThread(rt.threadId)?.sessionId) return false;
   log.info(`Bot ${rt.folder.id}: begins a tidy turn (${why})`);
   // Only a tidy turn that follows straight on a turn keeps that turn's mark (the person may not have
@@ -288,6 +296,7 @@ export function beginTidy(eng: Engine, rt: BotRuntime, why: string): boolean {
 /** bot.startFresh: a tidy turn now, whatever the size, when there is a session to tidy. */
 export function startFresh(eng: Engine, botId: string): { started: boolean } {
   const rt = eng.bot(botId);
+  requirePresent(rt);
   if (rt.busy && rt.turn?.tidy) throw new EngineError("conflict", "The bot is already writing down what matters.");
   if (rt.busy) throw new EngineError("conflict", "The bot is working. Try again when it is done.");
   if ([...rt.helpers.values()].some((h) => !h.manager)) throw new EngineError("conflict", `${rt.folder.file.name}'s helpers are working. Try again when they are done.`);
@@ -310,7 +319,7 @@ export function checkContext(eng: Engine): void {
   for (const rt of eng.bots.values()) {
     // Per provider since step 7b.
     const cfg = eng.ctxOf(rt);
-    if (!cfg.enabled || !calm(eng, rt)) continue;
+    if (away(rt) || !cfg.enabled || !calm(eng, rt)) continue;
     const c = eng.store.getContext(rt.threadId);
     if (c.tokens < cfg.minTokens || !c.sentAt) continue;
     if (!eng.store.getThread(rt.threadId)?.sessionId) continue;
@@ -332,6 +341,7 @@ export function checkContext(eng: Engine): void {
  * with a sentence and never a card. Outside tidy turns nothing is refused here.
  */
 export function tidyGate(eng: Engine, rt: BotRuntime, toolName: string, input: Record<string, unknown>): string | undefined {
+  if (away(rt)) return "This bot is on vacation.";
   // A turn the harness began by itself while a Stop holds does nothing, should it get as far as a tool.
   if (rt.swallow && !rt.busy) return STOP_REFUSAL;
   if (!rt.busy || !rt.turn?.tidy) return undefined;

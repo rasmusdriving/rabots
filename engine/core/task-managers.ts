@@ -3,6 +3,7 @@
 // the tools the bot chose (core/task-manager-host.ts). Not a bot and not one of the bot's helpers:
 // it never holds the bot, and it stays, resting, after its result until its bot or the person ends
 // it. After T3 Code's delegate_task and taskResultTransfer (apps/server/src/mcp/OrchestratorMcpService.ts, MIT).
+import { away, requirePresent } from "./vacation.js";
 import { managerEnded, managerSaid, managerTurnBegins, managerTurnOver } from "./card-questions.js";
 import { randomUUID } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
@@ -234,6 +235,7 @@ function checkStart(eng: Engine, rt: BotRuntime, args: StartTaskManagerArgs): st
 
 /** start_task_manager: its row where the bot works now, its own thread with the task, and its first turn. Returns at once. */
 export async function startTaskManagerFor(eng: Engine, rt: BotRuntime, args: StartTaskManagerArgs): Promise<ToolResult> {
+  requirePresent(rt);
   const checked = checkStart(eng, rt, args);
   if (typeof checked === "string") return problem(checked);
   if (!eng.store.isOpen || eng.stopping) return problem("Pobots is stopping, so the task manager was not started.");
@@ -356,6 +358,7 @@ function beginTurn(eng: Engine, rt: BotRuntime, tm: TaskManager, text: string, q
 
 /** A message for it: into its running turn when it works, else its next turn starts with it. */
 export async function deliver(eng: Engine, rt: BotRuntime, tm: TaskManager, text: string, origin: "bot" | "person", itemId: string = randomUUID(), question = false): Promise<"steered" | "queued" | "started"> {
+  requirePresent(rt);
   if (origin === "bot") tm.origin = "bot";
   else if (managerState(eng, rt, tm) === "resting") tm.origin = "person";
   const session = tm.session;
@@ -476,6 +479,7 @@ function said(eng: Engine, rt: BotRuntime, tm: TaskManager, text: string): void 
 
 /** Batch the usual messages, but give each card question a turn and a reply of its own. */
 export function startManagerInbox(eng: Engine, rt: BotRuntime, tm: TaskManager): boolean {
+  if (away(rt)) return false;
   const first = tm.inbox.shift();
   if (first === undefined) return false;
   if (typeof first === "string") {
@@ -563,6 +567,7 @@ export async function sendFromBot(eng: Engine, rt: BotRuntime, tm: TaskManager, 
 /** taskManager.send: the person writes to it in its thread. */
 export function sendToTaskManager(eng: Engine, params: Methods["taskManager.send"]["params"]): void {
   const rt = eng.bot(params.botId);
+  requirePresent(rt);
   const tm = rt.managers.get(params.managerId);
   if (!tm) throw new EngineError("not_found", "This task manager has ended.");
   const text = params.text.trim();
@@ -609,12 +614,12 @@ export function stopTaskManagerFrom(eng: Engine, params: Methods["taskManager.st
 }
 
 /** Ends it: stopped, its row says ended, out of the rail and the database. */
-function endManager(eng: Engine, rt: BotRuntime, tm: TaskManager, how: "bot" | "person" | "failed" | "retired", by?: string): void {
+function endManager(eng: Engine, rt: BotRuntime, tm: TaskManager, how: "bot" | "person" | "failed" | "retired" | "vacation", by?: string): void {
   stopManager(eng, rt, tm, false);
   for (const [id, p] of [...eng.cards]) if (p.manager === tm.id) removeCard(eng, id, "withdrawn", { type: "withdrawn" });
   rt.managers.delete(tm.id);
   sendManagerRow(eng, rt, tm, true, true);
-  const text = how === "person" ? "You ended this task manager" : how === "failed" ? "The task manager could not start" : how === "retired" ? "Ended, because its bot was retired" : `Ended by ${by ?? rt.folder.file.name}`;
+  const text = how === "person" ? "You ended this task manager" : how === "failed" ? "The task manager could not start" : how === "retired" ? "Ended, because its bot was retired" : how === "vacation" ? "Ended, because its bot went on vacation" : `Ended by ${by ?? rt.folder.file.name}`;
   if (eng.store.isOpen) eng.addItem(rt, { kind: "notice", at: now(), text, tone: "info" }, tm.ownThread);
   eng.titles.add({ threadId: tm.ownThread, botId: rt.folder.id, kind: "helper", fromSeq: 0 });
   save(eng, rt);
@@ -650,8 +655,8 @@ export async function endTaskManagerFor(eng: Engine, asker: BotRuntime, args: En
 }
 
 /** The bot is retired: its task managers end with it. */
-export function endAllTaskManagers(eng: Engine, rt: BotRuntime): void {
-  for (const tm of [...rt.managers.values()]) endManager(eng, rt, tm, "retired");
+export function endAllTaskManagers(eng: Engine, rt: BotRuntime, why: "retired" | "vacation" = "retired"): void {
+  for (const tm of [...rt.managers.values()]) endManager(eng, rt, tm, why);
 }
 
 // ------------------------------------------------------------ Pobots stops and starts

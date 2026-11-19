@@ -19,6 +19,7 @@ import { Composer, filesFor } from "./Composer";
 import { Confirm } from "./Dialog";
 import { FilesView, JobView } from "./FilesView";
 import { HistoryView } from "./HistoryView";
+import { VacationChat } from "./VacationControls";
 import { SettingsView } from "./SettingsView";
 import { Thread } from "./Thread";
 import { PlanPanel } from "./PlanPanel";
@@ -37,7 +38,7 @@ export function ChatPanel({ bot, pickerOpenAtStart, covered = false }: { bot: Bo
   const tab = useAppState((s) => s.tabs[bot.id] ?? "chat");
   const helperOpen = useAppState((s) => (s.helpers[bot.id]?.length ?? 0) > 0);
   const panelId = `bot-${bot.id}-${tab}`;
-  const drop = useDrop(bot.id, tab === "chat" && !helperOpen && !covered && canUpload());
+  const drop = useDrop(bot.id, tab === "chat" && !helperOpen && !covered && !bot.vacationSince && canUpload());
   const phone = usePhone();
   return (
     <main className="pb-main app-main" aria-label={bot.name} inert={covered || undefined} aria-hidden={(phone && covered) || undefined} data-drop={drop.over || undefined} {...drop.handlers}>
@@ -138,7 +139,7 @@ function ChatTab({ bot, pickerOpenAtStart }: { bot: Bot; pickerOpenAtStart?: boo
 
   useEffect(() => setError(undefined), [bot.id]);
 
-  if (frame) return managed ? <TaskManagerPane key={frame.helperThreadId} bot={bot} frame={frame} stack={stack} /> : <HelperPane key={frame.helperThreadId} bot={bot} frame={frame} stack={stack} />;
+  if (frame) return managed && !bot.vacationSince ? <TaskManagerPane key={frame.helperThreadId} bot={bot} frame={frame} stack={stack} /> : <HelperPane key={frame.helperThreadId} bot={bot} frame={frame} stack={stack} />;
 
   return (
     <>
@@ -155,8 +156,12 @@ function ChatTab({ bot, pickerOpenAtStart }: { bot: Bot; pickerOpenAtStart?: boo
             </p>
           )}
           {/* Waiting messages stand here until the bot takes them, with their line (step 7a). */}
-          <QueueStack bot={bot} />
-          <Composer key={bot.id} bot={bot} pickerOpenAtStart={pickerOpenAtStart} onError={setError} />
+          {bot.vacationSince ? <VacationChat key={bot.id} bot={bot} /> : (
+            <>
+              <QueueStack bot={bot} />
+              <Composer key={bot.id} bot={bot} pickerOpenAtStart={pickerOpenAtStart} onError={setError} />
+            </>
+          )}
         </div>
       </div>
     </>

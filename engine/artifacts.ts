@@ -288,7 +288,7 @@ export function filesSignature(botDir: string, rel: string): { exists: boolean; 
   return { exists: true, sig: createHash("sha1").update(lines.join("\n")).digest("hex") };
 }
 
-export type PageFile = { ok: true; full: string; type: string; isPage: boolean; size: number } | { ok: false };
+export type PageFile = { ok: true; full: string; type: string; isPage: boolean; size: number; name: string; download: boolean } | { ok: false };
 
 /**
  * The file an address under /page/<key>/ names, for an artifact whose HTML file is `rel` in
@@ -296,9 +296,10 @@ export type PageFile = { ok: true; full: string; type: string; isPage: boolean; 
  * folder) and the HTML file's own name give the HTML file; any other file in the same folder or
  * below it is served by its relative path. Never: anything outside the folder, a dot file or dot
  * folder, a link that leads out of the folder, a folder, a kind of file that is not served, or a
- * supporting file of a page that sits directly in the bot's folder.
+ * supporting file of a page that sits directly in the bot's folder. Explicit downloads and links
+ * that navigate to supporting files use a sealed attachment response, including for other endings.
  */
-export function pageFile(botDir: string, rel: string, rest: string): PageFile {
+export function pageFile(botDir: string, rel: string, rest: string, mode: "resource" | "navigate" | "download" = "resource"): PageFile {
   const no = { ok: false } as const;
   if (rest.includes("\\") || rest.includes("\0") || /%(?:00|2f|5c)/i.test(rest)) return no;
   let segs: string[];
@@ -314,7 +315,9 @@ export function pageFile(botDir: string, rel: string, rest: string): PageFile {
   const isPage = want.length === 1 && want[0] === pageName;
   // A page directly in the bot's folder: only the page itself.
   if (!dir && !isPage) return no;
-  const type = PAGE_TYPES[extname(want.at(-1)!).toLowerCase()];
+  const name = want.at(-1)!;
+  const download = mode === "download" || (mode === "navigate" && !isPage);
+  const type = download ? "application/octet-stream" : PAGE_TYPES[extname(name).toLowerCase()];
   if (!type) return no;
   const root = resolve(botDir);
   const folder = dir ? join(root, ...parts(dir)) : root;
@@ -325,10 +328,11 @@ export function pageFile(botDir: string, rel: string, rest: string): PageFile {
     const realRoot = realpathSync(root);
     const real = realpathSync(full);
     if (!real.startsWith(realFolder + sep) || !real.startsWith(realRoot + sep)) return no;
+    if (download && relative(realRoot, real).split(sep).some((part) => part.startsWith("."))) return no;
     const st = statSync(real);
     if (!st.isFile()) return no;
     if (st.size > (isPage ? ARTIFACT_MAX_BYTES : PAGE_FILE_MAX_BYTES)) return no;
-    return { ok: true, full: real, type, isPage, size: st.size };
+    return { ok: true, full: real, type, isPage, size: st.size, name, download };
   } catch {
     return no;
   }

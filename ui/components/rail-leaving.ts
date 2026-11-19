@@ -2,7 +2,7 @@
 // so there is no render that removes the row and no new arrival animation.
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
-type Row<T> = { item: T; key: string; leaving: boolean };
+type Row<T> = { item: T; key: string; leaving: boolean; arriving?: true };
 
 const motion = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : undefined;
 const reduce = () => motion?.matches ?? false;
@@ -13,10 +13,14 @@ function subscribe(change: () => void) {
 
 export function useRailLeaving<T>(items: T[], keyOf: (item: T) => string) {
   const immediate = useSyncExternalStore(subscribe, reduce);
-  const live = (): Row<T>[] => items.map((item) => ({ item, key: keyOf(item), leaving: false }));
+  const live = (before?: Row<T>[]): Row<T>[] => items.map((item) => {
+    const key = keyOf(item);
+    const old = before?.find((row) => row.key === key);
+    return { item, key, leaving: false, ...(before && (!old || old.arriving) ? { arriving: true } : {}) };
+  });
   const [state, setState] = useState(() => ({ items, immediate, rows: live() }));
   if (state.items !== items || state.immediate !== immediate) {
-    const rows = live();
+    const rows = live(state.rows);
     if (!immediate) {
       // Insert runs of old rows after their closest surviving predecessor. This keeps adjacent
       // exits in order even when an earlier row starts leaving before they finish.

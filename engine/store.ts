@@ -2,6 +2,8 @@
 // session id. SQLite through node:sqlite, one file, WAL mode, numbered migrations.
 import { backup as sqliteBackup, DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
+import { chmodSync } from "node:fs";
+import { LinkStore } from "./core/link-store.js";
 import { ChannelPostStore, makeChannelPostTables } from "./channel-posts-store.js";
 import { CalendarStore, makeCalendarTables } from "./calendar-store.js";
 import { ActivityStore, makePersonActionTable } from "./activity-store.js";
@@ -392,6 +394,7 @@ export function isOpenItem(item: Item): boolean {
 
 export class Store {
   private db: DatabaseSync;
+  readonly links: LinkStore;
   /** True when SQLite's full-text search is there and the chat index is kept. */
   readonly chatIndex: boolean;
   /** The posts bots wrote in channels on their own (engine 0.23.0). */
@@ -404,11 +407,21 @@ export class Store {
   /** `fullText: false` leaves the full-text index out, as on a SQLite without it. For tests. */
   constructor(path: string, opts: { fullText?: boolean } = {}) {
     this.db = new DatabaseSync(path);
+    if (path && path !== ":memory:") {
+      // The database and its SQLite side files hold private link and webhook keys.
+      chmodSync(path, 0o600);
+      for (const end of ["-wal", "-shm"]) {
+        try { chmodSync(path + end, 0o600); }
+        catch (err) { if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err; }
+      }
+    }
     this.db.exec("PRAGMA journal_mode = WAL");
     this.db.exec("PRAGMA synchronous = NORMAL");
     this.db.exec("PRAGMA foreign_keys = ON");
     this.db.exec("PRAGMA busy_timeout = 3000");
     this.migrate();
+    this.links = new LinkStore(this.db);
+    this.links.migrate();
     this.makeTodoTable();
     makeChannelPostTables(this.db);
     this.posts = new ChannelPostStore(this.db);
@@ -1327,7 +1340,7 @@ export class Store {
    * chats that a fresh start closed, fresh runs' threads and helpers' threads with nothing still
    * running. Threads of retired bots are left out.
    */
-  untitledChats(limit: number): { threadId: string; botId: string; kind: TitledChat["kind"]; fromSeq: number; toSeq?: number }[] {
+  untitledChats(limit: number, include: (botId: string) => boolean = () => true): { threadId: string; botId: string; kind: TitledChat["kind"]; fromSeq: number; toSeq?: number }[] {
     const out: { threadId: string; botId: string; kind: TitledChat["kind"]; fromSeq: number; toSeq?: number; at: string }[] = [];
     // Closed sessions of main chats.
     const fresh = this.db
@@ -1342,7 +1355,7 @@ export class Store {
       const from = f.t === prevThread ? prevSeq + 1 : 1;
       prevThread = f.t;
       prevSeq = f.s;
-      if (!this.getChatTitle(f.t, from)) out.push({ threadId: f.t, botId: f.b, kind: "main", fromSeq: from, toSeq: f.s, at: f.at });
+      if (include(f.b) && !this.getChatTitle(f.t, from)) out.push({ threadId: f.t, botId: f.b, kind: "main", fromSeq: from, toSeq: f.s, at: f.at });
     }
     // Runs and helpers.
     const threads = this.db
@@ -1355,6 +1368,7 @@ export class Store {
       )
       .all() as { t: string; b: string; k: string; at: string }[];
     for (const t of threads) {
+      if (!include(t.b)) continue;
       // A helper whose row still says running is not over yet.
       const parent = this.getThread(t.t)?.parentItemId;
       const row = parent ? this.getItem(parent) : undefined;

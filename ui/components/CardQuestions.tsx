@@ -3,8 +3,7 @@
 // answers, one quiet line while an answer is on its way, and a one-line box to ask before he acts
 // (Enter sends, Shift+Enter makes a new line). Asking never closes or answers the card.
 import { memo, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import Markdown, { type Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownText } from "./ThreadMarkdown";
 import type { CardQuestion } from "../../shared/protocol";
 import { messageOf } from "../engine/types";
 import { carried, useCarry } from "../lib/carry";
@@ -18,28 +17,15 @@ export const ASK_WORDS = {
   thread: "Your questions about this",
 } as const;
 
-const mdComponents: Components = {
-  a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noreferrer noopener">
-      {children}
-    </a>
-  ),
-};
-
-const Answer = memo(function Answer({ text }: { text: string }) {
-  return (
-    <div className="pb-cq-answer app-md">
-      <Markdown remarkPlugins={[remarkGfm]} components={mdComponents}>
-        {text}
-      </Markdown>
-    </div>
-  );
+const Answer = memo(function Answer({ text, botId }: { text: string; botId?: string }) {
+  return <div className="pb-cq-answer app-md"><MarkdownText text={text} botId={botId} /></div>;
 });
 
 export function CardQuestions({
   id,
   questions,
   botName,
+  botId,
   onAsk,
   disabled,
   place,
@@ -48,6 +34,7 @@ export function CardQuestions({
   id: string;
   questions: CardQuestion[] | undefined;
   botName: string;
+  botId?: string;
   onAsk(text: string): Promise<void>;
   disabled?: boolean;
   /** "card" on the rail, "todo" in the to-do's window. */
@@ -106,7 +93,7 @@ export function CardQuestions({
             <li key={q.id} className="pb-cq-item" data-state={q.state}>
               <p className="pb-cq-question">{q.text}</p>
               {q.state === "answered" && q.answer ? (
-                <Answer text={q.answer} />
+                <Answer botId={botId} text={q.answer} />
               ) : (
                 <p className="pb-cq-wait" data-state={q.state} aria-live="polite">
                   {q.state === "answering" ? ASK_WORDS.answering(botName) : q.state === "queued" ? ASK_WORDS.queued(botName) : ASK_WORDS.unanswered}

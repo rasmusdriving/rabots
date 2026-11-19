@@ -4,7 +4,8 @@
 // is installed, read or sent anywhere: this only acts it out for the window.
 //
 // ?usage= picks the usage reading: one (the default: one account each), several (two Claude
-// accounts and two Codex accounts, as from a hub), none (nothing could be read).
+// accounts and two Codex accounts), none (nothing could be read), and hub-claude, mixed,
+// mixed-failure or hub-codex (fixtures with a configured usage hub).
 // ?update=none starts with Claude Code and Codex up to date; the default has a Codex update.
 // ?update=nocodex: Codex is not installed (a public install without it), Claude Code up to date.
 // ?pobots= acts out a public install (engine 0.34.0): available (Pobots 0.34.1 is out), current (up
@@ -69,6 +70,27 @@ function codexAccount(id: string, email: string, used: [number, number], via = "
 
 function usageFor(kind: string, hub: boolean): UsageState {
   const via = hub ? "hub-mac.example.net:8443" : "This Mac";
+  if (hub && ["hub-claude", "mixed", "mixed-failure", "hub-codex"].includes(kind)) {
+    const providers: UsageProvider[] = [{
+      id: "claude", label: "Claude", accounts: [
+        claudeAccount("c1", "kaja.lind@example.com", [0, 30, 67], via),
+        claudeAccount("c2", "ops.team@example.com", [0, 68, 73, 41], via),
+      ],
+    }];
+    if (kind !== "hub-claude") {
+      const local = kind !== "hub-codex";
+      const codex = codexAccount(local ? "codex-local" : "x1", "ops.team@example.com", [12, 88], local ? "This Mac" : via);
+      if (kind === "mixed-failure") {
+        codex.windows = [];
+        codex.problem = "Codex could not be asked for its usage.";
+      } else {
+        codex.credits = local ? { balance: 450.5, unlimited: false } : { unlimited: true };
+        codex.resetCredits = { availableCount: 2, nextExpiresAt: hoursFromNow(72) };
+      }
+      providers.push({ id: "codex", label: "Codex", accounts: [codex] });
+    }
+    return { source: "hub", providers, reading: false, checkedAt: new Date().toISOString() };
+  }
   if (kind === "none") return { source: hub ? "hub" : "providers", providers: [], reading: false, checkedAt: new Date().toISOString(), problem: "Neither Claude Code nor Codex is ready on this Mac." };
   const providers: UsageProvider[] =
     kind === "several" || hub
@@ -112,7 +134,9 @@ export class MockSettings {
       healthCheckSeconds: 300,
       titleModel: "claude-haiku-5-5",
       providers: { claude: { enabled: true }, codex: { enabled: true } },
-      hubs: [],
+      hubs: ["hub-claude", "mixed", "mixed-failure", "hub-codex"].includes(this.usageKind)
+        ? [{ id: "mock-hub", kind: "cliproxy", url: "https://hub-mac.example.net:8443", addedAt: hoursFromNow(-1), keyKind: "saved" }]
+        : [],
     };
     this.prov = {
       machine: "Kaja's Mac mini",
@@ -367,7 +391,6 @@ export class MockSettings {
   }
   setUsageKind(kind: string): void {
     this.usageKind = kind;
-    this.usage = null;
   }
   titleChat(botId: string, chat: ChatTitle): void {
     const list = this.titles.get(botId) ?? [];

@@ -162,7 +162,7 @@ export async function discardAttachment(id: string): Promise<void> {
 }
 
 /** The address of a sent picture's preview, or of the file itself. */
-export const attachmentUrl = (id: string, which: "preview" | "full"): string | undefined => client?.attachmentUrl(id, which);
+export const attachmentUrl = (id: string, which: "preview" | "full" | "download"): string | undefined => client?.attachmentUrl(id, which);
 
 export async function interrupt(botId: string): Promise<void> {
   await engine().request("turn.interrupt", { botId });
@@ -268,6 +268,11 @@ export async function createBot(params: Methods["bot.create"]["params"]): Promis
   store.openBot(bot.id);
   store.setTab(bot.id, "chat");
   return bot;
+}
+
+export async function setBotVacation(botId: string, vacation: boolean, stop?: boolean): Promise<void> {
+  const { bot } = await engine().request("bot.vacation", { botId, vacation, ...(stop ? { stop } : {}) });
+  store.putBot(bot);
 }
 
 export async function retireBot(botId: string): Promise<void> {
@@ -536,6 +541,10 @@ export async function resolveCard(cardId: string, decision: CardDecision): Promi
 // ------------------------------------------------------------ the nightly backup
 
 /** Saves the 1Password reference, never the password. */
+export function setConnection(change: Methods["connection.set"]["params"]) {
+  return engine().request("connection.set", change);
+}
+
 export async function setBackupPasswordRef(passwordRef: string): Promise<void> {
   const seen = store.backupEvents;
   const { backup } = await engine().request("backup.setPasswordRef", { passwordRef });
@@ -703,7 +712,8 @@ export async function closeTodo(todoId: string, how: "done" | "dismissed"): Prom
 }
 
 /** The address of a file shown in a to-do's window (block `index`), or undefined where none can be made. */
-export const todoFileUrl = (todoId: string, index: number, version: string): string | undefined => client?.todoFileUrl?.(todoId, index, version);
+export const todoFileUrl = (todoId: string, index: number, version: string, download = false): string | undefined => client?.todoFileUrl?.(todoId, index, version, download);
+export const botDownloadUrl = (botId: string, path?: string): string | undefined => client?.botDownloadUrl?.(botId, path);
 
 // ------------------------------------------------------------ the calendar tools (16 Nov 2026)
 

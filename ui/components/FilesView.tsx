@@ -3,13 +3,15 @@
 // (it goes under memory/ by default); remove one with a confirm.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Bot, BotFile, BotFileKind } from "../../shared/protocol";
+import { downloadFileName, type DownloadEntry } from "../../shared/downloads";
 import { messageOf } from "../engine/types";
 import { usePhone } from "../lib/phone";
 import { innerBack, useBackLayer, useInnerBack } from "../lib/phone-back";
-import { deleteFile, listFiles, writeFile } from "../state/actions";
+import { botDownloadUrl, deleteFile, listFiles, writeFile } from "../state/actions";
 import { store, useAppState } from "../state/store";
 import { BackIcon, PlusIcon } from "./bits";
 import { Confirm } from "./Dialog";
+import { DownloadButton } from "./FileDownload";
 import { carriedFileDraft, FileEditor } from "./FileEditor";
 
 export function JobView({ bot }: { bot: Bot }) {
@@ -35,7 +37,7 @@ export function pathFromName(name: string): string {
 }
 
 export function FilesView({ bot }: { bot: Bot }) {
-  const [files, setFiles] = useState<BotFile[] | null>(null);
+  const [files, setFiles] = useState<DownloadEntry[] | null>(null);
   const [error, setError] = useState<string>();
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<BotFile | null>(null);
@@ -50,7 +52,9 @@ export function FilesView({ bot }: { bot: Bot }) {
 
   const refresh = useCallback(async () => {
     try {
-      const all = await listFiles(bot.id);
+      const inventory = botDownloadUrl(bot.id);
+      const response = inventory ? await fetch(inventory).catch(() => undefined) : undefined;
+      const all: DownloadEntry[] = response?.ok ? (await response.json()).files : await listFiles(bot.id);
       setFiles(all.filter((f) => f.kind !== "job"));
       setError(undefined);
     } catch (e) {
@@ -65,6 +69,9 @@ export function FilesView({ bot }: { bot: Bot }) {
   // The memory index first, as the bot reads it first; the rest as the engine lists them.
   const shown = files ? GROUPS.flatMap((g) => files.filter((f) => f.kind === g.kind).sort((a, b) => Number(b.path === "memory/MEMORY.md") - Number(a.path === "memory/MEMORY.md"))) : null;
   const open = shown?.find((f) => f.path === openPath) ?? (openPath ? undefined : shown?.[0]);
+
+  const download = open && botDownloadUrl(bot.id, open.path);
+  const downloadAction = download && <DownloadButton href={download} name={downloadFileName(open.path)} />;
 
   const choose = (path: string) => {
     if (path === open?.path) {
@@ -158,22 +165,34 @@ export function FilesView({ bot }: { bot: Bot }) {
               <BackIcon />
               Files
             </button>
-            <FileEditor
+            {open.downloadOnly ? (
+              <div className="app-editor">
+                <div className="pb-editor-bar">
+                  <div className="pb-editor-name">
+                    <span className="pb-editor-title">{open.title}</span>
+                    <span className="pb-editor-path">{open.path}</span>
+                  </div>
+                  {downloadAction}
+                </div>
+                <p className="pb-hint">Download this file to open it.</p>
+              </div>
+            ) : <FileEditor
               key={open.path}
               bot={bot}
               path={open.path}
               title={open.title}
               what={open.path}
               onGone={gone}
-              actions={
+              actions={<>
+                {downloadAction}
                 <button className="pb-btn pb-btn-sm pb-btn-danger" type="button" onClick={() => {
                     setRemoveError(undefined);
                     setRemoving(open);
                   }}>
                   Remove
                 </button>
-              }
-            />
+              </>}
+            />}
           </>
         ) : (
           files && files.length > 0 && <p className="pb-files-empty app-files-none">Pick a file on the left.</p>

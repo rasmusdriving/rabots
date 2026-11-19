@@ -43,6 +43,10 @@ export default async function section() {
     writeFileSync(note, "second version\n");
     await js('document.querySelector(".pb-backup-now").click()');
     check("backup: second snapshot is incremental", await finished("Made, upload not confirmed") && (await state()).snapshots === 2 && (await latest()).bytes < first.bytes);
+    const recorded = (await state()).history.map((r) => r.at);
+    const shown = await js('[...document.querySelectorAll(".pb-backup-runs time")].map(t => t.dateTime)');
+    check("backup: the second run appears first and its row replaces the checking state", recorded.length === 2 &&
+      recorded[0] > recorded[1] && recorded[1] === first.at && JSON.stringify(shown) === JSON.stringify(recorded));
 
     const cli = (args, password = throwaway) => spawnSync(process.execPath, [join(root, "scripts", "restore.mjs"), ...args, backupDir], {
       env: { ...process.env, RESTIC_PASSWORD: password }, encoding: "utf8", timeout: 10_000,

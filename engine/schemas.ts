@@ -98,6 +98,7 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
       sees: botSees.nullable().optional(),
     }),
   }),
+  "bot.vacation": z.object({ botId: id, vacation: z.boolean(), stop: z.boolean().optional() }),
   "bot.retire": z.object({ botId: id }),
   "bot.startFresh": z.object({ botId: id }),
   "bot.files": z.object({ botId: id }),
@@ -192,6 +193,13 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
   "card.resolve": z.object({ cardId: id, decision }),
   // Only the 1Password reference crosses the protocol.
   "backup.setPasswordRef": z.object({ passwordRef: z.string().max(512) }),
+  "connection.list": z.object({}).optional(),
+  "connection.set": z.discriminatedUnion("action", [
+    z.object({ action: z.literal("start"), name: z.string().max(60) }),
+    z.object({ action: z.literal("connect"), id: z.string().max(36), code: z.string().max(2058) }),
+    z.object({ action: z.literal("rename"), id: z.string().max(36), name: z.string().max(60) }),
+    z.object({ action: z.enum(["code", "pause", "resume", "remove"]), id: z.string().max(36) }),
+  ]),
   "backup.run": z.object({}).optional(),
   // Notifications: shapes and sizes; the engine checks the push service and the keys and refuses in plain words.
   "notify.setKinds": z.object({ kinds: z.object({ needs: z.boolean().optional(), note: z.boolean().optional(), finished: z.boolean().optional() }).strict() }),

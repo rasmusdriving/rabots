@@ -1,4 +1,5 @@
 // Channels: saved channels, posts that arrive, the bot's reply at the end of its turn, and follow-ups after a helper.
+import { away } from "./vacation.js";
 import type { ChannelOutcome, Engine } from "../engine.js";
 import type { ChannelRow } from "../store.js";
 import type { Channel, ChannelMessage, Methods } from "../../shared/protocol.js";
@@ -161,7 +162,7 @@ export function channelCall(eng: Engine, channelId: string, value: unknown): Cha
     return { status: 200, body: { ok: true, refused: true } };
   }
   const route = matchRoute(
-    ch.routes.filter((r) => eng.bots.has(r.botId)),
+    ch.routes.filter((r) => eng.bots.has(r.botId) && !away(eng.bots.get(r.botId))),
     body.mentions,
     body.text,
   );

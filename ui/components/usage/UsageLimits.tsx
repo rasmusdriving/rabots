@@ -6,8 +6,7 @@ import { readUsage } from "../../state/actions";
 import { useNow } from "../../lib/hooks";
 import { messageOf } from "../../engine/types";
 import { checkedWords, ProblemLine, resetWords } from "../SettingsWindow";
-
-const NO_HUBS: never[] = [];
+import { accountInitials, UsageCredits } from "./UsageCredits";
 
 /** What is left of one window: 100 minus what is used, rounded. */
 const remaining = (w: UsageWindow) => Math.max(0, 100 - w.usedPercent);
@@ -26,15 +25,20 @@ function poolWindows(p: UsageProvider): { id: string; label: string; members: { 
   return out;
 }
 
-function initials(email: string | undefined, fallback: string): string {
-  if (!email) return fallback.slice(0, 2).toUpperCase();
-  const [local = "", domain = ""] = email.split("@");
-  return `${local[0] ?? ""}${domain[0] ?? ""}`.toUpperCase() || "?";
+function sourceWords(providers: UsageProvider[]): string {
+  const sources = new Set(providers.flatMap((p) => p.accounts.map((a) => a.via)));
+  const local = sources.delete("This Mac");
+  if (local && sources.size) return "From usage hubs and this Mac.";
+  if (sources.size) return `From ${[...sources].join(" and ")}.`;
+  if (local) {
+    const names = providers.map((p) => p.id === "claude" ? "Claude Code" : p.label);
+    return `From ${names.join(" and ")} on this Mac.`;
+  }
+  return "";
 }
 
 export function UsageLimits({ provider, refreshSignal, onReading }: { provider: HistoryProvider | "all"; refreshSignal: number; onReading(reading: boolean): void }) {
   const usage = useAppState((s) => s.usage);
-  const hubs = useAppState((s) => s.settings?.hubs) ?? NO_HUBS;
   const now = useNow(30_000);
   const [error, setError] = useState("");
   const lastRefresh = useRef(refreshSignal);
@@ -47,13 +51,13 @@ export function UsageLimits({ provider, refreshSignal, onReading }: { provider: 
     return () => { gone = true; };
   }, [refreshSignal]);
   const reading = !error && (!usage || usage.reading);
-  const source = hubs.length ? `From ${hubs.map((h) => h.url.replace(/^https?:\/\//, "")).join(" and ")}.` : "From Claude Code and Codex on this Mac.";
   useEffect(() => onReading(reading), [onReading, reading]);
   const providers = (usage?.providers ?? []).filter((p) => provider === "all" || p.id === provider);
+  const source = sourceWords(providers);
   return (
     <section className="pb-section pb-set7-usage" aria-label="Plan limits" data-reading={reading || undefined}>
       <p className="pb-set7-checked-text pb-usage-status small" role="status">
-        {reading ? "Reading plan limits." : `${source} ${checkedWords(usage?.checkedAt, now)}`}
+        {[source, reading ? "Reading plan limits." : checkedWords(usage?.checkedAt, now)].filter(Boolean).join(" ")}
       </p>
       <ProblemLine text={error || usage?.problem || ""} />
       <div className="pb-set7-meters">
@@ -71,12 +75,15 @@ function ProviderMeters({ p, now }: { p: UsageProvider; now: number }) {
   const several = p.accounts.length > 1;
   return (
     <div className="pb-set7-meter-group" data-provider={p.id}>
-      <h3 className="pb-set7-meter-title heading">{p.label}</h3>
+      <div className="pb-usage-group-head">
+        <h3 className="pb-set7-meter-title heading">{p.label}</h3>
+        {p.accounts.length === 1 && p.accounts[0]?.via === "This Mac" && <span className="pb-usage-origin label">This Mac</span>}
+      </div>
       {p.accounts
         .filter((a) => a.problem)
         .map((a) => (
           <p key={a.id} className="pb-hint pb-set7-meter-problem">
-            {several && a.email ? `${a.email}: ${a.problem}` : a.problem}
+            {several && a.email ? `${accountInitials(a.email, a.via)}: ${a.problem}` : a.problem}
           </p>
         ))}
       {rows.map((r) => {
@@ -97,6 +104,7 @@ function ProviderMeters({ p, now }: { p: UsageProvider; now: number }) {
           </div>
         );
       })}
+      {p.id === "codex" && <UsageCredits accounts={p.accounts} now={now} />}
     </div>
   );
 }
@@ -108,7 +116,7 @@ function Bar({ account, window, now, several }: { account: UsageAccount; window:
   const label = `${several ? `${who}: ` : ""}${l}% left${reset ? `, ${reset}` : ""}`;
   return (
     <div className="pb-set7-bar label" title={[who, account.plan, reset].filter(Boolean).join(" · ")} aria-label={label} role="img" data-low={l <= 15 || undefined}>
-      {several && <span className="pb-set7-chip">{initials(account.email, account.via)}</span>}
+      {several && <span className="pb-set7-chip">{accountInitials(account.email, account.via)}</span>}
       <span className="pb-set7-bar-track">
         <span className="pb-set7-bar-fill" style={{ width: `${l}%` }} />
       </span>

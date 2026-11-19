@@ -2,6 +2,7 @@
 // notification devices and the usage meters, and run_pobots_task (back up now, update the providers,
 // update Pobots itself on a public install behind a card (engine 0.34.0), a test notification). The backup password reference, usage hubs and turning notifications on for a device stay with
 // the person: none of them is reachable here, and no key, address or token is ever told.
+import { usageCreditRows } from "../../shared/usage-credits.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
 import type { ToolResult } from "../claude/session.js";
@@ -56,9 +57,18 @@ function devicesWords(eng: Engine): string {
 function usageWords(eng: Engine): string {
   const u = eng.hub.usageState();
   if (!u.providers.length) return `Usage: ${u.problem ?? "not read yet"} (get_settings fresh reads it).`;
-  const lines = u.providers.flatMap((p) =>
-    p.accounts.map((a) => `- ${p.label}${a.plan ? `, ${a.plan}` : ""}, via ${a.via}: ${a.problem ?? (a.windows.map((w) => `${w.label} ${Math.round(w.usedPercent)}% used${w.resetsAt ? `, resets ${localWhen(eng, w.resetsAt)}` : ""}`).join("; ") || "no meters")}`),
-  );
+  const lines = u.providers.flatMap((p) => p.accounts.map((a) => {
+    const windows = a.windows.map((w) => {
+      const figure = p.id === "codex" ? `${w.label}: ${Math.round(100 - w.usedPercent)}% left` : `${w.label} ${Math.round(w.usedPercent)}% used`;
+      return `${figure}${w.resetsAt ? `, resets ${localWhen(eng, w.resetsAt)}` : ""}`;
+    });
+    const credits = usageCreditRows(a).map((row) =>
+      `${row.label}: ${row.value}${row.expiresAt ? `, ${row.id === "reset" ? "next " : ""}expires ${localWhen(eng, row.expiresAt)}` : ""}${row.resetsAt ? `, resets ${localWhen(eng, row.resetsAt)}` : ""}`,
+    );
+    const meters = [...windows, ...credits, ...(a.problem ? [a.problem] : [])];
+    return `- ${p.label}${a.plan ? `, ${a.plan}` : ""}, via ${a.via}: ${meters.join("; ") || "no meters"}`;
+  }));
+  if (u.problem) lines.push(u.problem);
   return `Usage${u.checkedAt ? ` (read ${localWhen(eng, u.checkedAt)})` : ""}:\n${lines.join("\n")}`;
 }
 

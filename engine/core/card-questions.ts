@@ -12,6 +12,7 @@
 //   answered early): his question goes to the bot as his message, marked as a question, waiting in
 //   line and never steering in. The bot's last message of the turn it starts is the answer, as a
 //   bot-to-bot ask takes it. A task manager's to-do or card goes to the task manager while it is there.
+import { away, requirePresent } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime, InternalDecision, PendingCard } from "./runtime.js";
 import { deliver, type ManagerMessage, type TaskManager } from "./task-managers.js";
@@ -111,7 +112,7 @@ function writeQuestions(eng: Engine, t: Target, change: (qs: CardQuestion[]) => 
     if (!row || row.status !== "open") return;
     const todo = { ...row.todo, questions: change(row.todo.questions ?? []) };
     eng.store.saveTodo({ ...row, todo });
-    eng.opts.emit("todo.changed", { todo });
+    if (!away(eng.bots.get(todo.botId))) eng.opts.emit("todo.changed", { todo });
     return;
   }
   const p = eng.cards.get(t.id);
@@ -121,7 +122,7 @@ function writeQuestions(eng: Engine, t: Target, change: (qs: CardQuestion[]) => 
   const park = st(eng).parks.get(t.id);
   if (park) park.card = card;
   eng.store.addCard(card);
-  eng.opts.emit("card.changed", { card });
+  if (!away(p.rt)) eng.opts.emit("card.changed", { card });
 }
 
 function settle(qs: CardQuestion[], qid: string, said: string): CardQuestion[] {
@@ -169,6 +170,7 @@ export function askOnTodo(eng: Engine, params: Methods["todo.ask"]["params"]): M
   if (!row || row.status !== "open") throw new EngineError("not_found", "This to-do is no longer on your list.");
   const rt = eng.bots.get(row.todo.botId);
   if (!rt) throw new EngineError("not_found", "The bot of this to-do is gone.");
+  requirePresent(rt);
   const text = cleanText(params.text);
   checkRoom(row.todo.questions ?? []);
   const todo = row.todo;
@@ -538,6 +540,7 @@ export function settleQuestionsAtStart(eng: Engine): void {
     });
   };
   for (const todo of eng.store.openTodos()) {
+    if (away(eng.bots.get(todo.botId))) continue;
     const qs = fix({ kind: "todo", id: todo.id }, todo.questions, eng.bots.get(todo.botId));
     const row = qs && eng.store.getTodo(todo.id);
     if (row) eng.store.saveTodo({ ...row, todo: { ...row.todo, questions: qs } });

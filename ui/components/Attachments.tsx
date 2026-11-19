@@ -5,6 +5,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Attachment } from "../../shared/protocol";
+import { DownloadButton } from "./FileDownload";
 import { attachmentUrl } from "../state/actions";
 import { removeChip, retry, trayLine, type Chip, type Tray } from "../state/tray";
 import { ATTACH_WORDS, fileSize } from "../lib/words";
@@ -280,7 +281,7 @@ function MessageFile({ attachment: a }: { attachment: Attachment }) {
       </span>
     </>
   );
-  const href = a.missing ? undefined : attachmentUrl(a.id, "full");
+  const href = a.missing ? undefined : attachmentUrl(a.id, "download");
   if (!href)
     return (
       <div className="pb-chip-file pb-msg-file" data-missing={a.missing || undefined} title={a.missing ? `${a.name}. ${a.expired ? ATTACH_WORDS.notKept : ATTACH_WORDS.gone}` : a.name}>
@@ -333,6 +334,7 @@ function PictureView({ attachment: a, onClose }: { attachment: Attachment; onClo
   const [noPreview, setNoPreview] = useState(false);
   const preview = noPreview ? undefined : attachmentUrl(a.id, "preview");
   const src = attachmentUrl(a.id, "full");
+  const download = attachmentUrl(a.id, "download");
   const [room, setRoom] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   const phone = usePhone();
   const layer = useBackLayer(onClose);
@@ -368,9 +370,10 @@ function PictureView({ attachment: a, onClose }: { attachment: Attachment; onClo
       e.stopPropagation();
       layer.close();
     } else if (e.key === "Tab") {
-      // The close button is the one stop inside.
+      const link = e.currentTarget.querySelector<HTMLAnchorElement>("a[download]");
       e.preventDefault();
-      close.current?.focus({ preventScroll: true });
+      if (link && document.activeElement === close.current) link.focus({ preventScroll: true });
+      else close.current?.focus({ preventScroll: true });
     }
   };
 
@@ -404,6 +407,7 @@ function PictureView({ attachment: a, onClose }: { attachment: Attachment; onClo
           <span className="pb-picture-view-name" title={a.name}>
             {a.name}
           </span>
+          {download && <DownloadButton href={download} name={a.name} />}
           <button ref={close} type="button" className="pb-icon-btn pb-picture-view-close" aria-label="Close" title="Close" onClick={() => layer.close()}>
             <CloseIcon />
           </button>

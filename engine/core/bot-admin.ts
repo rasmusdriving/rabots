@@ -258,6 +258,9 @@ export function retireBot(eng: Engine, botId: string): void {
   // Its Codex thread goes to Codex's archive, so Codex's own history does not keep dead Pobots threads.
   if (eng.store.getSessionMeta(rt.threadId)?.harness === "codex") forgetSession(eng, rt.threadId);
   eng.store.retireThreads(botId);
+  if (rt.folder.file.vacationSince) {
+    for (const card of eng.store.listCards()) if (card.kind !== "system" && card.botId === botId) eng.store.removeCard(card.id);
+  }
   eng.store.removeRulesOf(botId);
   // Its artifacts go with it, and no key opens them any more.
   eng.store.retireArtifacts(botId);
@@ -294,7 +297,7 @@ export function retireBot(eng: Engine, botId: string): void {
 }
 
 /** Ends everything a bot is doing: its turn, its queue, its cards, its asks and its harness. */
-export function stopBot(eng: Engine, rt: BotRuntime, why: string): void {
+export function stopBot(eng: Engine, rt: BotRuntime, why: string, keepWaiting = false): void {
   clearTimeout(rt.doneTimer);
   clearTimeout(rt.sleepTimer);
   clearTimeout(rt.interruptTimer);
@@ -314,6 +317,7 @@ export function stopBot(eng: Engine, rt: BotRuntime, why: string): void {
   }
   for (const id of rt.queue) {
     const item = eng.store.getItem(id);
+    if (keepWaiting && item?.kind === "user" && item.from.type === "you") continue;
     if (item && item.kind === "user") eng.putItem({ ...item, queued: false });
     const ask = eng.askByItem.get(id);
     if (ask) settleAsk(eng, ask, { problem: why });
@@ -321,8 +325,11 @@ export function stopBot(eng: Engine, rt: BotRuntime, why: string): void {
     endRunOfItem(eng, id, "failed", "The bot was stopped before the run started");
     endChannelOfItem(eng, id, "The bot was stopped before it answered");
   }
-  rt.queue = [];
-  rt.hold = undefined;
+  rt.queue = keepWaiting ? rt.queue.filter((id) => {
+    const item = eng.store.getItem(id);
+    return item?.kind === "user" && item.from.type === "you";
+  }) : [];
+  if (!rt.queue.length) rt.hold = undefined;
   saveHold(eng, rt);
   for (const ac of rt.lateCalls) ac.abort();
   rt.lateCalls.clear();

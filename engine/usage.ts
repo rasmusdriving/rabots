@@ -1,5 +1,5 @@
-// How much of the plans is left (step 7b): from a usage hub (a CLIProxyAPI server) when one is
-// added, else from Claude Code and Codex on this Mac. Nothing here changes anything: every call
+// How much of the plans is left: from usage hubs and, where no hub lists a provider,
+// from Claude Code or Codex on this Mac. Nothing here changes anything: every call
 // only reads, and none sends a prompt to a model.
 //
 // Copied from T3 Code's approach (MIT, github.com/pingdotgg/t3code):
@@ -11,6 +11,7 @@
 import { query, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { UsageAccount, UsageProvider, UsageWindow } from "../shared/protocol.js";
 import { CodexRpc } from "./codex/rpc.js";
+import { CODEX_RESET_CREDITS, CODEX_USAGE, codexCredits, codexResetCredits, epochSeconds, hubResetCredits, record } from "./core/usage-codex.js";
 import type { Fetcher } from "./providers.js";
 
 type Loose = Record<string, unknown>;
@@ -21,11 +22,6 @@ const MONTH_MINS = 30 * 24 * 60;
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n * 10) / 10));
 const num = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
-
-function isoFromSeconds(v: unknown): string | undefined {
-  const n = num(v);
-  return n && n > 0 ? new Date(n * 1000).toISOString() : undefined;
-}
 
 function isoFromString(v: unknown): string | undefined {
   if (typeof v !== "string" || !v) return undefined;
@@ -159,15 +155,40 @@ export function codexWindows(snapshot: unknown): UsageWindow[] {
     if (used === undefined) continue;
     const mins = num(w?.windowDurationMins) ?? fallback;
     const kind: UsageWindow["kind"] = mins >= MONTH_MINS ? "monthly" : mins >= WEEK_MINS ? "weekly" : "session";
-    const resetsAt = isoFromSeconds(w?.resetsAt);
+    const resetsAt = epochSeconds(w?.resetsAt);
     out.push({ id, kind, label: kind === "session" ? "Session" : kind === "weekly" ? "Weekly" : "Monthly", usedPercent: clamp(used), ...(resetsAt ? { resetsAt } : {}) });
+  }
+  const individual = record(s.individualLimit);
+  const remaining = num(individual?.remainingPercent);
+  if (remaining !== undefined) {
+    const resetsAt = epochSeconds(individual?.resetsAt);
+    out.push({ id: "individual", kind: "monthly", label: "Monthly credit limit", usedPercent: clamp(100 - remaining), ...(resetsAt ? { resetsAt } : {}) });
   }
   return out;
 }
 
+const CODEX_PLANS = new Set(["free", "go", "plus", "pro", "prolite", "team", "business", "enterprise", "edu", "education", "enterprise_cbp"]);
 function codexPlan(t: unknown): string | undefined {
-  if (typeof t !== "string" || !t) return undefined;
+  if (typeof t !== "string" || !CODEX_PLANS.has(t)) return undefined;
   return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+type AccountMeters = Pick<UsageAccount, "windows" | "plan" | "credits" | "resetCredits">;
+
+/** Account-rate-limit reply from the local Codex app-server. The general entry wins over model limits. */
+export function codexAccountMeters(reply: unknown, accountPlan?: unknown): AccountMeters {
+  const r = record(reply);
+  const main = record(r?.rateLimits);
+  const snap = record(record(r?.rateLimitsByLimitId)?.codex) ?? main;
+  const plan = codexPlan(snap?.planType ?? accountPlan);
+  const credits = codexCredits(snap?.credits);
+  const resetCredits = codexResetCredits(r?.rateLimitResetCredits);
+  return {
+    windows: codexWindows(snap),
+    ...(plan ? { plan } : {}),
+    ...(credits ? { credits } : {}),
+    ...(resetCredits ? { resetCredits } : {}),
+  };
 }
 
 /** Codex's own reading on this Mac: a short-lived app-server asked who is signed in and its rate limits. */
@@ -178,13 +199,10 @@ export async function readCodexUsage(o: { executable: string; args?: string[]; e
     rpc.start();
     await rpc.initialize(30_000);
     const acc = await rpc.request<Loose>("account/read", {}, 20_000).catch(() => undefined);
-    const a = acc?.account as Loose | undefined;
-    const email = typeof a?.email === "string" ? a.email : undefined;
-    const r = await rpc.request<Loose>("account/rateLimits/read", null as never, 20_000);
-    const byId = r.rateLimitsByLimitId as Loose | undefined;
-    const snap = (byId?.codex as Loose | undefined) ?? (r.rateLimits as Loose | undefined);
-    const plan = codexPlan(snap?.planType ?? a?.planType);
-    return { ...base, ...(email ? { email } : {}), ...(plan ? { plan } : {}), windows: codexWindows(snap) };
+    const r = await rpc.request<unknown>("account/rateLimits/read", null, 20_000);
+    const meters = codexAccountMeters(r, record(acc?.account)?.planType);
+    if (meters.windows.length || meters.credits || meters.resetCredits) return { ...base, ...meters };
+    return { ...base, ...meters, problem: "Codex reported no plan limits or credits." };
   } catch {
     return { ...base, problem: "Codex could not be asked for its usage." };
   } finally {
@@ -211,11 +229,10 @@ interface HubAccount {
   id_token?: { chatgpt_account_id?: string; chatgpt_plan_type?: string; plan_type?: string };
 }
 
-const CODEX_USAGE = "https://chatgpt.com/backend-api/wham/usage";
 const CLAUDE_USAGE = "https://api.anthropic.com/api/oauth/usage";
 
 /** The providers a hub can read, by the hub's own name for them. Others are left out. */
-const HUB_PROVIDERS: Record<string, { id: string; label: string; url: string; header: (a: HubAccount) => Record<string, string>; read: (body: string, a: HubAccount) => { windows: UsageWindow[]; plan?: string } }> = {
+const HUB_PROVIDERS: Record<string, { id: string; label: string; url: string; header: (a: HubAccount) => Record<string, string>; read: (body: string, a: HubAccount) => AccountMeters }> = {
   claude: {
     id: "claude",
     label: "Claude",
@@ -250,7 +267,16 @@ const HUB_PROVIDERS: Record<string, { id: string; label: string; url: string; he
       };
       const planType = (u.plan_type as string | undefined) ?? a.id_token?.plan_type ?? a.id_token?.chatgpt_plan_type;
       const plan = codexPlan(planType);
-      return { windows: codexWindows({ planType, primary: win(rl?.primary_window), secondary: win(rl?.secondary_window) }), ...(plan ? { plan } : {}) };
+      const credits = codexCredits(u.credits);
+      const individual = record(u.individual_limit);
+      return {
+        windows: codexWindows({
+          planType, primary: win(rl?.primary_window), secondary: win(rl?.secondary_window),
+          individualLimit: { remainingPercent: individual?.remaining_percent, resetsAt: individual?.resets_at },
+        }),
+        ...(plan ? { plan } : {}),
+        ...(credits ? { credits } : {}),
+      };
     },
   },
 };
@@ -304,26 +330,38 @@ export async function readHub(hub: CliproxyHub, fetcher: Fetcher = fetch as unkn
   if (!listed || !Array.isArray(listed.files)) throw new Error("The hub did not list its accounts.");
   const accounts = (listed.files as Loose[]).filter((f): f is Loose & HubAccount => typeof f?.id === "string" && typeof f.auth_index === "string" && typeof f.provider === "string" && f.disabled !== true);
   const byProvider = new Map<string, UsageProvider>();
-  const read = async (a: HubAccount): Promise<void> => {
-    const def = HUB_PROVIDERS[a.provider];
-    if (!def) return;
+  const read = async (a: HubAccount): Promise<{ id: string; label: string; account: UsageAccount } | undefined> => {
+    if (!Object.hasOwn(HUB_PROVIDERS, a.provider)) return;
+    const def = HUB_PROVIDERS[a.provider]!;
     const account: UsageAccount = { id: a.id, ...(a.email ? { email: a.email } : {}), via: hub.label, windows: [] };
-    try {
-      const r = (await hubCall(hub, "api-call", fetcher, { auth_index: a.auth_index, method: "GET", url: def.url, header: def.header(a) })) as Loose;
+    const header = def.header(a);
+    const call = async (url: string): Promise<string> => {
+      const r = (await hubCall(hub, "api-call", fetcher, { auth_index: a.auth_index, method: "GET", url, header })) as Loose;
       const code = num(r?.status_code);
       if (code === undefined || typeof r.body !== "string") throw new Error("The hub's answer was not understood.");
       if (code < 200 || code >= 300) throw new Error(`The provider refused the hub's request (HTTP ${code}).`);
-      const got = def.read(r.body, a);
-      account.windows = got.windows;
-      if (got.plan) account.plan = got.plan;
+      return r.body;
+    };
+    try {
+      Object.assign(account, def.read(await call(def.url), a));
+      if (def.id === "codex") {
+        // Some hubs cannot read reset credits. Still keep the plan windows and balance.
+        const resetCredits = await call(CODEX_RESET_CREDITS).then((body) => hubResetCredits(JSON.parse(body))).catch(() => undefined);
+        if (resetCredits) account.resetCredits = resetCredits;
+      }
     } catch (err) {
       account.problem = err instanceof Error && /^The /.test(err.message) ? err.message : "The hub could not read this account's usage.";
     }
-    const p = byProvider.get(def.id) ?? { id: def.id, label: def.label, accounts: [] };
-    p.accounts.push(account);
-    byProvider.set(def.id, p);
+    return { id: def.id, label: def.label, account };
   };
-  // Four at a time, as T3 Code does.
-  for (let i = 0; i < accounts.length; i += 4) await Promise.all(accounts.slice(i, i + 4).map(read));
+  // Four at a time, as T3 Code does. Keep the listed order even when replies arrive out of order.
+  for (let i = 0; i < accounts.length; i += 4) {
+    for (const entry of await Promise.all(accounts.slice(i, i + 4).map(read))) {
+      if (!entry) continue;
+      const p = byProvider.get(entry.id) ?? { id: entry.id, label: entry.label, accounts: [] };
+      p.accounts.push(entry.account);
+      byProvider.set(entry.id, p);
+    }
+  }
   return ["claude", "codex"].map((id) => byProvider.get(id)).filter((p): p is UsageProvider => !!p);
 }

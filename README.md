@@ -61,7 +61,7 @@ Pobots looks for a new version at start and every four hours, with a plain `git 
 
 ## Settings
 
-Most settings are changed in the app (the settings window) or by asking the main bot. A few that belong to the machine live in `config.json` in the data folder. All of them are optional. See [docs/configuration.md](docs/configuration.md).
+Most settings are changed in the app (the settings window) or by asking the main bot. [Connections](docs/connections.md) lets two main bots exchange messages. A few that belong to the machine live in `config.json` in the data folder. All of them are optional. See [docs/configuration.md](docs/configuration.md).
 
 ## Safety
 

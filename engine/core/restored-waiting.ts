@@ -7,9 +7,11 @@
 //
 // Only what is shown changes. The bot's own rt.state stays "idle" or "done", so the live update,
 // notifications, helpers and the harness events still see a bot at rest.
+import { away } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import type { BotState } from "../../shared/protocol.js";
 import { type BotRuntime, inBackground } from "./runtime.js";
+import { localWhen } from "./words.js";
 import { heldWords } from "./stop.js";
 
 export interface Shown {
@@ -38,6 +40,7 @@ function restWaitCard(eng: Engine, rt: BotRuntime): "approval" | "question" | un
 
 /** What the window, the phone and Po see of the bot's state. */
 export function shown(eng: Engine, rt: BotRuntime): Shown {
+  if (away(rt)) return { state: "idle", activity: "On vacation" };
   const own: Shown = { state: rt.state, activity: rt.activity };
   // In a turn the state is thinking, working or waiting; "done" or "idle" means at rest. A turn's end
   // sets its rest while the turn still counts as running (core/turn-end.ts), so this does not look at
@@ -54,6 +57,7 @@ export function shown(eng: Engine, rt: BotRuntime): Shown {
 
 /** "working, running a command", as Po's tools say it. */
 export function shownWords(eng: Engine, rt: BotRuntime): string {
+  if (away(rt)) return `on vacation since ${localWhen(eng, rt.folder.file.vacationSince)}`;
   const s = shown(eng, rt);
   return s.activity ? `${s.state}, ${s.activity.toLowerCase()}` : s.state;
 }

@@ -67,7 +67,7 @@ The backup section in Settings, General describes the nightly snapshot in plain 
 
 - The ring means idle, working, made or unconfirmed. A check means “Saved to iCloud”. A blocked mark means the run failed. The run line keeps the date and amount added, and the history tells you why confirmation failed or what files were left out.
 - The 1Password reference is a single text field with “Save reference” beside it. A pasted password is refused in the window. The feedback keeps its room.
-- The destination says “iCloud Drive” or “Local folder”, with the path, total size and snapshot count. Recent backups are oldest first, with new rows added at the bottom.
+- The destination says “iCloud Drive” or “Local folder”, with the path, total size and snapshot count. Recent backups are newest first. A run that changes status keeps the same row.
 - The mono field shrinks on a phone, and the path and file names wrap. Use the same button and input sizes as other settings.
 
 ## The settings window (step 7b, 14 Nov 2026)

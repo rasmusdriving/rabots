@@ -17,7 +17,7 @@ import {
   type ServerFrame,
   type WhoAmI,
 } from "../../shared/protocol";
-import { attachmentAddress, httpOriginOf, todoFileAddress } from "../lib/env";
+import { attachmentAddress, botDownloadAddress, httpOriginOf, todoFileAddress } from "../lib/env";
 import { reloadOnceForUpdate } from "../lib/update";
 import { EngineError, type ConnectionInfo, type EngineClient, type EngineEvent, type EngineListener, type UploadRequest } from "./types";
 
@@ -166,12 +166,16 @@ export class WsEngineClient implements EngineClient {
     return postFile(`${httpOriginOf(endpoint)}/api/attachments?${query.join("&")}`, request);
   };
 
-  attachmentUrl(id: string, which: "preview" | "full"): string | undefined {
+  attachmentUrl(id: string, which: "preview" | "full" | "download"): string | undefined {
     return this.known ? attachmentAddress(this.known, id, which) : undefined;
   }
 
-  todoFileUrl(todoId: string, index: number, version: string): string | undefined {
-    return this.known ? todoFileAddress(this.known, todoId, index, version) : undefined;
+  todoFileUrl(todoId: string, index: number, version: string, download?: boolean): string | undefined {
+    return this.known ? todoFileAddress(this.known, todoId, index, version, download) : undefined;
+  }
+
+  botDownloadUrl(botId: string, path?: string): string | undefined {
+    return this.known ? botDownloadAddress(this.known, botId, path) : undefined;
   }
 
   start(listener: EngineListener): void {

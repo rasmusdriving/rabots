@@ -25,6 +25,7 @@ import {
   publicTrigger,
   WORK_DAYS_LIST,
 } from "./mock-data";
+import { requireMockPresent } from "./mock-vacation";
 import type { MockEngine } from "./mock";
 
 export function seedTriggers(mock: MockEngine): void {
@@ -107,7 +108,7 @@ export function trigger(mock: MockEngine, id: string): MockTrigger {
 }
 
 export function nextAtOf(mock: MockEngine, t: MockTrigger): string | undefined {
-  if (!t.enabled || t.kind !== "schedule" || !t.schedule) return undefined;
+  if (!t.enabled || t.resting || t.kind !== "schedule" || !t.schedule) return undefined;
   return nextRun(t.schedule)?.toISOString();
 }
 
@@ -116,7 +117,7 @@ export function computeUpcoming(mock: MockEngine): Upcoming[] {
   const end = Date.now() + 24 * 3600_000;
   const out: Upcoming[] = [];
   for (const t of mock.triggers) {
-    if (!t.enabled || t.kind !== "schedule" || !t.schedule) continue;
+    if (!t.enabled || t.resting || t.kind !== "schedule" || !t.schedule) continue;
     let from = new Date();
     for (let n = 0; n < 20; n++) {
       const next = nextRun(t.schedule, from);
@@ -189,6 +190,7 @@ export function putRun(mock: MockEngine, t: MockTrigger, run: TriggerRun): void 
 /** Fires a trigger: a schedule coming due, a webhook call, or "Run now". */
 export function fireTrigger(mock: MockEngine, t: MockTrigger, body?: unknown, now = false): TriggerRun {
   const bot = mock.bot(t.botId);
+  requireMockPresent(bot);
   const previous = t.lastRun;
   if (!now && previous?.status === "running") {
     const skipped: TriggerRun = { id: `run${mock.nextId++}`, triggerId: t.id, botId: t.botId, at: new Date().toISOString(), status: "skipped", note: "The last run was still going" };

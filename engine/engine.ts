@@ -29,6 +29,7 @@
 //   core/uploads.ts         attachments and uploads
 // The WebSocket and the webhook address live in server.ts, the Claude process in claude/session.ts,
 // the git history in history.ts, the files in files.ts, schedule times in schedule.ts.
+import { away, requirePresent, setVacation, vacationNeedsStop } from "./core/vacation.js";
 import { flushNotes } from "./core/notes.js";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -98,6 +99,8 @@ import { channelAddress, channelCall, channelMessages, channelNewAddress, getCha
 import { checkSchedules, enableTrigger, hookAllowed, hookCall, hookTarget, hookWithinLimits, listTriggers, newAddress, removeTrigger, runTrigger, saveTrigger, triggerAddress, triggerRuns, upcoming, wrongHookCall } from "./core/triggers.js";
 import { clearSystemCard, resolveCard, showSystemCard } from "./core/cards.js";
 import { keepCardsAtShutdown, WAITED_NOTICE } from "./core/restored-cards.js";
+import { makeLinks } from "./core/link-bot.js";
+import type { Links, LinksOptions } from "./core/links.js";
 import { mayMessage } from "./core/asks.js";
 import { toolWords } from "./core/bot-tools.js";
 import { noteChanges } from "./core/main-bot-tools.js";
@@ -121,7 +124,7 @@ import { activityDayFor } from "./core/activity-day.js";
 export { HELPER_LAST_MAX, helperLine, helperTitle, insideDir, waitingWords } from "./core/words.js";
 export { TIDY_PROMPT, TIDY_REFUSAL } from "./core/runtime.js";
 
-export const ENGINE_VERSION = "0.36.0";
+export const ENGINE_VERSION = "0.38.1";
 
 /** How long a bot waits for another bot's answer before the answer is sent later as a message. */
 const ASK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -263,6 +266,7 @@ export interface EngineOptions {
   titleTimings?: { backfillStartMs?: number; backfillEveryMs?: number };
   /** The nightly backup's stand-ins and shorter waits, for tests. */
   backup?: BackupOptions;
+  links?: LinksOptions;
 }
 
 /** What a webhook call comes to. The server turns it into an HTTP answer. */
@@ -284,6 +288,7 @@ export class Engine {
   // Members without `private` are shared with the engine's files in engine/core/; only server.ts, main.ts and the tests call the public methods.
   opts: EngineOptions;
   store: Store;
+  readonly links: Links;
   bots = new Map<string, BotRuntime>();
   order: string[] = [];
   cards = new Map<string, PendingCard>();
@@ -372,6 +377,7 @@ export class Engine {
     this.replyTimeoutMs = opts.timings?.replyTimeoutMs ?? REPLY_TIMEOUT_MS;
     this.replyRetryMs = opts.timings?.replyRetryMs ?? REPLY_RETRY_MS;
     this.clock = opts.clock ?? Date.now;
+    this.links = makeLinks(this, opts.links);
     this.startedAtMs = this.clock();
     this.tz = opts.timeZone ?? localZone();
     this.wakeGraceMs = opts.timings?.wakeGraceMs ?? WAKE_GRACE_MS;
@@ -436,6 +442,7 @@ export class Engine {
         ...(opts.checkClaude ? { redetectClaude: opts.checkClaude } : {}),
         setClaude: (next) => this.setClaude(next),
         codex: () => this.codex,
+        waitForCodexCheck: () => this.codexChecking,
         recheckCodex: () => this.recheckCodex(),
         models: () => this.modelList(),
         botsOn: (p) => [...this.bots.values()].filter((rt) => rt.folder.file.harness === p).map((rt) => rt.folder.file.name),
@@ -462,7 +469,7 @@ export class Engine {
       // A GPT model's titles come from Codex, with the Claude default when Codex cannot (step gpt-titles).
       maker: routedTitleMaker({
         claude: opts.titleMaker ?? claudeTitleMaker(() => this.opts.claude, titlesDir),
-        codex: (prompt, model) => this.codexTitles.make(prompt, model),
+        codex: (prompt, model, canStart) => this.codexTitles.make(prompt, model, canStart),
         isGpt,
         codexOk,
         claudeOk,
@@ -470,6 +477,7 @@ export class Engine {
       }),
       model: () => this.hub.titleModel(),
       canMake: () => !this.stopping && (claudeOk() || (isGpt(this.hub.titleModel()) && codexOk())),
+      canTitle: (botId) => !away(this.bots.get(botId)),
       titled: (botId, chat) => this.opts.emit("chat.titled", { botId, chat }),
       ...(opts.titleTimings ? { timings: opts.titleTimings } : {}),
     });
@@ -486,7 +494,10 @@ export class Engine {
       ...(opts.notify?.foldMs !== undefined ? { foldMs: opts.notify.foldMs } : {}),
       ...(opts.notify?.retryMs !== undefined ? { retryMs: opts.notify.retryMs } : {}),
       host: {
-        botName: (botId) => this.bots.get(botId)?.folder.file.name,
+        botName: (botId) => {
+          const rt = this.bots.get(botId);
+          return away(rt) ? undefined : rt?.folder.file.name;
+        },
         openCards: () => [...this.cards.values()].map((p) => p.card),
         atRest: (botId) => {
           const rt = this.bots.get(botId);
@@ -506,6 +517,7 @@ export class Engine {
    */
   init(): void {
     init(this);
+    this.links.start();
   }
 
   saveSettings(folder: BotFolder): void {
@@ -605,11 +617,12 @@ export class Engine {
       channels: this.store.listChannels().map((row) => toChannel(this, row)),
       browser: this.browser.snapshot(),
       backup: this.backup.state(),
+      connections: this.links.list(),
       notify: this.notifier.state(),
       chat: { ...this.chat },
       settings: this.hub.view(),
       providers: this.hub.providers(),
-      todos: this.store.openTodos(),
+      todos: this.store.openTodos().filter((todo) => !away(this.bots.get(todo.botId))),
       aboutYou: aboutYou(this),
       calendar: calendarState(this),
     };
@@ -757,6 +770,7 @@ export class Engine {
       access: f.access,
       machine: f.machine,
       state: view.state,
+      ...(away(rt) ? { vacationSince: f.vacationSince } : f.role !== "main" && vacationNeedsStop(this, rt) ? { vacationNeedsStop: true } : {}),
       activity: view.activity,
       ...(view.atRest ? { atRest: true } : {}),
       // Engine 0.31.2: the turn running now in the main chat, so the window gives it its own block (core/live-turn.ts).
@@ -831,6 +845,10 @@ export class Engine {
     return updateBot(this, params);
   }
 
+  setVacation(params: Methods["bot.vacation"]["params"]): Methods["bot.vacation"]["result"] {
+    return setVacation(this, params);
+  }
+
   /** Stops a bot, withdraws its cards, archives its folder and takes it off the roster. Its chat stays in the database. */
   retireBot(botId: string): void {
     retireBot(this, botId);
@@ -838,13 +856,16 @@ export class Engine {
 
   setState(rt: BotRuntime, state: BotState, activity: string): void {
     // A tidy turn stays calm whatever the harness does: one line, until it ends.
-    if (rt.busy && rt.turn?.tidy) {
+    if (away(rt)) {
+      state = "idle";
+      activity = "On vacation";
+    } else if (rt.busy && rt.turn?.tidy) {
       state = "working";
       activity = TIDY_ACTIVITY;
     }
     // At rest while a Stop holds messages, the line says so (step 3b, third part). A turn's end sets
     // its rest while the turn still counts as running, so this does not look at busy.
-    if (state === "done" || state === "idle") activity = heldWords(this, rt) ?? activity;
+    if (!away(rt) && (state === "done" || state === "idle")) activity = heldWords(this, rt) ?? activity;
     if (rt.state === state && rt.activity === activity) return;
     rt.state = state;
     rt.activity = activity;
@@ -910,8 +931,8 @@ export class Engine {
    * The file an address under /page/<key>/ names, or nothing. An unknown or expired key, an artifact
    * taken off the list or of a retired bot, a link, and a file that is gone all give nothing.
    */
-  pageRequest(key: string, rest: string): PageFile {
-    return pageRequest(this, key, rest);
+  pageRequest(key: string, rest: string, mode?: Parameters<typeof pageRequest>[3]): PageFile {
+    return pageRequest(this, key, rest, mode);
   }
 
   /**
@@ -1001,6 +1022,7 @@ export class Engine {
 
   sendMessage(params: Methods["message.send"]["params"]): UserItem {
     const rt = this.bot(params.botId);
+    requirePresent(rt);
     if (params.threadId !== undefined && params.threadId !== rt.threadId) {
       throw new EngineError("not_found", "That thread does not belong to this bot.");
     }
@@ -1059,6 +1081,7 @@ export class Engine {
 
   /** A Claude bot's message is refused while Claude is not ready. A GPT bot's is taken up and ends blocked with Codex's sentence when Codex is not there. */
   checkReady(rt?: BotRuntime): void {
+    if (rt) requirePresent(rt);
     if ((!rt || rt.folder.file.harness === "claude") && !this.opts.claude.ready) {
       throw new EngineError("harness_unavailable", this.opts.claude.problem ?? "Claude is not ready on this computer.");
     }
@@ -1075,6 +1098,7 @@ export class Engine {
     from: UserItem["from"],
     o: { hops?: number; ask?: PendingAsk; lateAnswer?: boolean; threadId?: string; itemId?: string; held?: boolean; behind?: boolean; attachments?: Attachment[]; stored?: { done: boolean }; steer?: boolean; steered?: { done?: Promise<boolean> } } = {},
   ): UserItem {
+    requirePresent(rt);
     const { hops = 0, ask, lateAnswer = false } = o;
     // Messages held by a Stop do not keep what is new from starting (step 3b, third part). One that
     // was lined up before the Stop (`held`) waits with them.
@@ -1426,6 +1450,7 @@ export class Engine {
     this.titles.stop();
     this.codexTitles.stop();
     this.notifier.shutdown();
+    this.links.stop();
     // A backup being made is ended and its half-made file removed; await backupStopped() before the database closes.
     void this.backup.stop();
     this.browser.shutdown();

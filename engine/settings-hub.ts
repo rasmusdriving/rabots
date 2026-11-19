@@ -25,6 +25,7 @@ import {
   TIMING_WORDS,
   type SettingsFile,
 } from "./settings.js";
+import { addLocalUsage } from "./core/usage-sources.js";
 import { readClaudeUsage, readCodexUsage, readHub, type CliproxyHub } from "./usage.js";
 import type { SelfUpdate } from "./self-update.js";
 import { writeConfigPart } from "./config.js";
@@ -52,6 +53,8 @@ export interface SettingsHost {
   redetectClaude?(): Promise<ClaudeSetup>;
   setClaude(next: ClaudeSetup): void;
   codex(): CodexSetup;
+  /** Wait only for a detection already underway, such as the one started in the background. */
+  waitForCodexCheck(): Promise<void> | undefined;
   recheckCodex(): Promise<void>;
   models(): ModelInfo[];
   /** Names of the bots that run on a provider. */
@@ -234,9 +237,18 @@ export class SettingsHub {
     this.host.emit("usage.changed", { usage: this.usageState() });
     this.usageReading = (async () => {
       try {
-        this.usage = this.file.hubs.length ? await this.readFromHubs() : await this.readFromProviders();
-      } catch (err) {
-        log.warn("Usage could not be read", err);
+        const hubReading = this.file.hubs.length ? await this.readFromHubs() : undefined;
+        const providers = await this.readFromProviders(hubReading?.providers ?? []);
+        this.usage = {
+          ...hubReading,
+          source: hubReading ? "hub" : "providers",
+          providers,
+          checkedAt: iso(this.clock()),
+          reading: false,
+          ...(!hubReading && !providers.length ? { problem: "Neither Claude Code nor Codex is ready on this Mac." } : {}),
+        };
+      } catch {
+        log.warn("Usage could not be read");
         this.usage = { source: this.file.hubs.length ? "hub" : "providers", providers: [], reading: false, problem: "Usage could not be read." };
       } finally {
         this.usageAt = this.clock();
@@ -248,7 +260,7 @@ export class SettingsHub {
     return this.usageState();
   }
 
-  private async readFromHubs(): Promise<UsageState> {
+  private async readFromHubs(): Promise<Pick<UsageState, "providers" | "problem">> {
     const merged = new Map<string, UsageProvider>();
     const problems: string[] = [];
     for (const h of this.file.hubs) {
@@ -276,27 +288,29 @@ export class SettingsHub {
     }
     const providers = [...merged.values()];
     return {
-      source: "hub",
       providers,
-      checkedAt: iso(this.clock()),
-      reading: false,
       ...(problems.length ? { problem: problems.join(" ") } : providers.length ? {} : { problem: "The hub lists no Claude or Codex accounts." }),
     };
   }
 
-  private async readFromProviders(): Promise<UsageState> {
-    const providers: UsageProvider[] = [];
+  private async readFromProviders(hub: UsageProvider[]): Promise<UsageProvider[]> {
+    // Every entry point (including a hub change) shares this read. Do not cache a
+    // hub-only answer while startup is still checking a possible local fallback.
+    if (this.enabled("codex") && !this.host.codex().ready && !hub.some((p) => p.id === "codex" && p.accounts.length)) {
+      await this.host.waitForCodexCheck();
+    }
     const c = this.host.claude();
-    if (this.file.enabled.claude && c.ready && c.executable) {
-      const acc = await (this.o.readClaude ?? (() => readClaudeUsage({ executable: c.executable!, env: c.env, cwd: this.host.probeDir })))();
-      providers.push({ id: "claude", label: "Claude", accounts: [acc] });
-    }
     const x = this.host.codex();
-    if (this.file.enabled.codex && x.ready && x.executable) {
-      const acc = await (this.o.readCodex ?? (() => readCodexUsage({ executable: x.executable!, args: x.args ?? [], env: x.env })))();
-      providers.push({ id: "codex", label: "Codex", accounts: [acc] });
-    }
-    return { source: "providers", providers, checkedAt: iso(this.clock()), reading: false, ...(providers.length ? {} : { problem: "Neither Claude Code nor Codex is ready on this Mac." }) };
+    return addLocalUsage(hub, [
+      {
+        id: "claude", label: "Claude", executable: c.executable, enabled: this.file.enabled.claude, ready: c.ready,
+        read: this.o.readClaude ?? ((executable) => readClaudeUsage({ executable, env: c.env, cwd: this.host.probeDir })),
+      },
+      {
+        id: "codex", label: "Codex", executable: x.executable, enabled: this.file.enabled.codex, ready: x.ready,
+        read: this.o.readCodex ?? ((executable) => readCodexUsage({ executable, args: x.args ?? [], env: x.env })),
+      },
+    ]);
   }
 
   // ------------------------------------------------------------ providers

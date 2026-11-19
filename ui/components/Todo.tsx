@@ -6,8 +6,6 @@
 // bot's pages, fields and the bot's buttons; "Mark done" and "Dismiss" are always there.
 import { useRailExit, useRailLeaving } from "./rail-leaving";
 import { memo, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import Markdown, { type Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
 import type { Bot, Todo, TodoBlock } from "../../shared/protocol";
 import { messageOf } from "../engine/types";
 import { carried, useCarry } from "../lib/carry";
@@ -19,6 +17,9 @@ import { CopyButton } from "./Address";
 import { CheckIcon, Face, FileIcon } from "./bits";
 import { Dialog } from "./Dialog";
 import { CardQuestions } from "./CardQuestions";
+import { MarkdownText } from "./ThreadMarkdown";
+import { DownloadButton } from "./FileDownload";
+import { downloadFileName } from "../../shared/downloads";
 
 // ------------------------------------------------------------ words
 
@@ -247,33 +248,15 @@ function TodoWindow({ todo, bot, onClose }: { todo: Todo; bot: Bot | undefined; 
         ))}
       </div>
       {/* Protocol 23: ask the bot about it before acting, under the buttons so they never move. The to-do stays open. */}
-      <CardQuestions id={todo.id} place="todo" questions={todo.questions} botName={bot?.name ?? "The bot"} disabled={busy} onAsk={(text) => askTodo(todo.id, text)} />
+      <CardQuestions id={todo.id} place="todo" questions={todo.questions} botName={bot?.name ?? "The bot"} botId={todo.botId} disabled={busy} onAsk={(text) => askTodo(todo.id, text)} />
     </Dialog>
   );
 }
 
-const mdComponents: Components = {
-  a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noreferrer noopener">
-      {children}
-    </a>
-  ),
-};
-
-const TodoMarkdown = memo(function TodoMarkdown({ text }: { text: string }) {
-  return (
-    <div className="pb-todo-text app-md">
-      <Markdown remarkPlugins={[remarkGfm]} components={mdComponents}>
-        {text}
-      </Markdown>
-    </div>
-  );
-});
-
 function Block({ block: b, index, todo, value, onValue, disabled }: { block: TodoBlock; index: number; todo: Todo; value: string; onValue(id: string, v: string): void; disabled: boolean }) {
   switch (b.type) {
     case "text":
-      return <TodoMarkdown text={b.text} />;
+      return <div className="pb-todo-text app-md"><MarkdownText text={b.text} botId={todo.botId} /></div>;
     case "facts":
       return (
         <dl className="pb-todo-facts">
@@ -331,16 +314,22 @@ function Block({ block: b, index, todo, value, onValue, disabled }: { block: Tod
 }
 
 function FileBlock({ block: b, index, todo }: { block: Extract<TodoBlock, { type: "file" }>; index: number; todo: Todo }) {
-  const url = todoFileUrl(todo.id, index, todo.updatedAt);
+  const name = downloadFileName(b.path);
+  const url = todoFileUrl(todo.id, index, todo.updatedAt, true);
+  const picture = b.picture ? todoFileUrl(todo.id, index, todo.updatedAt) : undefined;
   const [broken, setBroken] = useState(false);
-  if (b.picture && url && !broken && !b.missing) {
+  if (picture && url && !broken && !b.missing) {
     return (
-      <a className="pb-todo-picture" href={url} target="_blank" rel="noreferrer noopener" aria-label={`${b.name}. Open the picture`}>
-        <img src={url} alt={b.name} draggable={false} onError={() => setBroken(true)} />
-      </a>
+      <div className="pb-todo-picture-block">
+        <a className="pb-todo-picture" href={picture} target="_blank" rel="noreferrer noopener" aria-label={`${b.name}. Open the picture`}>
+          <img src={picture} alt={b.name} draggable={false} onError={() => setBroken(true)} />
+        </a>
+        <DownloadButton href={url} name={name} />
+      </div>
     );
   }
-  const meta = b.missing || broken ? TODO_WORDS.missingFile : b.size !== undefined ? fileSize(b.size) : "";
+  const meta = b.missing ? TODO_WORDS.missingFile : b.size !== undefined ? fileSize(b.size) : "";
+  const detail = [b.name !== name ? name : "", meta].filter(Boolean).join(" · ");
   const inner = (
     <>
       <span className="pb-chip-thumb" aria-hidden="true">
@@ -348,12 +337,12 @@ function FileBlock({ block: b, index, todo }: { block: Extract<TodoBlock, { type
       </span>
       <span className="pb-chip-text">
         <span className="pb-chip-name">{b.name}</span>
-        <span className="pb-chip-meta">{meta}</span>
+        <span className="pb-chip-meta">{detail}</span>
       </span>
     </>
   );
-  return url && !b.missing && !broken ? (
-    <a className="pb-chip-file pb-todo-file" href={url} download={b.name} aria-label={`${b.name}${meta ? `, ${meta}` : ""}. Download`}>
+  return url && !b.missing ? (
+    <a className="pb-chip-file pb-todo-file" href={url} download={name} title={`Download ${name}`} aria-label={`${b.name}${detail ? `, ${detail}` : ""}. Download`}>
       {inner}
     </a>
   ) : (

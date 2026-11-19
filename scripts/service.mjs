@@ -225,6 +225,11 @@ async function install() {
   if (customDataDir) programArguments.push(`--data-dir=${customDataDir}`);
   if (customBotsDir) programArguments.push(`--bots-dir=${customBotsDir}`);
   if (port) programArguments.push(`--port=${port}`);
+  // Only the test copy can install a confined connection test peer through this script.
+  const connectionTestPeer = arg("connections-test-peer");
+  if (connectionTestPeer && label === "app.pobots.engine-test" && port === "47700" && customDataDir && customBotsDir) {
+    programArguments.push(`--connections-test-peer=${connectionTestPeer}`);
+  }
 
   await bootout();
   writeFileSync(plistPath, plist(programArguments));

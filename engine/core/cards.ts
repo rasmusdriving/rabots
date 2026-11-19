@@ -1,4 +1,5 @@
 // Cards: approvals and questions from the harness, the bots' own asks, notes, and cards from Pobots itself.
+import { away } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import { type BotRuntime, callScope, type Helper, inBackground, type InternalDecision, type PendingCard, waitWords } from "./runtime.js";
 import type { CanUseTool, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
@@ -10,6 +11,7 @@ import type { ApprovalCard, CardDecision, CardMeeting, QuestionCard, SystemCard 
 import { randomUUID } from "node:crypto";
 import { clip, now } from "./words.js";
 import { EngineError } from "../errors.js";
+import { isLinkTool } from "../tool-names.js";
 import { tidyGate } from "./turn-end.js";
 import { managerChanged } from "./task-managers.js";
 import { becomesMessage, takeGrant } from "./restored-cards.js";
@@ -28,6 +30,10 @@ export async function canUseTool(eng: Engine, rt: BotRuntime, toolName: Paramete
   const tidyNo = helper?.manager ? undefined : tidyGate(eng, rt, toolName, input);
   if (tidyNo) return { behavior: "deny", message: tidyNo };
   if (tidy) return { behavior: "allow", updatedInput: input };
+  const prefix = `mcp__${TOOL_SERVER}__`;
+  if (options.agentID && toolName.startsWith(prefix) && isLinkTool(toolName.slice(prefix.length))) {
+    return { behavior: "deny", message: "Only the main bot can use connections." };
+  }
   // The bot's own tools have their own gates.
   if (toolName.startsWith(`mcp__${TOOL_SERVER}__`)) return { behavior: "allow", updatedInput: input };
   if (toolName === "AskUserQuestion") return askQuestions(eng, rt, input, options.signal, helper);
@@ -135,12 +141,14 @@ export async function askQuestions(eng: Engine, rt: BotRuntime, input: Record<st
 }
 
 export function openCard(eng: Engine, rt: BotRuntime, card: ApprovalCard | QuestionCard, activity: string, signal?: AbortSignal, helper?: Helper): Promise<InternalDecision> {
-  // Engine 0.29.0: the repeat of a step the person approved on a card that came back after a restart.
-  const granted = card.kind === "approval" ? takeGrant(eng, card) : undefined;
+  if (away(rt)) return Promise.resolve({ type: "withdrawn" });
+  const startedBy = helper ? helper.purpose.startedBy : rt.turn?.startedBy;
+  const outside = startedBy === "connection";
+  // An outside message cannot reuse an answer meant for an earlier turn.
+  const granted = card.kind === "approval" && !outside ? takeGrant(eng, card) : undefined;
   if (granted) return Promise.resolve(granted);
   // An approval in a turn the person did not start expires, and then counts as a no. A helper's card
   // goes by the turn that started the helper.
-  const startedBy = helper ? helper.purpose.startedBy : rt.turn?.startedBy;
   const expires = card.kind === "approval" && startedBy !== undefined && startedBy !== "you";
   if (expires) card.expiresAt = new Date(Date.now() + eng.cardExpiryMs).toISOString();
   // Engine 0.31.0: a question after the person asked about the last one takes its place (core/card-questions.ts).

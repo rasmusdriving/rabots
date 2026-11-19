@@ -8,7 +8,6 @@ import { fileURLToPath } from "node:url";
 import { backupConfig, defaultBackupFolder, defaultDataDir, legacyOneDrive } from "../config.js";
 import { Backup, slotAtOrBefore } from "../core/backup-restic.js";
 import { claimFolder, MAX_FILE_BYTES, OTHER_OWNER, OWNER_FILE, repositoryFiles } from "../core/backup-restic-files.js";
-import { BACKUP_TIMINGS, confirmUpload, UPLOAD_ERROR, UPLOAD_PENDING, UPLOAD_UNKNOWN } from "../core/backup-restic-upload.js";
 import { findRestic, parseSnapshots, restic, STAGE_NAME } from "../core/restic-cli.js";
 import { Store } from "../store.js";
 import { tempDir } from "./helpers.js";
@@ -92,18 +91,6 @@ describe("restic backup", () => {
       await assert.rejects(claimFolder(notOurs, w.dataDir), /already contains files/);
       assert.equal(readFileSync(join(notOurs, "config"), "utf8"), "not ours");
     } finally { w.store.close(); }
-  });
-
-  test("upload waits for two positive reports, and distinguishes unsupported, pending and failed", async () => {
-    const timing = { ...BACKUP_TIMINGS, pollMs: 2, holdMs: 2, limitMs: 30 };
-    const signal = new AbortController().signal;
-    const ok = { exists: true, uploaded: true, ubiquitous: true };
-    let calls = 0;
-    assert.equal(await confirmUpload("/tmp", ["x"], async () => { calls++; return [ok]; }, timing, signal), undefined);
-    assert.ok(calls >= 2);
-    assert.equal(await confirmUpload("/tmp", ["x"], async () => [{ exists: true }], timing, signal), UPLOAD_UNKNOWN);
-    assert.equal(await confirmUpload("/tmp", ["x"], async () => [{ ...ok, uploaded: false }], timing, signal), UPLOAD_PENDING);
-    assert.equal(await confirmUpload("/tmp", ["x"], async () => [{ ...ok, uploadError: "provider detail" }], timing, signal), UPLOAD_ERROR);
   });
 
   test("incremental snapshots restore SQLite, hidden bot files and links while leaving out large and partial files", { skip: !executable && "restic not installed" }, async () => {

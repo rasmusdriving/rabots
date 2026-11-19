@@ -47,3 +47,5 @@ You provide the text, the sender and the time.
 - Pressed, it opens the list in order, under a hairline of `divider`; each row opens to its detail (a thinking summary in the body font).
 - Helper, browser and artifact rows, and cards, stay rows of their own and end a group. The finished turn's "Worked for" stays.
 - One face and name per stretch of the bot's work: a message the person steers into the turn stands where it went in, and the work after it goes on without a second face. The part before it does not fold until the turn ends.
+
+A local Markdown link in a bot’s answer downloads the file from that bot’s folder. Show its actual filename quietly beside a different label. An unavailable file stays as plain text with “File unavailable”. Website links still open separately.

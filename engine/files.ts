@@ -4,6 +4,8 @@
 import { createHash } from "node:crypto";
 import { lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync, type Stats } from "node:fs";
 import { basename, dirname, join, sep } from "node:path";
+import type { DownloadEntry } from "../shared/downloads.js";
+import { isPublicBotFile } from "./downloads.js";
 import type { BotFile, BotFileKind } from "../shared/protocol.js";
 import { EngineError } from "./errors.js";
 
@@ -99,9 +101,9 @@ function toBotFile(path: string, st: Stats): BotFile {
 }
 
 /** The text files in the folder: job first, then memory, skills and the rest, each by path. */
-export function listFiles(dir: string): BotFile[] {
+export function listFiles(dir: string, includeDownloads = false): DownloadEntry[] {
   const root = realpathSync(dir);
-  const out: BotFile[] = [];
+  const out: DownloadEntry[] = [];
   const walk = (rel: string, depth: number) => {
     if (out.length >= MAX_LISTED || depth > MAX_DEPTH) return;
     let entries: string[];
@@ -113,13 +115,14 @@ export function listFiles(dir: string): BotFile[] {
     for (const name of entries) {
       if (name.startsWith(".")) continue;
       const path = rel ? `${rel}/${name}` : name;
-      if (!rel && (name === "bot.json" || name === "CLAUDE.md" || name.startsWith("bot.json"))) continue;
+      if (!isPublicBotFile(path)) continue;
       const full = join(dir, path);
       let st: Stats;
       try {
         const l = lstatSync(full);
         if (l.isSymbolicLink()) {
-          if (!inside(root, realpathSync(full))) continue;
+          const real = realpathSync(full);
+          if (!real.startsWith(root + sep) || (includeDownloads && !isPublicBotFile(real.slice(root.length + 1).split(sep).join("/")))) continue;
           st = statSync(full);
         } else st = l;
       } catch {
@@ -129,13 +132,17 @@ export function listFiles(dir: string): BotFile[] {
         walk(path, depth + 1);
         continue;
       }
-      if (!st.isFile() || st.size > MAX_FILE_BYTES) continue;
-      try {
-        if (!looksLikeText(readFileSync(full))) continue;
-      } catch {
-        continue;
+      if (!st.isFile()) continue;
+      let editable = false;
+      if (st.size <= MAX_FILE_BYTES) {
+        try {
+          editable = looksLikeText(readFileSync(full));
+        } catch {
+          continue;
+        }
       }
-      out.push(toBotFile(path, st));
+      if (editable) out.push(toBotFile(path, st));
+      else if (includeDownloads) out.push({ ...toBotFile(path, st), downloadOnly: true });
       if (out.length >= MAX_LISTED) return;
     }
   };

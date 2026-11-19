@@ -49,7 +49,7 @@ export function HelperTask({ item, bot, depth }: { item: UserItem; bot: Bot; dep
           <time dateTime={item.at}>{clockTime(item.at)}</time>
         </div>
         <div className="pb-msg-body pb-task-body app-md" id={bodyId} data-open={open || undefined} data-long={long || undefined} style={{ ["--task-lines" as string]: TASK_LINES }}>
-          <MarkdownText text={item.text} />
+          <MarkdownText text={item.text} botId={bot.id} />
         </div>
         {(long || open) && (
           <button type="button" className="pb-task-more app-activity-btn" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen(!open)}>
@@ -66,6 +66,7 @@ export function YourMessage({ item, bots }: { item: UserItem; bots: Bot[] }) {
   if (item.from.type === "app") return null;
   if (item.from.type === "bot") return <FromBot item={item} from={bots.find((b) => b.id === (item.from as { botId: string }).botId)} />;
   if (item.from.type === "trigger") return <FromTrigger item={item} label={item.from.label} />;
+  if (item.from.type === "connection") return <FromConnection item={item} name={item.from.name} />;
   if (item.from.type === "channel") return <FromChannel item={item} from={item.from} />;
   return (
     <div className="app-you pb-arrive" ref={arriveFromStack(item.id)} data-item={item.id} data-queued={item.queued || undefined} data-steered={item.steered || undefined} data-turn={item.turnId}>
@@ -128,7 +129,7 @@ export function FromBot({ item, from }: { item: UserItem; from: Bot | undefined 
           <span className="pb-msg-from">{ask ? "asked, waits for the answer" : "passed this on"}</span>
           <time dateTime={item.at}>{clockTime(item.at)}</time>
         </div>
-        <div className="pb-msg-body app-from-bot">{item.text}</div>
+        <div className="pb-msg-body app-from-bot app-md"><MarkdownText text={item.text} botId={from?.id} /></div>
         {item.queued ? <div className="app-you-note app-from-note">Queued</div> : item.steered ? <div className="app-you-note app-from-note">{STEERED}</div> : null}
       </div>
     </article>
@@ -163,6 +164,21 @@ export function FromTrigger({ item, label }: { item: UserItem; label: string }) 
       </div>
     </article>
   );
+}
+
+function FromConnection({ item, name }: { item: UserItem; name: string }) {
+  return <article className="pb-msg pb-msg-channel pb-msg-connection pb-arrive" data-item={item.id} data-turn={item.turnId}>
+    <span className="pb-who pb-who-mark" aria-hidden="true"><SpeechIcon /></span>
+    <div>
+      <div className="pb-msg-head">
+        <b>{name}</b>
+        <span className="pb-msg-from">From another Pobots</span>
+        <time dateTime={item.at}>{clockTime(item.at)}</time>
+      </div>
+      <div className="pb-msg-body app-from-channel">{item.text}</div>
+      {item.queued && <div className="app-you-note app-from-note">Queued</div>}
+    </div>
+  </article>;
 }
 
 export type ChannelFrom = Extract<UserItem["from"], { type: "channel" }>;

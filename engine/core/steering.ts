@@ -1,4 +1,5 @@
 // Steering (protocol 14): a message sent into a running turn, putting it back in line, and the line itself.
+import { away, requirePresent } from "./vacation.js";
 import { questionBackInLine, questionTurnStarts } from "./card-questions.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
@@ -16,10 +17,12 @@ import { noteKey } from "./restored-cards.js";
  * that can steer. Otherwise the message waits in line as before.
  */
 export function canSteer(eng: Engine, rt: BotRuntime, threadId: string): boolean {
+  // Keep a follow-up from the person in its own turn. A connection ask sends its last reply outside.
+  if (rt.turn?.startedBy === "connection") return false;
   const t = rt.turn;
   const s = rt.session;
   return (
-    !eng.stopping &&
+    !eng.stopping && !away(rt) &&
     rt.busy &&
     !!t &&
     !t.tidy &&
@@ -120,6 +123,7 @@ export function steerQueued(eng: Engine, params: Methods["message.steer"]["param
 /** "message.unqueue": the person takes a waiting message back before the bot read it (step 7a). */
 export function unqueue(eng: Engine, params: Methods["message.unqueue"]["params"]): Methods["message.unqueue"]["result"] {
   const rt = eng.bot(params.botId);
+  requirePresent(rt);
   const item = eng.store.getItem(params.itemId);
   if (!item || item.kind !== "user" || item.from.type !== "you" || !item.queued || !rt.queue.includes(item.id)) {
     throw new EngineError("not_found", "That message is no longer waiting.");

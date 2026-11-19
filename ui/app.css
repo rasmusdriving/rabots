@@ -153,6 +153,10 @@ button, input, textarea { font-family: inherit; }
 .app-md em { font-style: normal; font-weight: 500; }
 .app-md a { color: var(--accent-text); text-decoration: none; border-radius: var(--radius-sm); }
 .app-md a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pb-todo-picture-block { display: grid; justify-items: start; gap: var(--space-2); }
+.pb-todo-picture-block .pb-todo-picture { width: 100%; }
+.pb-md-file { overflow-wrap: anywhere; }
+.pb-md-file small { color: var(--ink-muted); font-family: var(--font-mono); }
 .app-md a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-md h1, .app-md h2, .app-md h3, .app-md h4 { font-size: 15px; line-height: 24px; font-weight: 600; }
 .app-md code { font-family: var(--font-mono); font-size: 13px; line-height: 20px; padding: 1px var(--space-1); border-radius: var(--radius-sm); background: var(--fill); color: var(--ink); }
