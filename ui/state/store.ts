@@ -1,7 +1,7 @@
 // The app's state: one immutable object, changed only here, read in React with useAppState.
 // The engine is the source of truth; this holds what the window has seen of it.
 import { useSyncExternalStore } from "react";
-import type { Artifact, BackupState, Bot, BrowserSpace, BrowserState, CalendarState, Card, Channel, ChannelMessage, ChatSettings, ChatTitle, EngineStatus, Events, HelperItem, Item, Machine, ModelInfo, NotifyState, PobotsSettings, ProvidersState, Snapshot, Todo, Trigger, TriggerRun, Upcoming, UsageState, UserItem } from "../../shared/protocol";
+import type { Artifact, BackupState, Bot, BrowserSpace, BrowserState, CalendarState, Card, Channel, ChannelMessage, ChatSettings, ChatTitle, ConnectionsState, EngineStatus, Events, HelperItem, Item, Machine, ModelInfo, NotifyState, PobotsSettings, ProvidersState, Snapshot, Todo, Trigger, TriggerRun, Upcoming, UsageState, UserItem } from "../../shared/protocol";
 import type { ConnectionInfo, EngineEvent } from "../engine/types";
 import { engineHereAtStart } from "../lib/env";
 import { isPhone } from "../lib/phone";
@@ -285,8 +285,8 @@ export interface ThreadState {
 }
 
 /** Step 7b: the sections of the settings window. */
-export type SettingsSection = "general" | "chats" | "providers" | "calendar" | "usage" | "activity";
-export const SETTINGS_SECTIONS: SettingsSection[] = ["general", "chats", "providers", "calendar", "usage", "activity"];
+export type SettingsSection = "general" | "chats" | "providers" | "calendar" | "usage" | "connections" | "activity";
+export const SETTINGS_SECTIONS: SettingsSection[] = ["general", "chats", "providers", "calendar", "usage", "connections", "activity"];
 
 /** The history entry's mark of the section the settings window shows, so a reload keeps it. */
 const SETTINGS_SECTION_KEY = "pobotsSettingsSection";
@@ -368,6 +368,7 @@ export interface AppState {
   blockedLink: { url: string; title: string } | null;
   /** The nightly backup as the engine last said. Null before the first snapshot. */
   backup: BackupState | null;
+  connections: ConnectionsState | null;
   /** Notifications when the page is not open: the switches and the devices, as the engine last said. Null before the first snapshot. */
   notify: NotifyState | null;
   /** The chat settings (protocol 14): what a message sent while a bot works does by default. */
@@ -466,6 +467,7 @@ export class Store {
     browserShare: shareAtStart(BROWSER_SHARE_KEY, DEFAULT_BROWSER_SHARE),
     blockedLink: null,
     backup: null,
+    connections: null,
     notify: null,
     chat: { followUp: "steer" },
     aboutYou: "",
@@ -535,6 +537,7 @@ export class Store {
       channels: s.channels ?? [],
       browser: s.browser ?? NO_BROWSER,
       backup: s.backup ?? null,
+      connections: s.connections ?? null,
       notify: s.notify ?? null,
       chat: s.chat ?? { followUp: "steer" },
       aboutYou: s.aboutYou ?? "",
@@ -710,6 +713,9 @@ export class Store {
       case "browser.prompt":
       case "browser.ended":
         for (const l of feeds) l(e);
+        return;
+      case "connection.changed":
+        this.set({ connections: e.data });
         return;
       case "backup.changed":
         this.backupEvents++;

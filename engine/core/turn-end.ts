@@ -106,6 +106,11 @@ export function finishTurn(eng: Engine, rt: BotRuntime, outcome: { ok: boolean; 
     else if (failed && !turn.lastText) settleAsk(eng, turn.ask, { problem: `${name} ran into a problem and could not answer.` });
     else settleAsk(eng, turn.ask, { answer: turn.lastText || `${name} finished without writing an answer.` });
   }
+  const origin = rt.current?.from;
+  if (origin?.type === "connection" && origin.mode === "ask") {
+    eng.links.reply(origin.id, origin.messageId, interrupted ? "The other main bot was stopped before it answered."
+      : turn?.lastText || "The other main bot did not write an answer.");
+  }
   // Engine 0.31.0: his questions about a card get this turn's last message as their answer.
   questionTurnEnds(eng, rt, turn?.id, turn?.lastText ?? "");
   // A turn the harness began when a helper reported back: a bot that waited for the first answer hears this one too.

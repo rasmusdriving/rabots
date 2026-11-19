@@ -44,7 +44,7 @@ export interface Turn {
   /** Who started it, in words. */
   starter: string;
   /** For the summary's counts. */
-  starterKind: "you" | "schedule" | "webhook" | "fresh run" | "channel" | "bot" | "task manager" | "reported back";
+  starterKind: "you" | "schedule" | "webhook" | "fresh run" | "channel" | "connection" | "bot" | "task manager" | "reported back";
   title?: string;
   run: boolean;
   count: number;
@@ -337,6 +337,7 @@ const STARTER_NOUN: Record<Turn["starterKind"], string> = {
   webhook: "webhooks",
   "fresh run": "fresh runs' results",
   channel: "channels",
+  connection: "connections",
   bot: "other bots",
   "task manager": "task managers",
   "reported back": "helpers or background tasks reporting back",
@@ -491,6 +492,8 @@ function starterWords(ctx: Ctx, u: ActivityItemRow | undefined): Pick<Turn, "sta
       if (tr?.kind === "webhook") return { starter: `webhook ${q(label)}`, starterKind: "webhook" };
       return { starter: tr ? `schedule ${q(label)}` : `trigger ${q(label)}`, starterKind: "schedule" };
     }
+    case "connection":
+      return { starter: u.fromLabel ? `connection ${q(u.fromLabel)}` : "another Pobots", starterKind: "connection" };
     case "channel": {
       const ch = q(ctx.channels.get(u.fromChannelId ?? "") ?? u.fromLabel ?? "a channel");
       const sender = u.fromSender?.trim();

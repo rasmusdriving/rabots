@@ -1,3 +1,4 @@
+import { MockConnections } from "./mock-connections";
 // A pretend engine that lives inside the window. It speaks the same interface as the real client
 // (protocol version 12) and holds a sample team, so the UI can be built and reviewed without an
 // engine. Used with ?mock=1.
@@ -304,6 +305,7 @@ export class MockEngine implements EngineClient {
   /** The browser's requests are answered in the order they came. */
   private browserLine: Promise<void> = Promise.resolve();
   private backup!: MockBackup;
+  private connections: MockConnections;
   private notify!: MockNotify;
   /** Step 7b: the settings window. */
   private settings7!: MockSettings;
@@ -323,6 +325,7 @@ export class MockEngine implements EngineClient {
   private addFirst = false;
 
   constructor(private readonly scene: MockScene, readonly flags: URLSearchParams = new URLSearchParams()) {
+    this.connections = new MockConnections(flags.get("publicBase") === "1", e => this.emit(e));
     this.attach = new MockFiles(flags);
     this.browser = new MockBrowser((e) => this.emit(e as EngineEvent), () => this.bots.map((b) => b.id), scene === "browser" || flags.get("browser") === "1");
     if (scene !== "first-run") this.seedDefault();
@@ -910,6 +913,8 @@ export class MockEngine implements EngineClient {
       return {};
     },
     "backup.setPasswordRef": (p) => this.backup.handlers["backup.setPasswordRef"](p),
+    "connection.list": () => this.connections.list(),
+    "connection.set": p => this.connections.change(p),
     "backup.run": (p) => this.backup.handlers["backup.run"](p),
     "notify.setKinds": (p) => this.notify.handlers["notify.setKinds"](p),
     "notify.subscribe": (p) => this.notify.handlers["notify.subscribe"](p),
@@ -945,7 +950,7 @@ export class MockEngine implements EngineClient {
   }
 
   private snapshot(): Snapshot {
-    return structuredClone({ status: this.status, bots: this.bots, cards: this.cards, models: this.models(), machines: MACHINES, upcoming: this.upcomingList, channels: this.channels.map(publicChannel), browser: this.browser.state(), backup: this.backup.state(), notify: this.notify.state(), chat: this.chat, settings: this.settings7.view(), providers: this.settings7.providers(), todos: this.todos.state(), calendar: this.calendar.handlers["calendar.get"]({}).calendar, aboutYou: this.firstStart.text });
+    return structuredClone({ status: this.status, bots: this.bots, cards: this.cards, models: this.models(), machines: MACHINES, upcoming: this.upcomingList, channels: this.channels.map(publicChannel), browser: this.browser.state(), backup: this.backup.state(), connections: this.connections.list(), notify: this.notify.state(), chat: this.chat, settings: this.settings7.view(), providers: this.settings7.providers(), todos: this.todos.state(), calendar: this.calendar.handlers["calendar.get"]({}).calendar, aboutYou: this.firstStart.text });
   }
 
   /**

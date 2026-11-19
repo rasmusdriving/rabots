@@ -98,6 +98,8 @@ import { channelAddress, channelCall, channelMessages, channelNewAddress, getCha
 import { checkSchedules, enableTrigger, hookAllowed, hookCall, hookTarget, hookWithinLimits, listTriggers, newAddress, removeTrigger, runTrigger, saveTrigger, triggerAddress, triggerRuns, upcoming, wrongHookCall } from "./core/triggers.js";
 import { clearSystemCard, resolveCard, showSystemCard } from "./core/cards.js";
 import { keepCardsAtShutdown, WAITED_NOTICE } from "./core/restored-cards.js";
+import { makeLinks } from "./core/link-bot.js";
+import type { Links, LinksOptions } from "./core/links.js";
 import { mayMessage } from "./core/asks.js";
 import { toolWords } from "./core/bot-tools.js";
 import { noteChanges } from "./core/main-bot-tools.js";
@@ -121,7 +123,7 @@ import { activityDayFor } from "./core/activity-day.js";
 export { HELPER_LAST_MAX, helperLine, helperTitle, insideDir, waitingWords } from "./core/words.js";
 export { TIDY_PROMPT, TIDY_REFUSAL } from "./core/runtime.js";
 
-export const ENGINE_VERSION = "0.36.0";
+export const ENGINE_VERSION = "0.37.0";
 
 /** How long a bot waits for another bot's answer before the answer is sent later as a message. */
 const ASK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -263,6 +265,7 @@ export interface EngineOptions {
   titleTimings?: { backfillStartMs?: number; backfillEveryMs?: number };
   /** The nightly backup's stand-ins and shorter waits, for tests. */
   backup?: BackupOptions;
+  links?: LinksOptions;
 }
 
 /** What a webhook call comes to. The server turns it into an HTTP answer. */
@@ -284,6 +287,7 @@ export class Engine {
   // Members without `private` are shared with the engine's files in engine/core/; only server.ts, main.ts and the tests call the public methods.
   opts: EngineOptions;
   store: Store;
+  readonly links: Links;
   bots = new Map<string, BotRuntime>();
   order: string[] = [];
   cards = new Map<string, PendingCard>();
@@ -372,6 +376,7 @@ export class Engine {
     this.replyTimeoutMs = opts.timings?.replyTimeoutMs ?? REPLY_TIMEOUT_MS;
     this.replyRetryMs = opts.timings?.replyRetryMs ?? REPLY_RETRY_MS;
     this.clock = opts.clock ?? Date.now;
+    this.links = makeLinks(this, opts.links);
     this.startedAtMs = this.clock();
     this.tz = opts.timeZone ?? localZone();
     this.wakeGraceMs = opts.timings?.wakeGraceMs ?? WAKE_GRACE_MS;
@@ -506,6 +511,7 @@ export class Engine {
    */
   init(): void {
     init(this);
+    this.links.start();
   }
 
   saveSettings(folder: BotFolder): void {
@@ -605,6 +611,7 @@ export class Engine {
       channels: this.store.listChannels().map((row) => toChannel(this, row)),
       browser: this.browser.snapshot(),
       backup: this.backup.state(),
+      connections: this.links.list(),
       notify: this.notifier.state(),
       chat: { ...this.chat },
       settings: this.hub.view(),
@@ -1426,6 +1433,7 @@ export class Engine {
     this.titles.stop();
     this.codexTitles.stop();
     this.notifier.shutdown();
+    this.links.stop();
     // A backup being made is ended and its half-made file removed; await backupStopped() before the database closes.
     void this.backup.stop();
     this.browser.shutdown();

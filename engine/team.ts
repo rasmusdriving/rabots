@@ -9,6 +9,7 @@ import type { TodoArgs } from "./todos.js";
 import type { UsageToolArgs } from "./core/usage-history/tool.js";
 import type { ActivityLogArgs } from "./core/activity-log.js";
 import { FOLLOW_UP_RULE, ok, problem, TOOL_NAMES } from "./tool-names.js";
+import { linkTools, type LinksToolsHost } from "./core/link-tools.js";
 import { mainTools } from "./main-tools.js";
 import { type HelperHost, helperTools } from "./helper-tools.js";
 import { TASK_MANAGER_PROMPT, type TaskManagerHost, taskManagerTools } from "./task-manager-tools.js";
@@ -172,7 +173,7 @@ export function messageFraming(fromName: string, kind: "ask" | "tell" | "answer"
   return `${base} ${fromName} is not waiting for an answer.`;
 }
 
-export interface TeamHost extends HelperHost, TaskManagerHost {
+export interface TeamHost extends HelperHost, TaskManagerHost, LinksToolsHost {
   listBots(): string;
   messageBot(args: MessageBotArgs, signal?: AbortSignal): Promise<ToolResult>;
   askHuman(args: { question: string; context?: string; choices?: string[]; allow_text?: boolean }, signal?: AbortSignal): Promise<ToolResult>;
@@ -644,7 +645,7 @@ export function buildTools(role: "main" | "bot", host: TeamHost, ctx: ToolContex
     ...helperTools(host, main),
     ...taskManagerTools(host, main, models),
   ];
-  if (main) tools.push(...mainTools(host, models));
+  if (main) tools.push(...mainTools(host, models), ...linkTools(host));
   // A bot that is not the main bot changes what it sees itself, on either harness (docs/sees.md).
   else tools.push(changeWhatISeeTool(host, ctx.harness));
   return tools;

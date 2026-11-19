@@ -41,7 +41,7 @@
 import type { UsageOverviewRead, UsageRange } from "./usage-overview.js";
 export * from "./usage-overview.js";
 
-export const PROTOCOL_VERSION = 27;
+export const PROTOCOL_VERSION = 28;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -108,6 +108,34 @@ export interface Attachment {
 
 export interface AttachmentUploadResult {
   attachment: Attachment;
+}
+
+// ---------------------------------------------------------------- connections between Pobots
+export interface PobotsConnection {
+  id: string;
+  name: string;
+  state: "draft" | "waiting" | "connected" | "paused" | "unreached" | "expired";
+  expiresAt: string;
+  lastReached?: string;
+  lastMessage?: string;
+}
+
+export interface ConnectionsState {
+  hasPublicAddress: boolean;
+  connections: PobotsConnection[];
+}
+
+export type ConnectionChange =
+  | { action: "start"; name: string }
+  | { action: "code" | "pause" | "resume" | "remove"; id: string }
+  | { action: "connect"; id: string; code: string }
+  | { action: "rename"; id: string; name: string };
+
+export interface ConnectionChangeResult {
+  state: ConnectionsState;
+  id: string;
+  /** Public pairing code, only returned when starting or asking to see one. */
+  code?: string;
 }
 
 // ---------------------------------------------------------------- the nightly backup
@@ -438,6 +466,7 @@ export interface UserItem extends ItemBase {
     | { type: "you"; todo?: { id: string; title: string }; card?: { id: string; title: string }; question?: true }
     /** Protocol 21: `taskManager` is the title of the bot's task manager that wrote it (`botId` is its bot). */
     | { type: "bot"; botId: string; expectsReply: boolean; taskManager?: string }
+    | { type: "connection"; id: string; name: string; mode: "ask" | "tell" | "answer"; messageId: string }
     /**
      * From a trigger. `label` is its name at the time. `triggerId` and `runId` say which trigger and
      * which run. `result` is true when this is not the trigger's own message but what a fresh run
@@ -1004,6 +1033,7 @@ export interface Snapshot {
   browser: BrowserState;
   /** The nightly backup. */
   backup: BackupState;
+  connections?: ConnectionsState;
   /** Notifications: the switches and the devices. */
   notify: NotifyState;
   /** Settings for the chat as a whole (protocol 14). */
@@ -1290,6 +1320,8 @@ export interface Methods {
 
   /** Saves a 1Password reference. An empty string clears it. */
   "backup.setPasswordRef": { params: { passwordRef: string }; result: { backup: BackupState } };
+  "connection.list": { params: Record<string, never>; result: ConnectionsState };
+  "connection.set": { params: ConnectionChange; result: ConnectionChangeResult };
   /** Starts a backup now; changes arrive with "backup.changed". */
   "backup.run": { params: Record<string, never>; result: { backup: BackupState } };
 
@@ -1350,6 +1382,7 @@ export interface Events {
   "bot.added": { bot: Bot };
   /** A bot was retired and left the roster. Its cards are withdrawn with "card.removed". */
   "bot.removed": { botId: string };
+  "connection.changed": ConnectionsState;
   /** The nightly backup changed: a reference was saved, a run began or ended. Always the whole state. */
   "backup.changed": { backup: BackupState };
   /** Notifications changed: a switch, a device, or a send was recorded. Always the whole state. */

@@ -19,6 +19,7 @@ import type { ZodRawShape } from "zod";
 import type { AccessLevel, Effort } from "../../shared/protocol.js";
 import { AsyncQueue } from "../async-queue.js";
 import { log } from "../log.js";
+import { isLinkTool } from "../tool-names.js";
 import type { SeesSessionSettings } from "./sees.js";
 
 /** The picture types the harness takes as image blocks. The engine's copies for the model are always one of these. */
@@ -321,8 +322,10 @@ export class ClaudeSession {
     const permissionMode = PERMISSION_MODES[s.access];
     const gate = s.gate;
     const preToolUse: HookCallback = async (input) => {
-      if (!gate || input.hook_event_name !== "PreToolUse") return {};
-      const why = gate(input.tool_name, asLoose(input.tool_input));
+      if (input.hook_event_name !== "PreToolUse") return {};
+      const prefix = `mcp__${TOOL_SERVER}__`;
+      const why = input.agent_id && input.tool_name.startsWith(prefix) && isLinkTool(input.tool_name.slice(prefix.length))
+        ? "Only the main bot can use connections." : gate?.(input.tool_name, asLoose(input.tool_input));
       if (!why) return {};
       return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: why } };
     };
@@ -382,7 +385,7 @@ export class ClaudeSession {
         // The bot's own tools never raise the harness's permission prompt; their gates are the engine's.
         allowedTools: s.tools.map((t) => toolId(t.name)),
         includePartialMessages: true,
-        ...(gate ? { hooks: { PreToolUse: [{ hooks: [preToolUse] }] } } : {}),
+        ...((gate || s.tools.some(t => isLinkTool(t.name))) ? { hooks: { PreToolUse: [{ hooks: [preToolUse] }] } } : {}),
         resume: s.resume,
         ...(s.disallowedTools?.length ? { disallowedTools: s.disallowedTools } : {}),
         ...(s.persist === false ? { persistSession: false } : {}),

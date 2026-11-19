@@ -65,6 +65,8 @@ function fromWords(item: UserItem, bots: Bot[]): string | undefined {
     }
     case "trigger":
       return `From ${item.from.label}`;
+    case "connection":
+      return `From ${item.from.name} in another Pobots`;
     case "channel":
       return `From ${item.from.sender} in ${item.from.label}`;
     case "app":

@@ -28,6 +28,8 @@ export interface Flags {
    * protocol, and no service file passes it.
    */
   pushRelay?: string;
+  connectionTestBase?: string;
+  connectionTestPeer?: string;
   /**
    * --shell: started by the desktop window (desktop/main.ts), so the window closes with the engine
    * and can be opened again. Lets a public install restart itself after an update (engine 0.34.0).
@@ -302,6 +304,15 @@ export function parseFlags(argv: string[]): Flags {
       const relay = m[2] === undefined ? undefined : cleanRelay(m[2]);
       if (!relay) throw new Error('"--push-relay" takes only the form --push-relay=http://127.0.0.1:<port>.');
       flags.pushRelay = relay;
+      continue;
+    }
+    if (name === "connections-test-base" || name === "connections-test-peer") {
+      const port = /^http:\/\/127\.0\.0\.1:(\d{5})$/.exec(m[2] ?? "")?.[1];
+      if (!port || Number(port) < 10240 || Number(port) > 65535 || port === "47600") {
+        throw new Error("Connection test addresses must be loopback ports reserved for this test.");
+      }
+      if (name === "connections-test-base") flags.connectionTestBase = m[2];
+      else flags.connectionTestPeer = m[2];
       continue;
     }
     if (name === "shell") {

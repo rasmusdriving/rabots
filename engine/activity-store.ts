@@ -106,7 +106,8 @@ const ITEM_COLUMNS = `
   json_extract(i.data, '$.from.type') AS fromType,
   json_extract(i.data, '$.from.botId') AS fromBot,
   json_extract(i.data, '$.from.taskManager') AS fromTaskManager,
-  json_extract(i.data, '$.from.label') AS fromLabel,
+  CASE WHEN json_extract(i.data, '$.from.type') = 'connection' THEN json_extract(i.data, '$.from.name')
+    ELSE json_extract(i.data, '$.from.label') END AS fromLabel,
   json_extract(i.data, '$.from.triggerId') AS fromTriggerId,
   json_extract(i.data, '$.from.result') AS fromResult,
   json_extract(i.data, '$.from.channelId') AS fromChannelId,

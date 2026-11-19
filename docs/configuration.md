@@ -16,7 +16,7 @@ The data folder is `~/Library/Application Support/Pobots` on macOS. The engine a
 | `serve` | Serve the app window as a web page next to the engine's socket, on a fixed port (the background service turns this on) | off |
 | `port` | The port in serve mode | `47600` |
 | `remote.allowedLogins` | Tailscale logins that may open Pobots from other devices | empty: remote access is off |
-| `publicBase` | The engine's address from outside, such as `https://host.example.net:10000`, shown with webhook addresses | none |
+| `publicBase` | The engine's address from outside, such as `https://host.example.net:10000`, used for webhook and Pobots connection addresses | none |
 | `browser.enabled`, `browser.executable` | The bots' browser shown live in the app (see below) | on, command looked for in the usual places |
 | `backup.folder`, `backup.time`, `backup.executable` | The nightly backup (see below) | see below, `03:00` |
 | `notify` | Which notifications are sent to your devices | needs you and notes on, finished off |
@@ -31,7 +31,7 @@ Paths may start with `~`.
 Pobots runs with only Claude Code installed. Everything below can be left out.
 
 - **Codex and GPT models.** Bots on GPT models run through your own Codex install and ChatGPT login (`codex app-server`). Without Codex, bots on GPT models cannot run.
-- **Tailscale, for your other devices and your phone.** Remote access is off until `remote.allowedLogins` lists a login. To use it, run Pobots as a background service (`npm run service:install`, which turns on serve mode), publish port 47600 on your tailnet with `tailscale serve`, and add your Tailscale login. The engine trusts the `Tailscale-User-Login` header that `tailscale serve` adds, and only from requests that come through it; it listens on `127.0.0.1` only. Webhooks can be reached from outside through Tailscale Funnel on the `/hook` path only; set `publicBase` to that address.
+- **Tailscale, for your other devices and your phone.** Remote access is off until `remote.allowedLogins` lists a login. To use it, run Pobots as a background service (`npm run service:install`, which turns on serve mode), publish port 47600 on your tailnet with `tailscale serve`, and add your Tailscale login. The engine trusts the `Tailscale-User-Login` header that `tailscale serve` adds, and only from requests that come through it; it listens on `127.0.0.1` only. Webhooks can be reached from outside through Tailscale Funnel on the `/hook` path only; set `publicBase` to that address without the path. [Connections between Pobots](connections.md) reuse this door. Only one side needs a public address.
 - **The bots' browser.** Bots can drive a browser on this computer through the `ego-browser` command (from the ego lite browser), and the app shows its pages live beside the chat. Without that command there is no browser to show; switch it off with `"browser": { "enabled": false }`.
 - **The nightly backup.** Optional restic snapshots in iCloud Drive. The main data folder defaults to `~/Library/Mobile Documents/com~apple~CloudDocs/Pobots Backup`; any other data folder must name its own destination. Save a 1Password reference in Settings, General, Backup. See [the backup setup and restore steps](backup.md).
 - **1Password.** Where Pobots asks for a key, an `op://vault/item/field` reference works too. It is read with the 1Password command line (`op`) when used and never stored.

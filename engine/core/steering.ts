@@ -16,6 +16,8 @@ import { noteKey } from "./restored-cards.js";
  * that can steer. Otherwise the message waits in line as before.
  */
 export function canSteer(eng: Engine, rt: BotRuntime, threadId: string): boolean {
+  // Keep a follow-up from the person in its own turn. A connection ask sends its last reply outside.
+  if (rt.turn?.startedBy === "connection") return false;
   const t = rt.turn;
   const s = rt.session;
   return (

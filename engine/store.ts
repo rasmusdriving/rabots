@@ -2,6 +2,8 @@
 // session id. SQLite through node:sqlite, one file, WAL mode, numbered migrations.
 import { backup as sqliteBackup, DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
+import { chmodSync } from "node:fs";
+import { LinkStore } from "./core/link-store.js";
 import { ChannelPostStore, makeChannelPostTables } from "./channel-posts-store.js";
 import { CalendarStore, makeCalendarTables } from "./calendar-store.js";
 import { ActivityStore, makePersonActionTable } from "./activity-store.js";
@@ -392,6 +394,7 @@ export function isOpenItem(item: Item): boolean {
 
 export class Store {
   private db: DatabaseSync;
+  readonly links: LinkStore;
   /** True when SQLite's full-text search is there and the chat index is kept. */
   readonly chatIndex: boolean;
   /** The posts bots wrote in channels on their own (engine 0.23.0). */
@@ -404,11 +407,21 @@ export class Store {
   /** `fullText: false` leaves the full-text index out, as on a SQLite without it. For tests. */
   constructor(path: string, opts: { fullText?: boolean } = {}) {
     this.db = new DatabaseSync(path);
+    if (path && path !== ":memory:") {
+      // The database and its SQLite side files hold private link and webhook keys.
+      chmodSync(path, 0o600);
+      for (const end of ["-wal", "-shm"]) {
+        try { chmodSync(path + end, 0o600); }
+        catch (err) { if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err; }
+      }
+    }
     this.db.exec("PRAGMA journal_mode = WAL");
     this.db.exec("PRAGMA synchronous = NORMAL");
     this.db.exec("PRAGMA foreign_keys = ON");
     this.db.exec("PRAGMA busy_timeout = 3000");
     this.migrate();
+    this.links = new LinkStore(this.db);
+    this.links.migrate();
     this.makeTodoTable();
     makeChannelPostTables(this.db);
     this.posts = new ChannelPostStore(this.db);

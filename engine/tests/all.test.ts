@@ -52,6 +52,7 @@ await import("./fast.spec.js");
 await import("./attachments.spec.js");
 await import("./backup-format.spec.js");
 await import("./backup.spec.js");
+await import("./backup-upload.spec.js");
 await import("./restore.spec.js");
 await import("./steer.spec.js");
 await import("./settings7.spec.js");
@@ -81,3 +82,6 @@ await import("./first-start.spec.js");
 await import("./gpt-titles.spec.js");
 await import("./self-update.spec.js");
 await import("./usage-history.spec.js");
+
+await import("./link-wire.spec.js");
+await import("./links.spec.js");

@@ -127,11 +127,11 @@ function Reference({ backup }: { backup: BackupState }) {
 }
 
 function Runs({ history, now }: { history: BackupRun[]; now: Date }) {
-  // Keep rows in place while the window is open, even when the engine's recent list rolls over.
+  // Keep older rows while the window is open, even when the engine's recent list rolls over.
   const [earlier, setEarlier] = useState<BackupRun[]>([]);
   const merge = (previous: BackupRun[], latest: BackupRun[]) => [...new Map(
-    [...previous, ...[...latest].reverse()].map((run) => [run.at, run]),
-  ).values()];
+    [...previous, ...latest].map((run) => [run.at, run]),
+  ).values()].sort((a, b) => b.at.localeCompare(a.at));
   useEffect(() => { setEarlier((previous) => merge(previous, history)); }, [history]);
   const rows = merge(earlier, history);
   if (!rows.length) return <p className="pb-section-text">No backups yet.</p>;

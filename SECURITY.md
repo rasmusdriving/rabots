@@ -20,7 +20,7 @@ Pobots is maintained by one person in their own time. There is no bug bounty, an
 In scope, for example:
 
 - a way to open Pobots, its socket or its artifact pages from another device or web page without being allowed,
-- a way for a web page, an artifact, a webhook or a message from a channel to make a bot act or to read what it should not,
+- a way for a web page, an artifact, a webhook, a message from a channel or another Pobots to make a bot act or to read what it should not,
 - secrets (keys, tokens, the backup's private key) that end up in logs, files, the app or the network,
 - a bot reaching past what its settings allow.
 
@@ -32,5 +32,5 @@ Out of scope:
 ## Safe use
 
 - Remote access is off until you list a login in `remote.allowedLogins` in `config.json`. The engine listens on 127.0.0.1 only; other devices reach it only through `tailscale serve` on your own tailnet. Never put the engine's port on the open internet.
-- Webhooks are the only part meant to be reached from outside (through Tailscale Funnel, if you choose). Treat everything that comes in through them as untrusted data.
+- Only the /hook path is meant to be reached from outside (through Tailscale Funnel, if you choose). It serves webhooks and [paired Pobots connections](docs/connections.md). Treat all incoming text as untrusted data. A paired connection sends outside text into the main bot's normal session, where it has memory, tools and its usual access. The message cannot answer approval cards or grant access, but a model can still be talked into sharing information or taking actions. Pair only with people you trust, and pause the connection to stop new messages.
 - Keep secrets in a password manager and give bots references, not values.

@@ -145,7 +145,7 @@ describe("the allowed list", () => {
     const ms = await busy(engine, sessions, main.id);
     const bs = await busy(engine, sessions, b.id);
     const everyone = ["list_bots", "message_bot", "ask_human", "notify_human", "list_triggers", "set_schedule", "set_webhook", "webhook_address", "remove_trigger", "list_channels", "post_to_channel", "search_chat", "read_chat", "show_artifact", "add_todo", "update_todo", "remove_todo", "list_todos", "start_helper", "read_helper", "steer_helper", "stop_helper", "start_task_manager", "end_task_manager"];
-    assert.deepEqual(ms.toolNames(), [...everyone, "get_bot", "create_bot", "update_bot", "retire_bot", "bot_files", "set_channel_route", "remove_channel_route", "update_channel", "get_settings", "change_settings", "run_pobots_task", "activity_log"]);
+    assert.deepEqual(ms.toolNames(), [...everyone, "get_bot", "create_bot", "update_bot", "retire_bot", "bot_files", "set_channel_route", "remove_channel_route", "update_channel", "get_settings", "change_settings", "run_pobots_task", "activity_log", "list_connections", "set_connection", "message_pobots"]);
     // A bot that is not the main bot gets one tool more: what it sees itself, on a Claude model.
     assert.deepEqual(bs.toolNames(), [...everyone, "change_what_i_see"]);
     assert.match(ms.settings.team, /You are the main bot/);

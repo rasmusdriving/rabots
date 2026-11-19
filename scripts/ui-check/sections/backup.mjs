@@ -28,7 +28,11 @@ export default async function section() {
       await ev('document.querySelector(".pb-backup").scrollIntoView({block:"start"})');
       await shot("backup-headless-restic-missing");
     }
-    if (seed === "saved") check("backup: shows the iCloud folder, size and snapshot count", await ev('document.querySelector(".pb-backup").innerText.includes("iCloud Drive · Pobots Backup") && /MB · [0-9]+ snapshots/.test(document.querySelector(".pb-backup").innerText)'));
+    if (seed === "saved") {
+      check("backup: shows the iCloud folder, size and snapshot count", await ev('document.querySelector(".pb-backup").innerText.includes("iCloud Drive · Pobots Backup") && /MB · [0-9]+ snapshots/.test(document.querySelector(".pb-backup").innerText)'));
+      const dates = await ev('[...document.querySelectorAll(".pb-backup-runs time")].map(t => t.dateTime)');
+      check("backup: existing history is newest first", dates.length === 2 && dates[0] > dates[1]);
+    }
   }
 
   await settings("none", { width: 360, height: 780, theme: "light" });
@@ -51,7 +55,7 @@ export default async function section() {
   check("backup: shows an immediate in-place running state", !!(await until(`(${line}).includes("Backing up now") && ${button}.disabled`)));
   check("backup: starting a run keeps the controls in place at Android width", JSON.stringify(await ev(measure)) === JSON.stringify(before));
   check("backup: manual run ends in saved", !!(await until(`(${line}).includes("Saved to iCloud") && !${button}.disabled`, 6000)));
-  check("backup: recent run records amount added and who started it", await ev('document.querySelector(".pb-backup-runs li:last-child").innerText.includes("By you · 100 KB added")'));
+  check("backup: recent run records amount added and who started it", await ev('document.querySelector(".pb-backup-runs li:first-child").innerText.includes("By you · 100 KB added")'));
   await shot("backup-headless-android-light");
   const widths = await ev('(() => { const section = document.querySelector(".pb-backup"); return [section.scrollWidth, section.clientWidth, ...[...section.children].filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.className)]; })()');
   check("backup: phone section fits horizontally", widths[0] <= widths[1] + 1, JSON.stringify(widths));

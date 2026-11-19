@@ -23,6 +23,7 @@ import { SEES_ON_WORDS, seesSettings } from "../claude/sees.js";
 import { codexSeesParagraph } from "../codex/sees.js";
 import { codexSeesFor } from "./helper-sees.js";
 import { ClaudeSession, type SessionSettings } from "../claude/session.js";
+import { connectionText } from "./link-bot.js";
 import { canUseTool } from "./cards.js";
 import { noteKey } from "./restored-cards.js";
 import { questionTurnStarts } from "./card-questions.js";
@@ -139,6 +140,11 @@ export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: 
   if (from.type === "channel") {
     const ch = eng.store.getChannel(from.channelId);
     text = channelText({ sender: from.sender, channel: from.label, tag: from.tag, text: item.text, context: from.context ?? [], hasReplyUrl: !!ch?.replyUrl });
+  }
+
+  if (from.type === "connection") {
+    const question = from.mode === "answer" ? eng.store.links.answerQuestion(from.id, item.id) : undefined;
+    text = connectionText(from, item.text, question);
   }
 
   eng.setState(rt, "thinking", "Thinking");
@@ -392,7 +398,9 @@ export function lastMessages(eng: Engine, rt: BotRuntime, max: number, budget: n
     let line: string | undefined;
     if (item.kind === "user") {
       if (item.from.type === "app") continue;
-      line = `${speaker(eng, item)}: ${[clip(item.text, 600), ...attachmentLines(item.attachments)].filter(Boolean).join(" ")}`;
+      const text = clip(item.text, 600);
+      line = `${speaker(eng, item)}: ${item.from.type === "connection"
+        ? JSON.stringify(text) : [text, ...attachmentLines(item.attachments)].filter(Boolean).join(" ")}`;
     } else if (item.kind === "bot" && item.text.trim()) {
       if (eng.store.isTidyTurn(item.turnId)) continue;
       line = `You: ${clip(item.text, 600)}`;
@@ -414,6 +422,8 @@ export function speaker(eng: Engine, item: ChatHit): string {
       return `${eng.nameOf(from.botId)} (another bot)`;
     case "trigger":
       return from.result ? `Result of the trigger ${from.label}` : `The trigger ${from.label}`;
+    case "connection":
+      return `Outside message from ${JSON.stringify(from.name)} in another Pobots`;
     case "channel":
       return `${from.sender} in the channel ${from.label}`;
     case "app":

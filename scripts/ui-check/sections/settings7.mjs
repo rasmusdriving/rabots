@@ -43,7 +43,7 @@ export default async function section() {
     await until(`!!$(".pb-setwin")`);
     await sleep(250);
     const win = await ev(`({ tabs: $$(".pb-setwin-tab").map((t) => t.textContent + (t.getAttribute("aria-selected") === "true" ? "*" : "")), title: $(".pb-appsettings-title").textContent, focus: document.activeElement?.textContent, parts: $$(".pb-appsettings-section").map((s) => s.dataset.section).join(",") })`);
-    check(T("the settings window opens on General, the six sections listed on the left, its title in focus"), win?.tabs?.join(",") === "General*,Chats,Providers,Calendar,Usage,Activity" && win.title === "Settings" && win.focus === "Settings" && win.parts === "about,notify,chat,backup", win);
+    check(T("the settings window opens on General, the seven sections listed on the left, its title in focus"), win?.tabs?.join(",") === "General*,Chats,Providers,Calendar,Usage,Connections,Activity" && win.title === "Settings" && win.focus === "Settings" && win.parts === "about,notify,chat,backup", win);
     const box0 = await ev(winBox);
     const boxes = [];
     for (const id of ["chats", "providers", "calendar", "usage", "general"]) {

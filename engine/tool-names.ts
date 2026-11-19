@@ -8,6 +8,9 @@ export const FOLLOW_UP_RULE = "The person may ask about a card before acting; an
 
 export const TOOL_NAMES = {
   listBots: "list_bots",
+  listConnections: "list_connections",
+  setConnection: "set_connection",
+  messagePobots: "message_pobots",
   messageBot: "message_bot",
   askHuman: "ask_human",
   notifyHuman: "notify_human",
@@ -53,6 +56,9 @@ export const TOOL_NAMES = {
   // Engine 0.28.0: a day's activity, for the person's time reporting.
   activityLog: "activity_log",
 } as const;
+
+const LINK_TOOLS: ReadonlySet<string> = new Set([TOOL_NAMES.listConnections, TOOL_NAMES.setConnection, TOOL_NAMES.messagePobots]);
+export const isLinkTool = (name: string): boolean => LINK_TOOLS.has(name);
 
 export function ok(text: string): ToolResult {
   return { content: [{ type: "text", text }] };

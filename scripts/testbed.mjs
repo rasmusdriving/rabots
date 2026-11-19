@@ -35,6 +35,8 @@ const flags = [
   `--bots-dir=${TESTBED.botsDir}`,
   `--install-dir=${TESTBED.installDir}`,
 ];
+const connectionTestPeer = process.argv.find(a => a.startsWith("--connections-test-peer="));
+if (connectionTestPeer) flags.push(connectionTestPeer);
 const service = (command) => spawnSync(process.execPath, [join(repo, "scripts", "service.mjs"), command, ...flags], { stdio: "inherit" }).status ?? 1;
 
 /** The test copy uses the same Claude setup and the same allowed Tailscale logins as the real one. Values are never printed. */

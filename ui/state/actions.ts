@@ -536,6 +536,10 @@ export async function resolveCard(cardId: string, decision: CardDecision): Promi
 // ------------------------------------------------------------ the nightly backup
 
 /** Saves the 1Password reference, never the password. */
+export function setConnection(change: Methods["connection.set"]["params"]) {
+  return engine().request("connection.set", change);
+}
+
 export async function setBackupPasswordRef(passwordRef: string): Promise<void> {
   const seen = store.backupEvents;
   const { backup } = await engine().request("backup.setPasswordRef", { passwordRef });

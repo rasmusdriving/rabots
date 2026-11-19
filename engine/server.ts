@@ -37,6 +37,7 @@ import { ATTACH_WORDS, cleanName, UPLOADS_TOTAL_MAX, type ServedFile } from "./a
 import type { BrowserConn } from "./browser.js";
 import { ENGINE_VERSION, type Engine } from "./engine.js";
 import { EngineError, toErrorBody } from "./errors.js";
+import { linkHook } from "./core/link-hook.js";
 import { ENGINE_HEADER } from "./lock.js";
 import { log } from "./log.js";
 import { personActionAfter, personActionBefore, whereFrom } from "./core/person-actions.js";
@@ -396,6 +397,7 @@ export class EngineServer {
       return refuse(404, "Not found");
     };
     if (req.method !== "POST" || !engine || parts.length !== 4 || !parts[2] || !parts[3]) return wrong();
+    if (parts[2] === "link") return linkHook(engine.links, req, res, parts[3], wrong);
     const id = parts[2];
     const kind = engine.hookTarget(id, parts[3]);
     if (!kind) return wrong();
@@ -1214,6 +1216,10 @@ export class EngineServer {
       }
       case "backup.setPasswordRef":
         return engine.setBackupPasswordRef((params as Methods["backup.setPasswordRef"]["params"]).passwordRef);
+      case "connection.list":
+        return engine.links.list();
+      case "connection.set":
+        return engine.links.change(params as Methods["connection.set"]["params"]);
       case "backup.run":
         return engine.runBackup();
       case "notify.setKinds":
