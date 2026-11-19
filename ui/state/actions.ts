@@ -535,14 +535,10 @@ export async function resolveCard(cardId: string, decision: CardDecision): Promi
 
 // ------------------------------------------------------------ the nightly backup
 
-/**
- * Saves the public key the backups are locked to. The engine checks it and refuses with one plain
- * sentence; the window shows that sentence. A text that holds a private key is never sent: the
- * caller refuses it first (see looksPrivate in lib/backup.ts).
- */
-export async function setBackupKey(publicKey: string): Promise<void> {
+/** Saves the 1Password reference, never the password. */
+export async function setBackupPasswordRef(passwordRef: string): Promise<void> {
   const seen = store.backupEvents;
-  const { backup } = await engine().request("backup.setKey", { publicKey });
+  const { backup } = await engine().request("backup.setPasswordRef", { passwordRef });
   // A "backup.changed" that came meanwhile is at least as new as this answer.
   if (store.backupEvents === seen) store.setBackup(backup);
 }

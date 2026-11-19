@@ -12,7 +12,7 @@
 // notifyPresence, notifySubscribes, notifyAddDevice, notifyGone, notifySent.
 import { NOTIFY_MAX_DEVICES, type Events, type Methods, type NotifyDevice, type NotifySend, type NotifyState } from "../../shared/protocol";
 import { base64url } from "../lib/notify";
-import { sha256 } from "./mock-backup";
+import { sha256 } from "./mock-sha256";
 import { EngineError } from "./types";
 
 type Service = NotifyDevice["service"];

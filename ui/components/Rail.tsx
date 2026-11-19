@@ -1,5 +1,5 @@
 // The right side, on the ground: what needs a decision, as raised cards, oldest first.
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { ApprovalCard as Approval, Bot, Card, CardDecision, NoteCard as Note, QuestionCard as Question, SystemCard as System, Upcoming } from "../../shared/protocol";
 import { messageOf } from "../engine/types";
 import { askCard, resolveCard } from "../state/actions";
@@ -15,9 +15,8 @@ import { TaskManagers } from "./TaskManagers";
 import { TodoList } from "./Todo";
 import { MeetingDetail } from "./MeetingCard";
 import { CardQuestions } from "./CardQuestions";
+import { useRailExit, useRailLeaving } from "./rail-leaving";
 
-/** How long an answered card takes to settle and leave: dur-slow. */
-const LEAVE_MS = 480;
 /** How often the "Expires in" line is brought up to date. */
 const EXPIRY_TICK_MS = 15_000;
 
@@ -25,7 +24,7 @@ const EXPIRY_TICK_MS = 15_000;
 export function Rail({ covered = false }: { covered?: boolean }) {
   const cards = useAppState((s) => s.cards);
   const bots = useAppState((s) => s.bots);
-  const shown = useLeaving(cards);
+  const { rows: shown, finish } = useRailLeaving(cards, slotKey);
   const open = cards.length;
   const allToday = cards.every((c) => new Date(c.at).toDateString() === new Date().toDateString());
   const phone = usePhone();
@@ -42,21 +41,8 @@ export function Rail({ covered = false }: { covered?: boolean }) {
         Needs you {open > 0 && <span>{`${open} ${allToday ? "today" : "open"}`}</span>}
       </h2>
       {shown.length === 0 && <p className="app-rail-empty">Nothing needs you</p>}
-      {shown.map(({ card, leaving }) => (
-        // A card from Pobots itself keeps its slot when a newer one on the same topic takes its place.
-        <div className="app-card-slot" data-leaving={leaving ? (store.get().removedReasons[card.id] === "resolved" ? "resolved" : "quiet") : undefined} key={slotKey(card, leaving)}>
-          <div className="app-card-slot-inner">
-            {card.kind === "approval" ? (
-              <ApprovalCard card={card} bot={bots.find((b) => b.id === card.botId)} />
-            ) : card.kind === "note" ? (
-              <NoteCard card={card} bot={bots.find((b) => b.id === card.botId)} />
-            ) : card.kind === "system" ? (
-              <SystemCard card={card} />
-            ) : (
-              <QuestionCard card={card} bot={bots.find((b) => b.id === card.botId)} />
-            )}
-          </div>
-        </div>
+      {shown.map(({ item: card, key, leaving }) => (
+        <CardSlot key={key} card={card} slot={key} leaving={leaving} finish={finish} bot={card.kind === "system" ? undefined : bots.find((b) => b.id === card.botId)} />
       ))}
       <LaterToday />
       {/* The foot of the rail, in sight however many cards wait: the helpers that work now, across
@@ -123,48 +109,23 @@ function LaterToday() {
   );
 }
 
-/** The slot of a card from Pobots itself is its topic's, so a newer card on the topic stands in the same slot. */
-const slotKey = (card: Card, leaving: boolean): string => (card.kind === "system" && !leaving ? `system-${card.topic}` : card.id);
+/** A newer Pobots card on the same topic stays in the same keyed slot. */
+const slotKey = (card: Card): string => card.kind === "system" ? `system-${card.topic}` : card.id;
 
-/**
- * Keeps a removed card on screen for a moment so it can settle and leave instead of vanishing. A
- * leaving card keeps its place among the others: after the card that stood before it. A card from
- * Pobots that a newer one on the same topic replaced does not leave: the new one is in its place.
- */
-function useLeaving(cards: Card[]): { card: Card; leaving: boolean }[] {
-  const [leaving, setLeaving] = useState<{ card: Card; after: string | null }[]>([]);
-  const previous = useRef<Card[]>(cards);
-
-  useEffect(() => {
-    const ids = new Set(cards.map((c) => c.id));
-    const replaced = store.get().replacedCards;
-    const before = previous.current;
-    previous.current = cards;
-    const gone = before
-      .map((card, i) => {
-        // The nearest card before it that is still there, so it leaves from where it stood.
-        let after: string | null = null;
-        for (let j = i - 1; j >= 0; j--)
-          if (ids.has(before[j]!.id)) {
-            after = before[j]!.id;
-            break;
-          }
-        return { card, after };
-      })
-      .filter((g) => !ids.has(g.card.id) && !replaced[g.card.id]);
-    if (gone.length === 0) return;
-    setLeaving((l) => [...l, ...gone]);
-    // Not cleared when the cards change again: each card must still finish leaving.
-    setTimeout(() => setLeaving((l) => l.filter((x) => !gone.includes(x))), LEAVE_MS);
-  }, [cards]);
-
-  const all: { card: Card; leaving: boolean }[] = cards.map((card) => ({ card, leaving: false }));
-  for (const { card, after } of leaving) {
-    if (all.some((x) => x.card.id === card.id)) continue;
-    const at = after ? all.findIndex((x) => x.card.id === after) : -1;
-    all.splice(at + 1, 0, { card, leaving: true });
-  }
-  return all;
+function CardSlot({ card, slot, leaving, finish, bot }: { card: Card; slot: string; leaving: boolean; finish: (key: string) => void; bot: Bot | undefined }) {
+  const ref = useRailExit<HTMLDivElement>(slot, leaving, finish);
+  const reason = store.get().removedReasons[card.id];
+  return (
+    <div ref={ref} className="app-card-slot app-rail-exit" inert={leaving || undefined}
+      data-leaving={leaving ? (reason === "resolved" ? "resolved" : "quiet") : undefined}>
+      <div className="app-rail-exit-inner">
+        {card.kind === "approval" ? <ApprovalCard card={card} bot={bot} />
+          : card.kind === "note" ? <NoteCard card={card} bot={bot} />
+          : card.kind === "system" ? <SystemCard card={card} />
+          : <QuestionCard card={card} bot={bot} />}
+      </div>
+    </div>
+  );
 }
 
 function useDecide(cardId: string) {

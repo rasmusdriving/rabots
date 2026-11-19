@@ -1212,8 +1212,8 @@ export class EngineServer {
         engine.resolveCard(p.cardId, p.decision);
         return {};
       }
-      case "backup.setKey":
-        return engine.setBackupKey((params as Methods["backup.setKey"]["params"]).publicKey);
+      case "backup.setPasswordRef":
+        return engine.setBackupPasswordRef((params as Methods["backup.setPasswordRef"]["params"]).passwordRef);
       case "backup.run":
         return engine.runBackup();
       case "notify.setKinds":

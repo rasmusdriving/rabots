@@ -175,7 +175,8 @@ export function describeTool(name: string, input: Input): ToolWords {
   if (mcp) {
     const tool = words(mcp[2]!);
     const server = words(mcp[1]!.replace(/^claude_ai_/, ""));
-    return { done: `Used ${tool} in ${server}`, running: `Using ${tool} in ${server}`, detail: compactJson(input) };
+    const step = `${tool} in ${server}`;
+    return { done: `Used ${step}`, running: `Using ${step}`, failed: `Could not use ${step}`, detail: compactJson(input) };
   }
   return { done: `Used ${words(name)}`, running: `Using ${words(name)}`, detail: compactJson(input) };
 }

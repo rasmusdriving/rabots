@@ -276,10 +276,11 @@ async function playTurn(threadId, turnId, text) {
       note("thread/compacted", { threadId, turnId });
       await answer(threadId, turnId, "compacted");
       break;
-    case "mcp": {
+    case "mcp":
+    case "mcp-fail": {
       const id = `mcp-${randomUUID()}`;
       note("item/started", { threadId, turnId, item: { type: "mcpToolCall", id, server: "docs", tool: "search", status: "inProgress", arguments: { q: "x" }, result: null, error: null } });
-      note("item/completed", { threadId, turnId, item: { type: "mcpToolCall", id, server: "docs", tool: "search", status: "completed", arguments: { q: "x" }, result: { content: [{ type: "text", text: "found" }] }, error: null } });
+      note("item/completed", { threadId, turnId, item: { type: "mcpToolCall", id, server: "docs", tool: "search", status: "completed", arguments: { q: "x" }, result: { content: [{ type: "text", text: kind === "mcp-fail" ? "Service unavailable" : "found" }], ...(kind === "mcp-fail" ? { isError: true } : {}) }, error: null } });
       await answer(threadId, turnId, "searched");
       break;
     }

@@ -82,14 +82,14 @@ export function Roster({ covered = false }: { covered?: boolean } = {}) {
 
 /**
  * Step 7b: the icon row at the very foot, as in T3 Code's sidebar: the gear (the settings window; a
- * small quiet dot while no backup key is saved), the bars (the settings window on Usage), and at
+ * small quiet dot while backup is not set up), the bars (the settings window on Usage), and at
  * the right a round arrow only while Claude Code or Codex has an update (or one runs). The arrow's
  * place is kept when it is not there, so nothing moves when it comes.
  */
 function FootIcons() {
   const open = useAppState((s) => s.appSettings);
   const section = useAppState((s) => s.appSettingsSection);
-  const noKey = useAppState((s) => !!s.backup && !s.backup.key);
+  const noKey = useAppState((s) => !!s.backup && (!s.backup.passwordRef || !s.backup.resticInstalled));
   const providers = useAppState((s) => s.providers);
   const [asking, setAsking] = useState(false);
   // Pobots itself is in the list too on a public install (engine 0.34.0, lib/pobots-update.ts).

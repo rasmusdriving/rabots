@@ -39,7 +39,7 @@ export default async function section() {
   // ---------------- a to-do
   await s.request("message.send", {
     botId: bot.id,
-    text: `This is a test inside Pobots only. Use the Pobots tool add_todo (mcp__pobots__add_todo) once, with the title "${TODO_TITLE}", one text block "Choose Teal or Amber.", and the buttons Teal and Amber. ${RULES} Then reply with only the word Added. If I later ask about the to-do, answer in one short sentence that Teal is the calmer one.`,
+    text: `This is a test inside Pobots only. Use the Pobots tool add_todo (mcp__pobots__add_todo) once, with the title "${TODO_TITLE}", one text block "Choose Teal or Amber.", and the buttons Teal and Amber. ${RULES} Then reply with only the word Added. If I later ask about the to-do, answer in one short sentence that Teal is calmer if asked which is calmer, and Amber is warmer if asked which is warmer.`,
   });
   let todo;
   const end1 = Date.now() + 180_000;
@@ -53,15 +53,19 @@ export default async function section() {
   await js(`document.querySelector('.app-rail .pb-todo-item[data-todo-id="${todo.id}"]').click()`);
   const box = await until(`document.querySelector(".pb-dialog .pb-cq-input")?.placeholder`, 15_000);
   check("card questions: the to-do's window has the box", box === "Ask about this before you act", box);
-  await askIn(`document.querySelector(".pb-dialog")`, "Which one is calmer?");
+  const dialog = `document.querySelector(".pb-dialog")`;
+  await askIn(dialog, "Which one is calmer?");
+  await askIn(dialog, "Which one is warmer?");
+  const todoRows = await until(`document.querySelectorAll(".pb-dialog .pb-cq-item").length === 2`, 15_000);
+  check("card questions: two questions can be sent to the same to-do before acting", !!todoRows);
   let q;
   const end2 = Date.now() + 180_000;
   while (Date.now() < end2) {
-    q = (await s.request("snapshot")).todos.find((t) => t.id === todo.id)?.questions?.[0];
-    if (q && (q.state === "answered" || q.state === "unanswered")) break;
+    q = (await s.request("snapshot")).todos.find((t) => t.id === todo.id)?.questions;
+    if (q?.length === 2 && q.every((x) => x.state === "answered" || x.state === "unanswered")) break;
     await sleep(1000);
   }
-  check("card questions: the bot's answer lands in the to-do", q?.state === "answered" && /teal/i.test(q.answer ?? ""), JSON.stringify(q));
+  check("card questions: the bot's answer lands in the to-do", q?.[0]?.state === "answered" && /teal/i.test(q[0].answer ?? "") && q?.[1]?.state === "answered" && /amber/i.test(q[1].answer ?? ""), JSON.stringify(q));
   const shown = await until(`document.querySelector(".pb-dialog .pb-cq-answer")?.textContent`, 15_000);
   check("card questions: the window shows the answer inside the to-do", /teal/i.test(shown ?? ""), shown);
   check("card questions: the to-do stays open after a question", !!(await s.request("snapshot")).todos.find((t) => t.id === todo.id));
@@ -85,7 +89,7 @@ export default async function section() {
   // ---------------- an ask_human card
   await s.request("message.send", {
     botId: bot.id,
-    text: `Next test, inside Pobots only. Use the Pobots tool ask_human (mcp__pobots__ask_human) with the question "${QUESTION}" and the choices Teal and Amber. ${RULES} If the tool returns that I ask a question first, answer it in one short sentence (Teal is the calmer one), then call ask_human again with the same question and choices, as the tool says. When my answer comes, reply with only the colour I chose.`,
+    text: `Next test, inside Pobots only. Use the Pobots tool ask_human (mcp__pobots__ask_human) with the question "${QUESTION}" and the choices Teal and Amber. ${RULES} If the tool returns that I ask a question first, answer it in one short sentence (Teal is calmer if asked which is calmer, Amber is warmer if asked which is warmer), then call ask_human again with the same question and choices. Repeat for each follow-up as the tool says. When my answer comes, reply with only the colour I chose.`,
   });
   let card;
   const end4 = Date.now() + 180_000;
@@ -98,22 +102,22 @@ export default async function section() {
   const cardEl = `[...document.querySelectorAll(".app-rail .pb-card")].find((c) => c.querySelector(".pb-card-title")?.textContent.startsWith("Which colour"))`;
   await until(`!!(${cardEl})?.querySelector(".pb-cq-input")`, 15_000);
   await askIn(cardEl, "Which one is calmer?");
+  await askIn(cardEl, "Which one is warmer?");
   let now;
   const end5 = Date.now() + 180_000;
   while (Date.now() < end5) {
     now = (await s.request("snapshot")).cards.find((c) => c.id === card.id);
-    const q0 = now?.questions?.[0];
-    if (q0 && (q0.state === "answered" || q0.state === "unanswered")) break;
+    if (now?.questions?.length === 2 && now.questions.every((x) => x.state === "answered" || x.state === "unanswered")) break;
     await sleep(1000);
   }
   const q0 = now?.questions?.[0];
-  check("card questions: the bot answered and asked again in the same card (same id), with the answer in it", q0?.state === "answered" && /teal/i.test(q0.answer ?? ""), JSON.stringify(now));
+  check("card questions: the bot answered and asked again in the same card (same id), with the answer in it", q0?.state === "answered" && /teal/i.test(q0.answer ?? "") && now?.questions?.[1]?.state === "answered" && /amber/i.test(now.questions[1].answer ?? ""), JSON.stringify(now));
   check("card questions: only one card for the question stands on the rail", (await s.request("snapshot")).cards.filter((c) => c.kind === "question" && c.botId === bot.id).length === 1);
   const inCard = await until(`(${cardEl})?.querySelector(".pb-cq-answer")?.textContent`, 15_000);
   check("card questions: the window shows the answer inside the card", /teal/i.test(inCard ?? ""), inCard);
   items = (await s.request("thread.read", { threadId: bot.mainThreadId, limit: 200 })).items;
   const askedCard = items.filter((i) => i.kind === "user" && i.from?.question && i.from.card?.id === card.id);
-  check("card questions: his question on the card is in the chat once, above the answer", askedCard.length === 1 && askedCard[0].text === "Which one is calmer?" && !askedCard[0].queued, JSON.stringify(askedCard));
+  check("card questions: his questions on the card reach the chat once each and in order", askedCard.length === 2 && askedCard[0].text === "Which one is calmer?" && askedCard[1].text === "Which one is warmer?" && askedCard.every((i) => !i.queued), JSON.stringify(askedCard));
   await shot("91-card-question");
   // Then a choice answers it as before.
   await js(`[...(${cardEl}).querySelectorAll(".pb-card-actions .pb-btn")].find((b) => b.textContent.trim() === "Amber").click()`);

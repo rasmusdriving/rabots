@@ -14,13 +14,13 @@
 //   bot-to-bot ask takes it. A task manager's to-do or card goes to the task manager while it is there.
 import type { Engine } from "../engine.js";
 import type { BotRuntime, InternalDecision, PendingCard } from "./runtime.js";
-import { deliver, type TaskManager } from "./task-managers.js";
+import { deliver, type ManagerMessage, type TaskManager } from "./task-managers.js";
 import { CARD_QUESTION_TEXT_MAX, CARD_QUESTIONS_MAX, type CardQuestion, type Methods, type QuestionCard, type UserItem } from "../../shared/protocol.js";
 import { randomUUID } from "node:crypto";
 import { EngineError } from "../errors.js";
 import { log } from "../log.js";
 import { clip, now } from "./words.js";
-import { endHold, startNextInLine } from "./stop.js";
+import { endHold, saveHold, startNextInLine } from "./stop.js";
 import { answered } from "./restored-cards.js";
 import { restWaitChanged } from "./restored-waiting.js";
 import { FOLLOW_UP_RULE } from "../tool-names.js";
@@ -51,6 +51,7 @@ interface ManagerWatch {
   qid: string;
   botId: string;
   tmId: string;
+  itemId: string;
   active: boolean;
 }
 
@@ -140,7 +141,9 @@ function setState(qs: CardQuestion[], qid: string, state: CardQuestion["state"])
 
 function add(qs: CardQuestion[], q: CardQuestion): CardQuestion[] {
   const list = [...qs, q];
-  return list.length > CARD_QUESTIONS_MAX ? list.slice(list.length - CARD_QUESTIONS_MAX) : list;
+  const finished = list.findIndex((entry) => entry.state === "answered" || entry.state === "unanswered");
+  if (list.length > CARD_QUESTIONS_MAX && finished >= 0) list.splice(finished, 1);
+  return list;
 }
 
 function cleanText(text: string): string {
@@ -150,9 +153,11 @@ function cleanText(text: string): string {
   return t;
 }
 
-/** One question at a time per card: the next waits for the answer. */
-function checkFree(qs: CardQuestion[]): void {
-  if (qs.some((q) => q.state === "queued" || q.state === "answering")) throw new EngineError("bad_request", "Wait for the answer to your last question first.");
+/** Never drop an unanswered question to make room in a long history. */
+function checkRoom(qs: CardQuestion[]): void {
+  if (qs.filter((q) => q.state === "queued" || q.state === "answering").length >= CARD_QUESTIONS_MAX) {
+    throw new EngineError("bad_request", "There are too many questions waiting. Try again when a reply comes.");
+  }
 }
 
 // ------------------------------------------------------------ the person asks
@@ -165,7 +170,7 @@ export function askOnTodo(eng: Engine, params: Methods["todo.ask"]["params"]): M
   const rt = eng.bots.get(row.todo.botId);
   if (!rt) throw new EngineError("not_found", "The bot of this to-do is gone.");
   const text = cleanText(params.text);
-  checkFree(row.todo.questions ?? []);
+  checkRoom(row.todo.questions ?? []);
   const todo = row.todo;
   const target: Target = { kind: "todo", id: todo.id };
   const from: UserItem["from"] = { type: "you", todo: { id: todo.id, title: todo.title }, question: true };
@@ -190,18 +195,15 @@ export function askOnCard(eng: Engine, params: Methods["card.ask"]["params"]): M
   const rt = pending.rt;
   if (card.kind !== "question" || card.helper || !rt || pending.helper) throw new EngineError("bad_request", "This card does not take questions.");
   const text = cleanText(params.text);
-  checkFree(card.questions ?? []);
+  checkRoom(card.questions ?? []);
   const target: Target = { kind: "card", id: card.id };
   // The call that raised it still waits: it returns with his question, and the card stays.
   const from: UserItem["from"] = { type: "you", card: { id: card.id, title: card.title }, question: true };
   if (!pending.restored && !pending.call?.detached) {
     const qid = newQuestionId();
     writeQuestions(eng, target, (qs) => add(qs, { id: qid, at: now(), text, state: "answering" }));
-    // His question stands in the chat too, above the answer, as a message that went into the running
-    // turn (the way a steered message does): the bot's work after it goes on under the same face.
-    const thread = card.threadId ?? eng.liveThread(rt);
-    const turnId = rt.turn && rt.busy && rt.turn.threadId === thread ? rt.turn.id : undefined;
-    eng.addItem(rt, { kind: "user", at: now(), text, from, queued: false, steered: true, ...(turnId ? { turnId } : {}) }, thread);
+    // Show his question above the answer, in the same turn as the waiting call.
+    eng.addItem(rt, { kind: "user", at: now(), text, from, ...feedbackFields(rt, card.threadId) }, card.threadId);
     park(eng, pending, qid);
     pending.resolve({ type: "ask", text });
     log.info(`Bot ${rt.folder.id}: the person asked about a question card while its call waited`);
@@ -214,42 +216,39 @@ export function askOnCard(eng: Engine, params: Methods["card.ask"]["params"]): M
     return {};
   }
   eng.checkReady(rt);
-  toBot(eng, rt, target, text, from);
+  toBot(eng, rt, target, text, from, st(eng).parks.has(card.id) ? card.threadId : undefined);
   log.info(`Bot ${rt.folder.id}: the person asked about a card`);
   return {};
 }
 
 /** As a message from him that waits in line and never steers in, like an answer to a to-do. */
-function toBot(eng: Engine, rt: BotRuntime, target: Target, text: string, from: UserItem["from"]): void {
+function toBot(eng: Engine, rt: BotRuntime, target: Target, text: string, from: UserItem["from"], threadId?: string): void {
   const itemId = randomUUID();
   const qid = newQuestionId();
   writeQuestions(eng, target, (qs) => add(qs, { id: qid, at: now(), text, state: "queued", itemId }));
   eng.store.setValue(itemKey(itemId), JSON.stringify({ target, qid }));
   const holding = !!rt.hold;
-  eng.enqueue(rt, text, from, { behind: holding, itemId });
+  eng.enqueue(rt, text, from, { behind: holding, itemId, ...(threadId ? { threadId } : {}) });
   if (holding) {
     endHold(eng, rt);
     startNextInLine(eng, rt);
   }
 }
 
-/** To the task manager: into its running turn or its next one. */
+/** Each question starts its own turn, using the task manager's normal inbox. */
 function toManager(eng: Engine, rt: BotRuntime, tm: TaskManager, target: Target, text: string, from: UserItem["from"], lead: string): void {
   const itemId = randomUUID();
   const qid = newQuestionId();
+  const prompt = `${lead}\n\n${text}`;
+  eng.store.setValue(itemKey(itemId), JSON.stringify({ manager: tm.id, prompt }));
   writeQuestions(eng, target, (qs) => add(qs, { id: qid, at: now(), text, state: "queued", itemId }));
   eng.addItem(rt, { id: itemId, kind: "user", at: now(), text, from, queued: false }, tm.ownThread);
-  const w: ManagerWatch = { target, qid, botId: rt.folder.id, tmId: tm.id, active: false };
-  st(eng).managers.push(w);
-  void deliver(eng, rt, tm, `${lead}\n\n${text}`, "person", itemId)
-    .then((how) => {
-      if (how !== "queued") activate(eng, w);
-      else if (!rt.managers.has(tm.id)) endWatch(eng, w, "");
-    })
-    .catch((err) => {
-      log.error(`Bot ${rt.folder.id}: could not pass a question to a task manager`, err);
-      endWatch(eng, w, "");
-    });
+  st(eng).managers.push({ target, qid, botId: rt.folder.id, tmId: tm.id, itemId, active: false });
+  void deliver(eng, rt, tm, prompt, "person", itemId, true).catch((err) => {
+    log.error(`Bot ${rt.folder.id}: could not pass a question to a task manager`, err);
+    const w = st(eng).managers.find((watch) => watch.itemId === itemId);
+    if (w) endWatch(eng, w, "");
+  });
 }
 
 function activate(eng: Engine, w: ManagerWatch): void {
@@ -261,6 +260,7 @@ function activate(eng: Engine, w: ManagerWatch): void {
 function endWatch(eng: Engine, w: ManagerWatch, said: string): void {
   const s = st(eng);
   s.managers = s.managers.filter((m) => m !== w);
+  eng.store.deleteValue(itemKey(w.itemId));
   writeQuestions(eng, w.target, (qs) => settle(qs, w.qid, said));
 }
 
@@ -336,8 +336,9 @@ export function questionTurnEnds(eng: Engine, rt: BotRuntime, turnId: string | u
 // ------------------------------------------------------------ hooks: task managers
 
 /** A turn of the task manager begins (task-managers.ts beginTurn): what waited for it is being answered. */
-export function managerTurnBegins(eng: Engine, tm: TaskManager): void {
-  for (const w of [...st(eng).managers]) if (w.tmId === tm.id) activate(eng, w);
+export function managerTurnBegins(eng: Engine, tm: TaskManager, questionId: string): void {
+  const w = st(eng).managers.find((watch) => watch.tmId === tm.id && watch.itemId === questionId);
+  if (w) activate(eng, w);
 }
 
 /** The task manager said something (task-managers.ts said). */
@@ -431,6 +432,35 @@ function closePark(eng: Engine, p: Park): void {
   }
 }
 
+function feedbackFields(rt: BotRuntime, threadId: string) {
+  const turnId = rt.busy && rt.turn?.threadId === threadId ? rt.turn.id : undefined;
+  return { queued: false, steered: true, ...(turnId ? { turnId } : {}) };
+}
+
+/** The waiting call can take the oldest question on this card without starting a second turn. */
+function takePendingFeedback(eng: Engine, rt: BotRuntime, card: QuestionCard, manager?: string): CardQuestion | undefined {
+  const q = card.questions?.find((entry) => entry.state === "queued");
+  if (!q?.itemId) return undefined;
+  const item = eng.store.getItem(q.itemId);
+  if (item?.kind !== "user") return undefined;
+  if (manager) {
+    const inbox = rt.managers.get(manager)?.inbox;
+    const idx = inbox?.findIndex((entry) => typeof entry !== "string" && entry.questionId === q.itemId) ?? -1;
+    if (idx < 0) return undefined;
+    inbox!.splice(idx, 1);
+    const state = st(eng);
+    state.managers = state.managers.filter((w) => w.itemId !== q.itemId);
+  } else {
+    const idx = rt.queue.indexOf(q.itemId);
+    if (idx < 0) return undefined;
+    rt.queue.splice(idx, 1);
+    if (rt.hold?.held.delete(q.itemId)) saveHold(eng, rt);
+  }
+  eng.store.deleteValue(itemKey(q.itemId));
+  eng.putItem({ ...item, ...feedbackFields(rt, item.threadId) });
+  return q;
+}
+
 /**
  * The bot (or task manager) asks again (cards.ts openCard, task-manager-host.ts openManagerCard): its
  * new question card takes the parked card's place. `decision` when he answered in between: the call
@@ -455,7 +485,14 @@ export function takePlace(eng: Engine, rt: BotRuntime, card: QuestionCard, manag
   card.id = old.card.id;
   card.at = old.card.at;
   card.questions = settle(old.card.questions ?? [], p.qid, said);
-  return { replaced: true };
+  const next = takePendingFeedback(eng, rt, card, manager);
+  if (!next) return { replaced: true };
+
+  card.questions = setState(card.questions, next.id, "answering");
+  park(eng, { card, rt, ...(manager ? { manager } : {}), resolve: () => {} }, next.id);
+  eng.store.addCard(card);
+  eng.opts.emit("card.changed", { card });
+  return { decision: { type: "ask", text: next.text } };
 }
 
 /** His answer to the old card, for the new one: a choice goes by its label. */
@@ -469,31 +506,51 @@ function carried(d: InternalDecision, from: QuestionCard, to: QuestionCard): Int
 // ------------------------------------------------------------ at start
 
 /**
- * After a restart (start-up.ts): a question still in the bot's line keeps waiting; one that was being
- * answered, or that went to a task manager, has no answer coming.
+ * After a restart, queued questions keep waiting. An interrupted reply is left in the thread as
+ * unanswered: replaying a turn that already started could repeat what the bot did in it.
  */
 export function settleQuestionsAtStart(eng: Engine): void {
   const waiting = new Set([...eng.bots.values()].flatMap((rt) => rt.queue));
-  const fix = (qs: CardQuestion[] | undefined) => {
+  const managerQueues = new Map<TaskManager, { at: string; message: ManagerMessage }[]>();
+  const fix = (target: Target, qs: CardQuestion[] | undefined, rt: BotRuntime | undefined) => {
     if (!qs?.some((q) => q.state === "queued" || q.state === "answering")) return undefined;
     return qs.map((q) => {
-      const waits = q.state === "queued" && !!q.itemId && waiting.has(q.itemId) && !!eng.store.getValue(itemKey(q.itemId));
-      if (waits || (q.state !== "queued" && q.state !== "answering")) return q;
+      if (q.state !== "queued" && q.state !== "answering") return q;
+      const raw = q.itemId && eng.store.getValue(itemKey(q.itemId));
+      if (q.state === "queued" && q.itemId && raw) {
+        if (waiting.has(q.itemId)) return q;
+        try {
+          const { manager, prompt } = JSON.parse(raw) as { manager?: string; prompt?: string };
+          const tm = manager && rt?.managers.get(manager);
+          if (tm && rt && typeof prompt === "string" && eng.store.getItem(q.itemId)) {
+            const messages = managerQueues.get(tm) ?? [];
+            messages.push({ at: q.at, message: { text: prompt, questionId: q.itemId } });
+            managerQueues.set(tm, messages);
+            st(eng).managers.push({ target, qid: q.id, botId: rt.folder.id, tmId: tm.id, itemId: q.itemId, active: false });
+            return q;
+          }
+        } catch {
+          // An unreadable queue record cannot be resumed, but the question stays visible.
+        }
+      }
       if (q.itemId) eng.store.deleteValue(itemKey(q.itemId));
       return { ...q, state: "unanswered" as const };
     });
   };
   for (const todo of eng.store.openTodos()) {
-    const qs = fix(todo.questions);
+    const qs = fix({ kind: "todo", id: todo.id }, todo.questions, eng.bots.get(todo.botId));
     const row = qs && eng.store.getTodo(todo.id);
     if (row) eng.store.saveTodo({ ...row, todo: { ...row.todo, questions: qs } });
   }
   for (const p of eng.cards.values()) {
     if (p.card.kind !== "question") continue;
-    const qs = fix(p.card.questions);
+    const qs = fix({ kind: "card", id: p.card.id }, p.card.questions, p.rt);
     if (!qs) continue;
     p.card = { ...p.card, questions: qs };
     eng.store.addCard(p.card);
+  }
+  for (const [tm, messages] of managerQueues) {
+    tm.inbox.push(...messages.sort((a, b) => a.at.localeCompare(b.at)).map((entry) => entry.message));
   }
 }
 

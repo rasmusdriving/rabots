@@ -234,16 +234,23 @@ export default async function section() {
       check(P("Needs you opens from Bots as a screen of its own, as a whole"), JSON.stringify(await shown()) === JSON.stringify(["app-rail"]) && moved(f, "title").top === 0 && moved(f, "first").top === 0 && (await backTo()) === "Back to Bots", { shown: await shown(), title: moved(f, "title") });
       await phoneRules(P("Needs you"));
       await pShot(`${phone.tag}-03-needs-dark`);
-      const secondTop = await ev(`Math.round($$(".app-rail .pb-card")[1].getBoundingClientRect().top)`);
-      await startFrames({ second: ".app-rail .app-card-slot:not([data-leaving]) .pb-card" });
+      // Follow the same second card from before the tap. The first non-leaving slot points at
+      // two different cards as soon as the exit starts, even when neither card has moved.
+      const second = await ev(`(() => {
+        const el = $$(".app-rail .pb-card")[1];
+        return { title: el.getAttribute("aria-labelledby"), top: el.getBoundingClientRect().top };
+      })()`);
+      await startFrames({ second: `.app-rail .pb-card[aria-labelledby=${JSON.stringify(second.title)}]` });
       await tap(`btn("Allow once", $(".app-rail .pb-card"))`);
       await until(`window.pobotsState().cards.length === ${cardsBefore - 1}`, 3000);
-      await sleep(700);
+      await until(`!$(".app-rail .app-card-slot[data-leaving]")`, 3000);
       f = await stopFrames();
       const steps = (f ?? []).map((x) => x.second?.top).filter((x) => x !== undefined);
       const jump = steps.slice(1).reduce((m, t, i) => Math.max(m, Math.abs(t - steps[i])), 0);
+      const to = steps.at(-1);
+      const travel = second.top - to;
       check(P("two taps from Bots answer a card"), tapCount() === 2 && (await ev(`window.pobotsState().cards.length`)) === cardsBefore - 1, { taps: tapCount() });
-      check(P("the answered card settles and the next one slides up without a jump"), steps.length > 5 && jump <= 40 && Math.round(steps.at(-1)) < secondTop, { jump, from: secondTop, to: steps.at(-1), frames: steps.length });
+      check(P("the answered card settles and the next one slides up without a jump"), steps.length > 5 && travel > 0 && new Set(steps).size > 3 && jump < travel / 2, { jump, from: second.top, to, frames: steps.length });
       check(P("Needs you stays on screen after an answer"), (await screenNow()).screen === "needs");
       // Every card answered: the screen says so and stays; back goes where he came from.
       for (let i = 0; i < 8; i++) {

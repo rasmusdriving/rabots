@@ -233,8 +233,8 @@ export function chatTime(eng: Engine, at: string): string {
 export function toolWords(eng: Engine, name: string, input: Record<string, unknown>): ToolWords {
   const m = new RegExp(`^mcp__${TOOL_SERVER}__(.+)$`).exec(name);
   if (!m) return describeTool(name, input);
-  const words = pobotsToolWords(eng, m[1]!, input) ?? calendarToolWords(m[1]!, input) ?? describeTool(name, input);
-  return { ...words, failed: words.failed ?? `Could not use ${m[1]!.replace(/[_-]+/g, " ").trim()}`, whyOnFail: true };
+  const words = pobotsToolWords(eng, m[1]!, input) ?? calendarToolWords(m[1]!, input);
+  return { ...(words ?? describeTool(name, input)), failed: words?.failed ?? `Could not use ${m[1]!.replace(/[_-]+/g, " ").trim()}`, whyOnFail: true };
 }
 
 function pobotsToolWords(eng: Engine, tool: string, input: Record<string, unknown>): ToolWords | undefined {

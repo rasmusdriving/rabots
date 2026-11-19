@@ -8,9 +8,8 @@
 // can come a second or two before the bytes have left the Mac (see the groundwork notes).
 ObjC.import("Foundation");
 
-function run(argv) {
-  const path = argv[0];
-  if (!path) return JSON.stringify({ exists: false });
+function state(path) {
+  if (!path) return { exists: false };
   const url = $.NSURL.fileURLWithPath(path);
   const get = (key) => {
     const value = Ref();
@@ -22,14 +21,19 @@ function run(argv) {
     return v;
   };
   const exists = $.NSFileManager.defaultManager.fileExistsAtPath(path);
-  if (!exists) return JSON.stringify({ exists: false });
+  if (!exists) return { exists: false };
   const bool = (v) => (v === null || (v && v.failed) ? null : !!v.boolValue);
   const err = get($.NSURLUbiquitousItemUploadingErrorKey);
-  return JSON.stringify({
+  return {
     exists: true,
     ubiquitous: bool(get($.NSURLIsUbiquitousItemKey)),
     uploaded: bool(get($.NSURLUbiquitousItemIsUploadedKey)),
     uploading: bool(get($.NSURLUbiquitousItemIsUploadingKey)),
     uploadError: err === null || (err && err.failed) ? null : `${ObjC.unwrap(err.domain)} ${err.code}: ${ObjC.unwrap(err.localizedDescription)}`,
-  });
+  };
+}
+
+function run(argv) {
+  const states = argv.map(state);
+  return JSON.stringify(states.length === 1 ? states[0] : states);
 }

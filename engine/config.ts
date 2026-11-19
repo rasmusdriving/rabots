@@ -4,9 +4,10 @@ import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync, writeSync } from "node:fs";
 import { homedir, hostname } from "node:os";
-import { isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { ChatSettings, FollowUp } from "../shared/protocol.js";
 import { cleanPublicBase } from "./channels.js";
+import { cleanPasswordRef } from "../shared/backup-settings.js";
 import { log } from "./log.js";
 import { readSettingsFile, type SettingsFile } from "./settings.js";
 
@@ -53,12 +54,8 @@ export interface ConfigFile {
   context?: Partial<ContextSettings>;
   /** The bots' browser shown in Pobots (docs/build/step-2g.md): off, or where its command is. */
   browser?: { enabled?: boolean; executable?: string };
-  /**
-   * The nightly backup (docs/build/step-backup.md). `publicKey` is the one line "ssh-rsa AAAA..." the
-   * backups are locked to, written by the engine when the person saves it; `publicKeySavedAt` when.
-   * `folder` is where the files go; `time` the daily time ("03:00").
-   */
-  backup?: { publicKey?: string; publicKeySavedAt?: string; folder?: string; time?: string };
+  /** Only the reference is saved. The former public key is preserved for older versions. */
+  backup?: { publicKey?: string; publicKeySavedAt?: string; folder?: string; time?: string; passwordRef?: string; passwordRefSavedAt?: string; executable?: string };
   /**
    * Notifications when the page is not open (docs/build/step-push.md). The three switches, written
    * by the engine when the person changes them; `subject` the VAPID subject (only to be set when a
@@ -130,14 +127,40 @@ export interface BackupConfig {
   folderProblem?: string;
   /** "03:00". */
   time: string;
-  /** The saved public key line, unchecked here (the backup checks it). */
+  passwordRef?: string;
+  passwordRefSavedAt?: string;
+  executable?: string;
+  migrated?: boolean;
+  /** The former public key is readable for compatibility. */
   publicKey?: string;
   publicKeySavedAt?: string;
 }
 
 /** Where the real Pobots puts its backups unless config.json says otherwise. */
 export function defaultBackupFolder(): string {
-  return join(homedir(), "Library", "CloudStorage", "OneDrive-Personal", "Pobot");
+  return join(iCloudDriveFolder(), "Pobots Backup");
+}
+
+export function iCloudDriveFolder(): string {
+  return join(homedir(), "Library", "Mobile Documents", "com~apple~CloudDocs");
+}
+
+export const legacyOneDrive = (): string => join(homedir(), "Library", "CloudStorage", "OneDrive-Personal");
+
+/** Resolve existing ancestors too, so aliases cannot bypass the backup destination checks. */
+export function resolvedPath(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    const parent = dirname(path);
+    return parent === path ? resolve(path) : join(resolvedPath(parent), basename(path));
+  }
+}
+
+export function insidePath(path: string, root: string): boolean {
+  const comparable = (value: string) => process.platform === "darwin" ? resolvedPath(value).normalize("NFC").toLowerCase() : resolvedPath(value);
+  const rel = relative(comparable(root), comparable(path));
+  return rel === "" || (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`));
 }
 
 /** The daily time of the backup unless config.json says otherwise. */
@@ -396,6 +419,10 @@ export function loadConfigFile(dataDir: string): ConfigFile {
       if (typeof b.publicKey === "string" && b.publicKey.trim()) keep.publicKey = b.publicKey.trim();
       else if (b.publicKey !== undefined) log.warn(`"backup.publicKey" in ${path} is not a key line. Ignoring it.`);
       if (typeof b.publicKeySavedAt === "string" && Number.isFinite(Date.parse(b.publicKeySavedAt))) keep.publicKeySavedAt = b.publicKeySavedAt;
+      const passwordRef = typeof b.passwordRef === "string" && cleanPasswordRef(b.passwordRef);
+      if (passwordRef) keep.passwordRef = passwordRef;
+      if (typeof b.passwordRefSavedAt === "string" && Number.isFinite(Date.parse(b.passwordRefSavedAt))) keep.passwordRefSavedAt = b.passwordRefSavedAt;
+      if (typeof b.executable === "string") keep.executable = expandHome(b.executable.trim());
       // A folder that is set but empty or not a path is kept as "" (never the default folder): the
       // backup then refuses to run and says why, instead of quietly using the real Pobots' folder.
       if (typeof b.folder === "string" && b.folder.trim()) keep.folder = b.folder.trim();
@@ -465,8 +492,13 @@ export function loadConfigFile(dataDir: string): ConfigFile {
  */
 export function backupConfig(dataDir: string, file: ConfigFile["backup"], defaults: { dataDir: string; folder: string } = { dataDir: defaultDataDir(), folder: defaultBackupFolder() }): BackupConfig {
   const time = file?.time ?? BACKUP_TIME;
-  const key = { ...(file?.publicKey ? { publicKey: file.publicKey } : {}), ...(file?.publicKeySavedAt ? { publicKeySavedAt: file.publicKeySavedAt } : {}) };
+  const { folder: _folder, time: _time, ...key } = file ?? {};
   const isDefaultData = samePath(dataDir, defaults.dataDir);
+  const old = file?.folder && resolve(expandHome(file.folder));
+  if (old && insidePath(old, legacyOneDrive())) {
+    if (isDefaultData) return { ...key, folder: defaults.folder, time, migrated: true, passwordRef: undefined, passwordRefSavedAt: undefined };
+    return { ...key, folder: "", folderProblem: "Set a separate backup folder for this Pobots.", time };
+  }
   // Absent: the default folder, for the real Pobots only.
   if (file?.folder === undefined) {
     if (isDefaultData) return { folder: defaults.folder, time, ...key };
@@ -476,7 +508,7 @@ export function backupConfig(dataDir: string, file: ConfigFile["backup"], defaul
   const expanded = expandHome(file.folder.trim());
   if (!expanded || !isAbsolute(expanded)) return { folder: "", folderProblem: BAD_FOLDER_SETTING, time, ...key };
   const folder = resolve(expanded);
-  if (!isDefaultData && samePath(folder, defaults.folder)) {
+  if (!isDefaultData && (insidePath(folder, defaults.folder) || insidePath(defaults.folder, folder))) {
     return { folder, folderProblem: "This Pobots may not use the backup folder of the main Pobots. Set a folder of its own.", time, ...key };
   }
   return { folder, time, ...key };

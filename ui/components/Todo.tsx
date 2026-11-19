@@ -4,6 +4,7 @@
 // the newest. A click opens the to-do's window, which Pobots draws from the bot's blocks (never HTML
 // from a bot): text, facts, a link, a text to copy, a picture or file from the bot's folder, one of the
 // bot's pages, fields and the bot's buttons; "Mark done" and "Dismiss" are always there.
+import { useRailExit, useRailLeaving } from "./rail-leaving";
 import { memo, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -99,6 +100,8 @@ function useOpenTodo(): string | null {
   return id;
 }
 
+const todoKey = (todo: Todo) => todo.id;
+
 /** "Your to-do": at the bottom of the rail. Nothing while there is none. */
 export function TodoList() {
   const todos = useAppState((s) => s.todos);
@@ -106,6 +109,7 @@ export function TodoList() {
   const now = useNow(60_000);
   const open = useOpenTodo();
   const sorted = useMemo(() => sortTodos(todos), [todos]);
+  const { rows, finish } = useRailLeaving(sorted, todoKey);
   const openOne = open ? todos.find((t) => t.id === open) : undefined;
   // A to-do answered or closed elsewhere closes its window here.
   useEffect(() => {
@@ -120,19 +124,19 @@ export function TodoList() {
     if (!was || open || todos.some((t) => t.id === was)) return;
     const active = document.activeElement;
     if (active && active !== document.body && document.contains(active)) return;
-    document.querySelector<HTMLElement>(".app-rail .pb-todo-item")?.focus();
+    document.querySelector<HTMLElement>(".app-rail li:not([inert]) .pb-todo-item")?.focus();
   }, [open, todos]);
   return (
     <>
-      {sorted.length > 0 && (
+      {rows.length > 0 && (
         <section className="pb-todo app-todo" aria-labelledby="todo-title">
           <h3 className="pb-side-title pb-todo-title" id="todo-title">
             {TODO_WORDS.title}
-            <span className="pb-todo-count">{sorted.length}</span>
+            {sorted.length > 0 && <span className="pb-todo-count">{sorted.length}</span>}
           </h3>
           <ul className="pb-todo-list">
-            {sorted.map((t) => (
-              <TodoRow key={t.id} todo={t} bot={bots.find((b) => b.id === t.botId)} now={now} />
+            {rows.map(({ item: t, leaving }) => (
+              <TodoRow key={t.id} todo={t} bot={bots.find((b) => b.id === t.botId)} now={now} leaving={leaving} finish={finish} />
             ))}
           </ul>
         </section>
@@ -142,19 +146,22 @@ export function TodoList() {
   );
 }
 
-function TodoRow({ todo, bot, now }: { todo: Todo; bot: Bot | undefined; now: number }) {
+function TodoRow({ todo, bot, now, leaving, finish }: { todo: Todo; bot: Bot | undefined; now: number; leaving: boolean; finish: (key: string) => void }) {
+  const ref = useRailExit<HTMLLIElement>(todo.id, leaving, finish);
   const when = todo.due ? dueWord(todo.due, now) : { word: ageWord(todo.at, now), late: false };
   const from = todo.taskManager ? `${todo.taskManager.title}, for ${bot?.name ?? "a bot"}` : (bot?.name ?? "a bot");
   const label = `${todo.title}, from ${from}, ${todo.due ? when.word : `${when.word} ago`.replace("now ago", "just now")}`;
   return (
-    <li className="pb-arrive">
-      <button className="pb-todo-item" type="button" data-todo-id={todo.id} aria-label={label} aria-haspopup="dialog" onClick={() => openTodo(todo.id)}>
-        {bot ? <Face look={bot.look} size="sm" /> : <span className="pb-todo-noface" />}
-        <span className="pb-todo-name">{todo.title}</span>
-        <span className="pb-todo-when" data-due={todo.due ? "" : undefined} data-late={when.late || undefined}>
-          {when.word}
-        </span>
-      </button>
+    <li ref={ref} className="app-todo-slot app-rail-exit" inert={leaving || undefined} data-leaving={leaving ? "resolved" : undefined}>
+      <div className="app-rail-exit-inner pb-arrive">
+        <button className="pb-todo-item" type="button" data-todo-id={todo.id} aria-label={label} aria-haspopup="dialog" onClick={() => openTodo(todo.id)}>
+          {bot ? <Face look={bot.look} size="sm" /> : <span className="pb-todo-noface" />}
+          <span className="pb-todo-name">{todo.title}</span>
+          <span className="pb-todo-when" data-due={todo.due ? "" : undefined} data-late={when.late || undefined}>
+            {when.word}
+          </span>
+        </button>
+      </div>
     </li>
   );
 }

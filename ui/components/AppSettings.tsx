@@ -4,26 +4,9 @@
 // first (job 4), then "When a bot is working" (steering, protocol 14), then "Backup" (job 5), whose
 // list of runs stays the last thing on the page.
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import type { BackupRun, BackupState, FollowUp, NotifyDevice, NotifyKind, NotifyState } from "../../shared/protocol";
+import type { FollowUp, NotifyDevice, NotifyKind, NotifyState } from "../../shared/protocol";
 import { messageOf } from "../engine/types";
-import {
-  backupLine,
-  backupLines,
-  FOLDER_PROBLEMS,
-  folderWords,
-  hasOlderKeyBackups,
-  keyFacts,
-  looksPrivate,
-  nextLine,
-  NO_KEY_NEXT,
-  OLD_KEY_LINE,
-  PRIVATE_KEY_REFUSAL,
-  RUN_REFUSALS,
-  RUN_WORD,
-  runNote,
-} from "../lib/backup";
 import { useNow, useSaver, type SaveState } from "../lib/hooks";
-import { clockTime } from "../lib/words";
 import {
   allowSteps,
   ASKS_ONCE,
@@ -43,7 +26,7 @@ import {
   type Here,
 } from "../lib/notify";
 import { preparePush, sendTest, turnOff, turnOn, usePush, type PushView } from "../lib/push";
-import { forgetNotifyDevice, runBackup, setBackupKey, setFollowUp, setNotifyKinds } from "../state/actions";
+import { forgetNotifyDevice, setFollowUp, setNotifyKinds } from "../state/actions";
 import { FOLLOW_UP_INTRO, FOLLOW_UP_OTHER, FOLLOW_UP_TITLE, FOLLOW_UPS } from "../lib/steer";
 import { radioKeys } from "./SettingsView";
 import { usePhone } from "../lib/phone";
@@ -57,6 +40,8 @@ import { PhoneBack } from "./PhoneBack";
 import { CalendarSection } from "./CalendarSection";
 import { ActivityView } from "./ActivityView";
 import { AboutYouSection } from "./AboutYouSection";
+import { BackupSection } from "./BackupSection";
+import { Swap } from "./Swap";
 
 /** The parts of the General section, in order. A new part is one more entry here. */
 const SECTIONS: { id: string; render: () => ReactNode }[] = [
@@ -268,27 +253,6 @@ function SavedWord({ state }: { state: SaveState }) {
   );
 }
 
-/**
- * Words that take turns in one place: every one is laid out in the same cell, only the shown one is
- * seen and read out, so the box keeps the size of the longest and nothing around it moves.
- */
-function Swap({ lines, shown, className = "", lineClass = "" }: { lines: string[]; shown: string; className?: string; lineClass?: string | ((line: string) => string) }) {
-  const all = lines.includes(shown) ? lines : [...lines, shown];
-  return (
-    <span className={`pb-swap ${className}`.trim()}>
-      {all.map((line) => (
-        <span
-          key={line}
-          className={`pb-swap-line ${typeof lineClass === "function" ? lineClass(line) : lineClass}`.trim()}
-          data-show={line === shown || undefined}
-          aria-hidden={line !== shown || undefined}
-        >
-          {line}
-        </span>
-      ))}
-    </span>
-  );
-}
 
 /**
  * "When a bot is working" (steering, protocol 14): what a message sent while a bot is in a turn does
@@ -333,282 +297,6 @@ function FollowUpSection() {
         <Swap lines={[NOT_REACHED, ""]} shown={problem} lineClass="app-hint-error" />
       </p>
     </section>
-  );
-}
-
-const TONE_MARK = { none: "idle", running: "idle", saved: "check", unconfirmed: "idle", failed: "blocked" } as const;
-
-function BackupSection() {
-  const stored = useAppState((s) => s.backup);
-  const now = new Date(useNow(30_000));
-  /** "Back up now" was pressed and the engine has not answered yet: every line says so at once. */
-  const [asking, setAsking] = useState(false);
-  const backup = stored && asking && stored.key && !stored.running ? { ...stored, running: true } : stored;
-  if (!backup)
-    return (
-      <section className="pb-section" aria-labelledby="set-backup">
-        <h2 className="pb-section-title" id="set-backup">
-          Backup
-        </h2>
-        <p className="pb-section-text">Pobots has not said how the backup stands yet.</p>
-      </section>
-    );
-  const line = backupLine(backup, now);
-  return (
-    <section className="pb-section pb-backup" aria-labelledby="set-backup" data-key={backup.key ? "set" : "none"}>
-      <h2 className="pb-section-title" id="set-backup">
-        Backup
-      </h2>
-      <p className="pb-section-text">{`Every night at ${backup.time} Pobots packs all chats, every bot's folder and the settings into one locked file and puts it in your OneDrive. Only your key in 1Password can open it. The last ${backup.keep} nights are kept.`}</p>
-      <div className="pb-backup-state">
-        <p className="pb-backup-line" data-tone={line.tone} role="status">
-          <Mark state={TONE_MARK[line.tone]} />
-          <Swap lines={backupLines(backup, now)} shown={line.text} className="pb-backup-line-text" />
-        </p>
-        <p className="pb-backup-next" id="backup-next">
-          <Swap lines={[NO_KEY_NEXT, nextLine({ ...backup, key: backup.key ?? { fingerprint: "", bits: 0, savedAt: "" } }, now)]} shown={nextLine(backup, now)} />
-        </p>
-        <BackUpNow backup={backup} onAsking={setAsking} />
-      </div>
-      <KeyBlock backup={backup} />
-      <div className="pb-backup-part" aria-labelledby="backup-folder">
-        <h3 className="pb-backup-part-title" id="backup-folder">
-          Where the files go
-        </h3>
-        <p className="pb-backup-folder" title={backup.folder.path} aria-describedby="backup-folder-path">
-          {folderWords(backup.folder.path)}
-        </p>
-        <span id="backup-folder-path" hidden>
-          {backup.folder.path}
-        </span>
-        {/* The line for a folder problem keeps its room in every state, so a run that finds the folder gone moves nothing below. */}
-        <p className="pb-hint pb-backup-folder-problem" role={backup.folder.ok ? undefined : "alert"}>
-          <Swap lines={[...FOLDER_PROBLEMS, ""]} shown={backup.folder.ok ? "" : (backup.folder.problem ?? FOLDER_PROBLEMS[0]!)} lineClass="app-hint-error" />
-        </p>
-      </div>
-      <Runs history={backup.history} />
-    </section>
-  );
-}
-
-/** "Back up now", "Backing up" while it runs, at one size. Its error stands beside it. */
-function BackUpNow({ backup, onAsking }: { backup: BackupState; onAsking: (asking: boolean) => void }) {
-  const [error, setError] = useState<string>();
-  const running = backup.running;
-  const off = !backup.key || running;
-  const press = () => {
-    if (off) return;
-    setError(undefined);
-    onAsking(true);
-    runBackup()
-      .catch((e: unknown) => setError(messageOf(e)))
-      .finally(() => onAsking(false));
-  };
-  return (
-    <div className="pb-backup-act">
-      <button
-        type="button"
-        className="pb-btn pb-btn-sm pb-backup-now"
-        aria-disabled={off || undefined}
-        aria-describedby={!backup.key ? "backup-next" : undefined}
-        data-running={running || undefined}
-        onClick={press}
-      >
-        <Swap lines={["Back up now", "Backing up"]} shown={running ? "Backing up" : "Back up now"} />
-      </button>
-      {/* Beside the button, in a box that keeps the room of the engine's longest answer. */}
-      <span className="pb-hint pb-backup-act-error" role={error ? "alert" : undefined}>
-        <Swap lines={[...RUN_REFUSALS, ""]} shown={error ?? ""} lineClass="app-hint-error" />
-      </span>
-    </div>
-  );
-}
-
-/** A made-up fingerprint of the real length, so the place the fingerprint takes is kept before there is one. */
-const FINGERPRINT_ROOM = `SHA256:${"0".repeat(43)}`;
-
-const SETUP_TEXT =
-  "In your private vault in 1Password, make an SSH Key of the kind RSA, 4096 bits. Copy its public key and paste it below. The private key stays in 1Password, so only you can open the backups.";
-const COMPARE_TEXT = "Compare this with the fingerprint in 1Password. If they are the same, new backups are locked to this key. To use another key, paste its public key below.";
-/** The steps behind "How to make a key", the same with or without a key. */
-const HOW_STEPS = [
-  "In 1Password, open your private vault and choose New Item, then SSH Key.",
-  "Choose Add Private Key, then Generate a New Key, of the kind RSA and the size 4096. Save it.",
-  "Copy its public key, paste it in the field above and press Save key.",
-];
-const HOW_NOTE = "The key belongs in your private vault, not in a shared one. The private key never leaves 1Password: Pobots only needs the public key, which can lock backups but not open them.";
-const FIELD_HINT = "One line that starts with ssh-rsa. It can only lock backups, not open them.";
-
-/**
- * The key: what to do when there is none, or the saved key's fingerprint to compare with 1Password;
- * then the field to paste a public key, and under it the engine's plain refusal. Every part keeps
- * its box in both states, so saving a key changes words in place.
- */
-function KeyBlock({ backup }: { backup: BackupState }) {
-  const [value, setValue] = useState("");
-  const [refusal, setRefusal] = useState<string>();
-  const [busy, setBusy] = useState(false);
-  const [state, saved] = useSaver();
-  const [how, setHow] = useState(false);
-  const key = backup.key;
-  const older = hasOlderKeyBackups(backup);
-  const now = new Date(useNow(60_000));
-
-  const save = async () => {
-    if (busy) return;
-    setRefusal(undefined);
-    setBusy(true);
-    const ok = await saved(() => setBackupKey(value));
-    setBusy(false);
-    if (ok) setValue("");
-  };
-  // A refusal comes back from the save as its state; it is shown under the field, not by the title.
-  useEffect(() => {
-    if (state.phase === "error") setRefusal(state.message);
-  }, [state]);
-
-  const note = refusal ?? FIELD_HINT;
-  return (
-    <div className="pb-backup-part pb-backup-key" aria-labelledby="backup-key">
-      <div className="pb-section-head">
-        <h3 className="pb-backup-part-title" id="backup-key">
-          Your key
-        </h3>
-        <SavedWord state={state} />
-      </div>
-      <p className="pb-section-text pb-backup-key-text">
-        <Swap lines={[SETUP_TEXT, COMPARE_TEXT]} shown={key ? COMPARE_TEXT : SETUP_TEXT} />
-      </p>
-      <div className="pb-backup-print" data-set={key ? "" : undefined}>
-        <span className="pb-backup-print-label">Fingerprint</span>
-        {/* The fingerprint and its facts change in place, without a fade: the old one stays readable until the new one stands in its box. */}
-        <span className="pb-backup-print-text">
-          <span className="pb-swap-line pb-swap-room" aria-hidden="true">
-            {FINGERPRINT_ROOM}
-          </span>
-          <span className="pb-swap-line pb-swap-still" data-show="">
-            {key ? key.fingerprint : "No key yet"}
-          </span>
-        </span>
-        <span className="pb-backup-print-facts">
-          <span className="pb-swap-line pb-swap-still" data-show="">
-            {key ? keyFacts(key, now) : "Add a key to see it here."}
-          </span>
-        </span>
-        <Swap className="pb-backup-print-old" lines={[OLD_KEY_LINE, ""]} shown={older ? OLD_KEY_LINE : ""} />
-      </div>
-      <div className="pb-field pb-field-wide">
-        <label className="pb-label" htmlFor="backup-public-key">
-          {key ? "New public key" : "Public key"}
-        </label>
-        <div className="pb-backup-paste">
-          <textarea
-            id="backup-public-key"
-            className="pb-input pb-textarea pb-backup-input"
-            rows={3}
-            value={value}
-            spellCheck={false}
-            autoComplete="off"
-            autoCapitalize="off"
-            placeholder="ssh-rsa AAAA..."
-            aria-describedby="backup-key-note"
-            aria-invalid={refusal ? true : undefined}
-            onChange={(e) => {
-              const text = e.target.value;
-              // A private key is never kept, not even in the field: it is refused here and never sent.
-              if (looksPrivate(text)) {
-                setValue("");
-                setRefusal(PRIVATE_KEY_REFUSAL);
-                return;
-              }
-              setValue(text);
-              if (text.trim()) setRefusal(undefined);
-            }}
-            onKeyDown={(e) => {
-              // A key is one line: Enter saves it.
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void save();
-              }
-            }}
-          />
-          <button type="button" className="pb-btn pb-btn-sm pb-backup-save" aria-disabled={busy || undefined} onClick={() => void save()}>
-            Save key
-          </button>
-        </div>
-        <span className="pb-backup-note" id="backup-key-note" role={refusal ? "alert" : undefined}>
-          <Swap lines={[FIELD_HINT, note]} shown={note} lineClass={(l) => (l === refusal ? "app-hint-error" : "")} />
-        </span>
-      </div>
-      {/* Last in the key part: the steps open below it, so nothing above moves. */}
-      <div className="pb-backup-how">
-        <button type="button" className="pb-btn pb-btn-sm pb-btn-quiet pb-backup-how-toggle" aria-expanded={how} aria-controls="backup-how" onClick={() => setHow((v) => !v)}>
-          How to make a key
-        </button>
-        {how && (
-          <div className="pb-backup-how-steps pb-fade-in" id="backup-how">
-            <ol className="pb-backup-how-list">
-              {HOW_STEPS.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-            <p className="pb-section-text pb-backup-how-note">{HOW_NOTE}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/**
- * The recent runs as quiet lines, oldest first and the newest at the bottom, like the chat: a new
- * run is added below everything, so no line he is reading moves. The list is the last thing on the
- * page. A run that leaves the engine's list (after 14) stays where it stands while the page is open,
- * marked "No longer kept", so the lines below it do not move up either.
- */
-function Runs({ history }: { history: BackupRun[] }) {
-  const now = useNow(60_000);
-  // A line that came while the page is open fades in where it stands; lines shown before do not arrive again.
-  const seen = useRef<Set<string> | null>(null);
-  if (seen.current === null) seen.current = new Set(history.map((r) => r.at + r.status));
-  const shown = seen.current;
-  useEffect(() => {
-    for (const r of history) shown.add(r.at + r.status);
-  }, [history, shown]);
-  /** Every run shown since the page opened, by its time. */
-  const kept = useRef(new Map<string, BackupRun>());
-  for (const r of history) kept.current.set(r.at, r);
-  const current = new Set(history.map((r) => r.at));
-  const rows = [...kept.current.values()].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-  return (
-    <div className="pb-backup-part" aria-labelledby="backup-runs">
-      <h3 className="pb-backup-part-title" id="backup-runs">
-        Recent backups
-      </h3>
-      {rows.length === 0 ? (
-        <p className="pb-section-text">No backups yet.</p>
-      ) : (
-        <ul className="pb-runs pb-backup-runs">
-          {rows.map((run) => {
-            const gone = !current.has(run.at);
-            return (
-              <li key={run.at} className={`pb-run${shown.has(run.at + run.status) || gone ? "" : " pb-fade-in"}`} data-status={run.status} data-gone={gone || undefined}>
-                <div className="pb-run-row">
-                  <Mark state={gone ? "idle" : run.status === "saved" ? "check" : run.status === "failed" ? "blocked" : "idle"} />
-                  <span className="pb-run-text">
-                    <span className="pb-run-word">{gone ? "No longer kept" : RUN_WORD[run.status]}</span>
-                    <span className={`pb-run-note${run.status === "failed" ? " pb-run-note-full" : ""}`}>{runNote(run)}</span>
-                  </span>
-                  <time className="pb-time" dateTime={run.at}>
-                    {clockTime(run.at, new Date(now))}
-                  </time>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
   );
 }
 

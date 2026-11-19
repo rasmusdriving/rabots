@@ -152,7 +152,7 @@
   :is(.app-tabpanel, .pb-dialog, .app-appsettings .pb-backup) :is(.pb-btn-sm, .pb-seg button, .pb-day) { position: relative; }
   :is(.app-tabpanel, .pb-dialog, .app-appsettings .pb-backup) :is(.pb-btn-sm, .pb-seg button, .pb-day)::after { content: ""; position: absolute; inset: -2px; }
   .app-tabpanel .pb-field, .app-appsettings .pb-backup .pb-field { max-width: none; }
-  .app-tabpanel .pb-input:not(.pb-textarea, .pb-backup-input), .app-appsettings .pb-backup .pb-input:not(.pb-textarea, .pb-backup-input) { height: 44px; }
+  .app-tabpanel .pb-input:not(.pb-textarea), .app-appsettings .pb-backup .pb-input:not(.pb-textarea) { height: 44px; }
   .app-tabpanel .pb-seg button { height: 40px; }
   .app-tabpanel .pb-seg { max-width: 100%; flex-wrap: wrap; }
   .app-tabpanel .pb-select { display: flex; max-width: 100%; }
@@ -169,7 +169,6 @@
   .app-tabpanel pre, .app-tabpanel .pb-diff { max-width: 100%; }
 
   /* The Backup part of Pobots settings: the key field at 16 px with lines to match. */
-  .app-appsettings .pb-backup-input { line-height: 22px; height: calc(22px * 3 + var(--space-2) * 2); }
   .app-appsettings .pb-backup-act { flex-wrap: wrap; min-height: 44px; }
 
   /* The Notifications part of Pobots settings (job 4): buttons 40 px with a 44 px hit area, the

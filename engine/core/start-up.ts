@@ -4,7 +4,7 @@ import { type BotFolder, pickColor, readBotFolders } from "../bots.js";
 import { log } from "../log.js";
 import { newRuntime } from "./runtime.js";
 import { restWaitChanged } from "./restored-waiting.js";
-import { restoreTaskManagers } from "./task-managers.js";
+import { restoreTaskManagers, startManagerInbox } from "./task-managers.js";
 import { UPLOAD_CLEAN_EVERY_MS } from "../attachments.js";
 import { loadHold, saveHold, startNextInLine } from "./stop.js";
 import { computeUpcoming, endRunOfItem, idleActivity } from "./triggers.js";
@@ -69,10 +69,10 @@ export function init(eng: Engine): void {
     eng.tidyAttachments();
   }, UPLOAD_CLEAN_EVERY_MS);
   eng.uploadsTimer.unref();
-  eng.backup.init();
   for (const rt of eng.bots.values()) loadHold(eng, rt);
   // Engine 0.26.0: task managers come back, resting.
   for (const rt of eng.bots.values()) restoreTaskManagers(eng, rt);
+  settleQuestionsAtStart(eng);
   for (const rt of eng.bots.values()) rt.activity = idleActivity(eng, rt);
   eng.upcomingList = computeUpcoming(eng);
   log.info(`Loaded ${eng.bots.size} bot${eng.bots.size === 1 ? "" : "s"} from ${eng.opts.config.botsDir}`);
@@ -83,6 +83,11 @@ export function init(eng: Engine): void {
   eng.titles.startBackfill();
   setImmediate(() => {
     sendQueuedAfterStart(eng);
+    if (!eng.stopping) {
+      for (const rt of eng.bots.values()) for (const tm of rt.managers.values()) {
+        if (!tm.busy && (tm.harness !== "claude" || eng.opts.claude.ready)) startManagerInbox(eng, rt, tm);
+      }
+    }
     // The first look at the schedules: what was due while Pobots was not running runs late or is skipped.
     if (!eng.stopping) eng.checkSchedules();
   });
@@ -161,8 +166,6 @@ export function tidyAfterStop(eng: Engine): void {
   restoreCards(eng);
   // Engine 0.31.1: a bot with such a card reads Waiting for you (core/restored-waiting.ts).
   for (const rt of eng.bots.values()) restWaitChanged(eng, rt);
-  // Engine 0.31.0: his questions on cards and to-dos: one being answered when Pobots stopped has no answer coming.
-  settleQuestionsAtStart(eng);
 }
 
 export function sendQueuedAfterStart(eng: Engine): void {

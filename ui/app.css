@@ -192,11 +192,24 @@ button, input, textarea { font-family: inherit; }
 
 /* ------------------------------------------------------------ rail */
 .app-rail-empty { margin: 0; font-size: 14px; line-height: 22px; color: var(--ink-muted); }
-/* An answered card settles and leaves over dur-slow; the rail closes the gap without jumping. */
-.app-card-slot { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr; min-width: 0; transition: grid-template-rows var(--dur-slow) var(--ease-out), opacity var(--dur-quick) var(--ease-soft), margin-top var(--dur-slow) var(--ease-out); }
-.app-card-slot-inner { min-width: 0; min-height: 0; }
-.app-card-slot[data-leaving] { grid-template-rows: 0fr; opacity: 0; margin-top: calc(var(--space-3) * -1); pointer-events: none; }
-.app-card-slot[data-leaving] .app-card-slot-inner { overflow: hidden; }
+/* Leave the row at full height during the fade, then close its height and the list's gap together. */
+.app-rail-exit { --rail-fade: var(--dur-slow); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr; flex: none; min-width: 0; }
+.app-rail-exit-inner { min-width: 0; min-height: 0; }
+.app-card-slot { --rail-gap: var(--space-3); }
+.app-todo-slot { --rail-gap: var(--todo-row-gap); }
+.app-rail-exit[data-leaving="quiet"] { --rail-fade: var(--dur-quick); }
+.app-rail-exit[data-leaving] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-top: calc(var(--rail-gap) * -1);
+  transition: opacity var(--rail-fade) var(--ease-soft),
+    grid-template-rows var(--dur-calm) var(--ease-out) var(--rail-fade),
+    margin-top var(--dur-calm) var(--ease-out) var(--rail-fade);
+}
+.app-rail-exit[data-leaving] > .app-rail-exit-inner {
+  overflow: clip;
+  transition: overflow 0s step-start var(--rail-fade) allow-discrete;
+}
 .app-draft { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: hidden; }
 .app-draft:has(.pb-meet) { max-height: 360px; }
 .app-draft[data-open] { max-height: none; }
@@ -280,8 +293,6 @@ button, input, textarea { font-family: inherit; }
 .app-from-bot { white-space: pre-wrap; overflow-wrap: anywhere; }
 .app-from-note { padding: 0; margin-top: var(--space-1); }
 
-/* An expired or withdrawn card leaves without fuss: a short fade, then the gap closes. */
-.app-card-slot[data-leaving="quiet"] { transition: grid-template-rows var(--dur-calm) var(--ease-soft) var(--dur-quick), opacity var(--dur-quick) var(--ease-soft), margin-top var(--dur-calm) var(--ease-soft) var(--dur-quick); }
 
 /* ------------------------------------------------------------ triggers (step 2b) */
 .app-triggers-inner { width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-3); }
@@ -296,7 +307,6 @@ button, input, textarea { font-family: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-card-slot, .app-card-slot[data-leaving="quiet"] { transition: opacity var(--dur-quick) linear; }
   .app-name, .app-activity-btn { transition: none; }
 }
 

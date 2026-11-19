@@ -109,6 +109,15 @@ export default async function section() {
     check(T("the row opens to the reason"), rowWhy === TODO_WHY, rowWhy);
     await ev(`$$(".app-main .pb-work-row").find((x) => x.querySelector(".pb-workline-words")?.textContent === ${JSON.stringify(TODO)})?.scrollIntoView({ block: "center" })`);
     await picture(`todo-${theme}-${phone ? phone.tag : "laptop"}`);
+    for (const [label, message] of [
+      ["Could not use outlook email search in Microsoft 365", "a failed service step uses the failed wording"],
+      ["Ran a command", "a failed command keeps its wording"],
+    ]) {
+      const status = await until(`${lineOf(label)}?.querySelector(".app-activity-failed")?.textContent`);
+      check(T(message), status === "Failed", status);
+      if (status) await ev(`${lineOf(label)}.scrollIntoView({ block: "center" })`);
+      await picture(`${label.startsWith("Could not") ? "service" : "command"}-${theme}-${phone ? phone.tag : "laptop"}`);
+    }
     await houseRules(M(where));
   }
 }

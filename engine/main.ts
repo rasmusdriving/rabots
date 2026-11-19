@@ -92,7 +92,7 @@ async function main(): Promise<void> {
     try {
       engine.shutdown();
       // A running backup is ended before the database closes: its child processes ended and its
-      // half-made files removed. Bounded inside (engine/backup.ts, stopMs, then by force), so this
+      // half-made files removed. Bounded inside (engine/core/backup-restic.ts, stopMs, then by force), so this
       // never waits past launchd's limit, and never closes the store while the clean-up still runs.
       const clean = await engine.backupStopped();
       if (!clean) log.error("The backup's clean-up could not be finished before the stop; see the lines above");

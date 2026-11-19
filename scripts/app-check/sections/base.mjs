@@ -356,7 +356,7 @@ export default async function section() {
     // 11. The browser: the bot opens a harmless page in the browser it works in, the row shows in the
     //     chat and stays in sight while the workspace is open, the panel shows a live picture, and
     //     with "Take control" a click over the picture reaches the page. Only https://example.com, only
-    //     in a workspace named "pobots test check", which the check closes itself.
+    //     in a uniquely named "pobots test check" workspace, which the check closes itself.
     const egoInstalled = [...(process.env.PATH ?? "").split(":"), join(homedir(), ".local", "bin")].some((d) => d && existsSync(join(d, "ego-browser")));
     const egoScript = (script, ms = 60_000) =>
       new Promise((resolve) => {
@@ -369,15 +369,15 @@ export default async function section() {
         const timer = setTimeout(() => child.kill("SIGKILL"), ms);
         child.on("exit", () => (clearTimeout(timer), resolve(out.trim())));
       });
-    const SPACE = "pobots test check";
+    const SPACE = `pobots test check ${process.pid}`;
     const closeTestSpaces = async () => {
       const out = await egoScript(
         [
           "for (const s of await listTaskSpaces()) {",
-          '  if (typeof s.name !== "string" || !s.name.startsWith("pobots test")) continue;',
+          `  if (s.name !== ${JSON.stringify(SPACE)}) continue;`,
           '  try { const t = s.ownership === "agent" ? await taskSpace(s.id) : null; if (t) await t.finish({ keep: [] }); } catch (e) {}',
           "}",
-          'console.log(JSON.stringify((await listTaskSpaces()).filter((s) => typeof s.name === "string" && s.name.startsWith("pobots test")).length));',
+          `console.log(JSON.stringify((await listTaskSpaces()).filter((s) => s.name === ${JSON.stringify(SPACE)}).length));`,
         ].join("\n"),
       );
       return Number(out.split("\n").pop());

@@ -90,15 +90,16 @@ describe("questions on a to-do", () => {
     await settle();
     assert.equal(todoOf(w, w.todoId).questions![0]!.state, "queued");
     assert.equal(questionItems(w.events)[0]!.queued, true);
-    assert.throws(() => askOnTodo(w.engine, { todoId: w.todoId, text: "And who reads it?" }), /Wait for the answer/);
+    askOnTodo(w.engine, { todoId: w.todoId, text: "And who reads it?" });
+    assert.deepEqual(todoOf(w, w.todoId).questions?.map((q) => q.state), ["queued", "queued"]);
     assert.throws(() => w.engine.unqueue({ botId: w.bot.id, itemId: questionItems(w.events)[0]!.id }), /cannot be taken back/);
     w.s.reply("Done with that.");
     await settle();
     assert.equal(todoOf(w, w.todoId).questions![0]!.state, "answering");
     w.s.reply("Not urgent, by Friday.");
     await settle();
-    askOnTodo(w.engine, { todoId: w.todoId, text: "And who reads it?" });
-    await settle();
+    assert.equal(w.s.sent.at(-1)?.text, "And who reads it?");
+    assert.deepEqual(todoOf(w, w.todoId).questions?.map((q) => q.state), ["answered", "answering"]);
     w.s.reply("The customer's IT lead.");
     await settle();
     const qs = todoOf(w, w.todoId).questions!;
@@ -232,6 +233,58 @@ describe("questions on a question card (ask_human)", () => {
     assert.equal(text(await again), "The person chose: Nordvik");
     w.engine.shutdown();
     w.store.close();
+  });
+
+  test("two queued questions go through successive asks without changing the card's slot", async () => {
+    const w = await world();
+    const args = { question: "Which colour?", choices: ["Blue", "Green"] };
+    const find = () => w.engine.snapshot().cards.find((c): c is QuestionCard => c.kind === "question")!;
+    const first = w.s.tool("ask_human", args);
+    await settle();
+    const card = find();
+    const params = (text: string) => ({ cardId: card.id, text });
+    askOnCard(w.engine, params("What colour is the sky?"));
+    askOnCard(w.engine, params("What colour is the grass?"));
+    askOnCard(w.engine, params("What colour is the sea?"));
+    assert.deepEqual(find().questions?.map((q) => q.state), ["answering", "queued", "queued"]);
+    assert.match(text(await first), /sky/);
+    say(w.s, "Sky blue.");
+    assert.match(text(await w.s.tool("ask_human", args)), /grass/);
+    assert.deepEqual(find().questions?.map((q) => q.state), ["answered", "answering", "queued"]);
+    say(w.s, "Grass green.");
+    assert.match(text(await w.s.tool("ask_human", args)), /sea/);
+    say(w.s, "Sea blue.");
+    const last = w.s.tool("ask_human", args);
+    await settle();
+    assert.equal(find().id, card.id);
+    assert.deepEqual(find().questions?.map((q) => q.answer), ["Sky blue.", "Grass green.", "Sea blue."]);
+    w.engine.resolveCard(card.id, { type: "choice", choiceId: "0" });
+    await last;
+    w.engine.shutdown();
+    w.store.close();
+  });
+
+  test("a question queued during card feedback survives a restart and starts a new turn", async () => {
+    const w = await world();
+    const first = w.s.tool("ask_human", { question: "Which colour?", choices: ["Blue", "Green"] });
+    await settle();
+    const card = w.engine.snapshot().cards.find((c): c is QuestionCard => c.kind === "question")!;
+    askOnCard(w.engine, { cardId: card.id, text: "What colour is the sky?" });
+    await first;
+    askOnCard(w.engine, { cardId: card.id, text: "What colour is the grass?" });
+    w.engine.shutdown();
+    await settle();
+    w.store.close();
+    const second = setup(w.dirs);
+    assert.deepEqual(cardOf(second, card.id)?.questions?.map((q) => q.state), ["unanswered", "queued"]);
+    await settle();
+    const s = second.sessions.at(-1)!;
+    assert.equal(s.sent.at(-1)?.text, "What colour is the grass?");
+    s.reply("Grass green.");
+    await settle();
+    assert.deepEqual(cardOf(second, card.id)?.questions?.map((q) => [q.state, q.answer]), [["unanswered", undefined], ["answered", "Grass green."]]);
+    second.engine.shutdown();
+    second.store.close();
   });
 
   test("a choice pressed before the bot asks again comes back at once to its next ask", async () => {
@@ -411,6 +464,30 @@ describe("questions on a task manager's cards", () => {
     assert.equal(todoOf(w, todoId).questions![0]!.answer, "The sans one, at small sizes.");
     w.engine.shutdown();
     w.store.close();
+  });
+
+  test("queued to-do questions for a task manager survive restart and get separate turns", async () => {
+    const w = await managerWorld();
+    const r = await w.m.tool("add_todo", { title: "Pick a font", blocks: [{ type: "text", text: "Two options." }], buttons: [{ id: "a", label: "Serif" }] });
+    const todoId = idOf(r);
+    askOnTodo(w.engine, { todoId, text: "What works on phones?" });
+    askOnTodo(w.engine, { todoId, text: "What works in print?" });
+    assert.deepEqual(todoOf(w, todoId).questions?.map((q) => q.state), ["queued", "queued"]);
+    w.engine.shutdown();
+    await settle();
+    w.store.close();
+    const second = setup(w.dirs);
+    await settle();
+    const s = second.sessions.at(-1)!;
+    assert.match(s.sent.at(-1)?.text ?? "", /What works on phones\?$/);
+    s.reply("Sans.");
+    await settle();
+    assert.match(s.sent.at(-1)?.text ?? "", /What works in print\?$/);
+    s.reply("Serif.");
+    await settle();
+    assert.deepEqual(todoOf(second, todoId).questions?.map((q) => q.answer), ["Sans.", "Serif."]);
+    second.engine.shutdown();
+    second.store.close();
   });
 });
 

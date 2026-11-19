@@ -29,6 +29,8 @@ import { log } from "../log.js";
 import { EngineError } from "../errors.js";
 
 /** A task manager while Pobots runs. */
+export type ManagerMessage = string | { text: string; questionId: string };
+
 export interface TaskManager {
   /** Its row's item id. */
   id: string;
@@ -64,7 +66,7 @@ export interface TaskManager {
   /** Its own tool calls that run now. */
   calls: Map<string, RunningTool>;
   /** Messages for its next turn, oldest first. */
-  inbox: string[];
+  inbox: ManagerMessage[];
   /** Messages steered into the running turn, by id, until the turn took them up. */
   steered: Map<string, string>;
   /** The text the running turn was started with, for one fresh try when a resumed session fails. */
@@ -337,7 +339,7 @@ function makeSession(eng: Engine, rt: BotRuntime, tm: TaskManager): HarnessSessi
 }
 
 /** A turn of it, with this message: its session is made (or resumed) when it has none. */
-function beginTurn(eng: Engine, rt: BotRuntime, tm: TaskManager, text: string): void {
+function beginTurn(eng: Engine, rt: BotRuntime, tm: TaskManager, text: string, questionId?: string): void {
   const fresh = !tm.session || tm.session.closed;
   if (fresh) {
     tm.session = makeSession(eng, rt, tm);
@@ -347,17 +349,17 @@ function beginTurn(eng: Engine, rt: BotRuntime, tm: TaskManager, text: string): 
   tm.sent = text;
   tm.lastText = "";
   tm.why = undefined;
+  if (questionId) managerTurnBegins(eng, tm, questionId);
   tm.session!.send(text);
-  managerTurnBegins(eng, tm);
   sendManagerRow(eng, rt, tm, true);
 }
 
 /** A message for it: into its running turn when it works, else its next turn starts with it. */
-export async function deliver(eng: Engine, rt: BotRuntime, tm: TaskManager, text: string, origin: "bot" | "person", itemId: string = randomUUID()): Promise<"steered" | "queued" | "started"> {
+export async function deliver(eng: Engine, rt: BotRuntime, tm: TaskManager, text: string, origin: "bot" | "person", itemId: string = randomUUID(), question = false): Promise<"steered" | "queued" | "started"> {
   if (origin === "bot") tm.origin = "bot";
   else if (managerState(eng, rt, tm) === "resting") tm.origin = "person";
   const session = tm.session;
-  if (tm.busy && session && !session.closed && session.steer) {
+  if (!question && tm.busy && session && !session.closed && session.steer) {
     tm.steered.set(itemId, text);
     let took = false;
     try {
@@ -370,10 +372,10 @@ export async function deliver(eng: Engine, rt: BotRuntime, tm: TaskManager, text
   }
   if (!rt.managers.has(tm.id)) return "queued";
   if (tm.busy) {
-    tm.inbox.push(text);
+    tm.inbox.push(question ? { text, questionId: itemId } : text);
     return "queued";
   }
-  beginTurn(eng, rt, tm, text);
+  beginTurn(eng, rt, tm, text, question ? itemId : undefined);
   return "started";
 }
 
@@ -472,6 +474,18 @@ function said(eng: Engine, rt: BotRuntime, tm: TaskManager, text: string): void 
   sendManagerRow(eng, rt, tm);
 }
 
+/** Batch the usual messages, but give each card question a turn and a reply of its own. */
+export function startManagerInbox(eng: Engine, rt: BotRuntime, tm: TaskManager): boolean {
+  const first = tm.inbox.shift();
+  if (first === undefined) return false;
+  if (typeof first === "string") {
+    const messages = [first];
+    while (typeof tm.inbox[0] === "string") messages.push(tm.inbox.shift() as string);
+    beginTurn(eng, rt, tm, messages.join("\n\n"));
+  } else beginTurn(eng, rt, tm, first.text, first.questionId);
+  return true;
+}
+
 /** Its turn ended: the next message, waiting for its workers, or its result to the bot and rest. */
 function turnOver(eng: Engine, rt: BotRuntime, tm: TaskManager, good: boolean, why?: string): void {
   tm.busy = false;
@@ -493,10 +507,7 @@ function turnOver(eng: Engine, rt: BotRuntime, tm: TaskManager, good: boolean, w
   if (!good) eng.addItem(rt, { kind: "notice", at: now(), text: why ?? "It stopped because of an error.", tone: "error" }, tm.ownThread);
   // Engine 0.31.0: its last message answers the person's questions it took up (core/card-questions.ts).
   managerTurnOver(eng, tm);
-  if (good && tm.inbox.length) {
-    beginTurn(eng, rt, tm, tm.inbox.splice(0).join("\n\n"));
-    return;
-  }
+  if (good && startManagerInbox(eng, rt, tm)) return;
   settleManager(eng, rt, tm, good ? undefined : why);
 }
 
@@ -512,10 +523,7 @@ export function settleManager(eng: Engine, rt: BotRuntime, tm: TaskManager, fail
     sendManagerRow(eng, rt, tm, true);
     return;
   }
-  if (tm.inbox.length) {
-    beginTurn(eng, rt, tm, tm.inbox.splice(0).join("\n\n"));
-    return;
-  }
+  if (startManagerInbox(eng, rt, tm)) return;
   if (tm.origin === "bot") report(eng, rt, tm, failed);
   tm.origin = "person";
   if (tm.session && !tm.session.closed) tm.session.close();
@@ -572,6 +580,7 @@ export function stopManager(eng: Engine, rt: BotRuntime, tm: TaskManager, notice
   tm.lateCalls.clear();
   stopWorkers(eng, rt, tm);
   tm.inbox = [];
+  if (!eng.stopping) managerEnded(eng, tm);
   tm.steered.clear();
   for (const call of tm.calls.values()) if (call.itemId) finishActivity(eng, call, "failed");
   tm.calls.clear();
@@ -602,7 +611,6 @@ export function stopTaskManagerFrom(eng: Engine, params: Methods["taskManager.st
 /** Ends it: stopped, its row says ended, out of the rail and the database. */
 function endManager(eng: Engine, rt: BotRuntime, tm: TaskManager, how: "bot" | "person" | "failed" | "retired", by?: string): void {
   stopManager(eng, rt, tm, false);
-  managerEnded(eng, tm);
   for (const [id, p] of [...eng.cards]) if (p.manager === tm.id) removeCard(eng, id, "withdrawn", { type: "withdrawn" });
   rt.managers.delete(tm.id);
   sendManagerRow(eng, rt, tm, true, true);

@@ -47,7 +47,7 @@ const answerFor = (text: string) =>
 
 export class MockCardQuestions {
   private holding = false;
-  private waiting: { target: Target; qid: string; botId: string; text: string }[] = [];
+  private waiting: { target: Target; qid: string; botId: string; text: string; item: UserItem }[] = [];
   private log: { kind: "todo" | "card"; id: string; text: string }[] = [];
   private n = 1;
   private refusal: string | undefined;
@@ -56,7 +56,7 @@ export class MockCardQuestions {
     window.pobotsCardQuestions = {
       hold: (on) => {
         this.holding = on;
-        if (!on) this.answerAll();
+        if (!on) for (const id of new Set(this.waiting.map((w) => w.botId))) this.answer(this.waiting.find((w) => w.botId === id)!.qid);
       },
       answerNow: () => this.answerAll(),
       reask: (cardId, title) => this.reask(cardId, title),
@@ -72,19 +72,19 @@ export class MockCardQuestions {
     "todo.ask": (p) => {
       const todo = window.pobotsTodos?.list().find((t) => t.id === p.todoId);
       if (!todo) throw new EngineError({ code: "not_found", message: "This to-do is no longer on your list." });
-      this.ask({ kind: "todo", id: todo.id }, todo.botId, todo.title, p.text, todo.questions);
+      this.ask({ kind: "todo", id: todo.id }, todo.botId, todo.title, p.text);
       return {};
     },
     "card.ask": (p) => {
       const card = this.mock.cards.find((c) => c.id === p.cardId);
       if (!card) throw new EngineError({ code: "not_found", message: "That card is no longer open." });
       if (card.kind !== "question" || card.helper) throw new EngineError({ code: "bad_request", message: "This card does not take questions." });
-      this.ask({ kind: "card", id: card.id }, card.botId, card.title, p.text, card.questions);
+      this.ask({ kind: "card", id: card.id }, card.botId, card.title, p.text);
       return {};
     },
   };
 
-  private ask(target: Target, botId: string, title: string, raw: string, before: CardQuestion[] | undefined): void {
+  private ask(target: Target, botId: string, title: string, raw: string): void {
     if (this.refusal) {
       const message = this.refusal;
       this.refusal = undefined;
@@ -92,17 +92,17 @@ export class MockCardQuestions {
     }
     const text = raw.trim();
     if (!text) throw new EngineError({ code: "bad_request", message: "Write a question first." });
-    if (before?.some((q) => q.state === "queued" || q.state === "answering")) throw new EngineError({ code: "bad_request", message: "Wait for the answer to your last question first." });
     const bot = this.mock.bot(botId);
-    const busy = this.mock.turns.has(botId);
+    const alreadyWaiting = this.waiting.some((w) => w.botId === botId);
+    const busy = this.mock.turns.has(botId) || alreadyWaiting;
     const from: UserItem["from"] = { type: "you", ...(target.kind === "todo" ? { todo: { id: target.id, title } } : { card: { id: target.id, title } }), question: true };
     const item = this.mock.add<UserItem>(bot.mainThreadId, { kind: "user", from, queued: busy, text });
     this.mock.upsert(item);
     const qid = `cq_mock${this.n++}`;
     this.write(target, (qs) => [...qs, { id: qid, at: new Date().toISOString(), text, state: busy ? "queued" : "answering", itemId: item.id }]);
     this.log.push({ ...target, text });
-    this.waiting.push({ target, qid, botId, text });
-    if (!this.holding) setTimeout(() => this.answer(qid), ANSWER_MS);
+    this.waiting.push({ target, qid, botId, text, item });
+    if (!this.holding && !alreadyWaiting) setTimeout(() => this.answer(qid), ANSWER_MS);
   }
 
   private answerAll(): void {
@@ -114,10 +114,16 @@ export class MockCardQuestions {
     const w = this.waiting.find((x) => x.qid === qid);
     if (!w) return;
     this.waiting = this.waiting.filter((x) => x !== w);
+    if (w.item.queued) this.mock.upsert({ ...w.item, queued: false });
     const said = answerFor(w.text);
     const bot = this.mock.bot(w.botId);
     this.mock.upsert(this.mock.add<BotItem>(bot.mainThreadId, { kind: "bot", botId: w.botId, streaming: false, text: said }));
     this.write(w.target, (qs) => qs.map((q) => (q.id === qid ? { ...q, state: "answered", answer: said, answeredAt: new Date().toISOString() } : q)));
+    const next = this.waiting.find((entry) => entry.botId === w.botId);
+    if (next) {
+      this.write(next.target, (qs) => qs.map((q) => q.id === next.qid ? { ...q, state: "answering" } : q));
+      setTimeout(() => this.answer(next.qid), ANSWER_MS);
+    }
   }
 
   private reask(cardId: string, title: string): void {

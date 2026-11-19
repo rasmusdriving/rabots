@@ -1071,7 +1071,7 @@ a.pb-msg-file:focus-visible { outline: 2px solid var(--focus); outline-offset: 2
 
 /* ------------------------------------------------------------ Pobots settings and the backup (job 5) */
 /* The way in at the very foot of the roster: "Pobots settings", a quiet line like the Browser line.
-   While no backup key is saved a small dot stands at its end: quiet, not an alarm, no colour. */
+   While backup is not set up a small dot stands at its end: quiet, not an alarm, no colour. */
 .pb-settings-line { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 32px; padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: var(--ink-muted); font: inherit; font-size: 13px; line-height: 20px; text-align: left; cursor: pointer; position: relative; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft), box-shadow var(--dur-quick) var(--ease-soft); }
 .pb-settings-line:hover { background: var(--fill); color: var(--ink); }
 .pb-settings-line:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
@@ -1102,43 +1102,22 @@ a.pb-msg-file:focus-visible { outline: 2px solid var(--focus); outline-offset: 2
 .pb-appsettings-back { margin-left: auto; max-width: 50%; flex: none; }
 .pb-appsettings-back-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
-/* The backup section. The state at the top in one line with its mark; the next run and "Back up now"
-   under it, in line with the words. Every line keeps its box when the state changes. */
-.pb-backup-state { display: flex; flex-direction: column; gap: var(--space-2); }
-.pb-backup-line { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: var(--space-2); align-items: start; margin: 0; font-size: 15px; line-height: 24px; color: var(--ink); }
-.pb-backup-line > .pb-mark { justify-self: center; margin-top: 7px; }
-.pb-backup-line .pb-swap, .pb-backup-next .pb-swap, .pb-backup-key-text .pb-swap, .pb-backup-note .pb-swap { display: grid; }
-.pb-backup-next { margin: 0 0 0 calc(16px + var(--space-2)); font-size: 13px; line-height: 20px; color: var(--ink-muted); }
-.pb-backup-act { display: flex; align-items: center; gap: var(--space-3); min-height: 36px; margin-left: calc(16px + var(--space-2)); }
-.pb-backup-act-error { display: grid; min-width: 0; }
-.pb-backup-act-error .pb-swap, .pb-backup-folder-problem .pb-swap, .pb-backup-print-old { display: grid; }
-.pb-backup-part { display: flex; flex-direction: column; gap: var(--space-2); }
-.pb-backup-part-title { margin: 0; font-size: 13px; line-height: 20px; font-weight: 600; }
-.pb-backup-key-text { max-width: none; }
-/* The saved key's fingerprint, in mono in a well, to compare with the one 1Password shows. Before a key
-   is saved the well keeps the room the fingerprint will take. */
-.pb-backup-print { display: grid; gap: 2px; padding: var(--space-3) var(--space-4); background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-md); }
-.pb-backup-print-label { font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: 0.01em; color: var(--ink-muted); }
-.pb-backup-print-text { display: grid; font-family: var(--font-mono); font-size: 13px; line-height: 20px; color: var(--ink); overflow-wrap: anywhere; word-break: break-all; }
-.pb-backup-print[data-set] .pb-backup-print-text { user-select: all; }
-.pb-backup-print:not([data-set]) .pb-backup-print-text { font-family: var(--font-sans); font-size: 14px; color: var(--ink-muted); }
-.pb-backup-print:not([data-set]) .pb-swap-room { font-family: var(--font-mono); font-size: 13px; }
-.pb-backup-print-facts { display: grid; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
-/* Under the facts, a quiet line when older backups were locked to an earlier key. Its room is kept. */
-.pb-backup-print-old { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
-/* The field to paste a public key, with Save beside it, and one line under it that keeps two lines of
-   room: what to paste, or the engine's plain refusal in its place. */
-.pb-backup-paste { display: flex; align-items: flex-end; gap: var(--space-2); }
-.pb-backup-input { flex: 1; min-width: 0; min-height: 0; height: calc(18px * 3 + var(--space-2) * 2); resize: none; font-family: var(--font-mono); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; word-break: break-all; }
-.pb-backup-note { display: grid; min-height: 32px; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
-/* The folder as a person says it ("OneDrive, folder Pobot"); the full path is the tooltip. The line for a
-   folder problem under it keeps its room in every state. */
-.pb-backup-folder { margin: 0; font-size: 14px; line-height: 22px; color: var(--ink-muted); overflow-wrap: anywhere; }
-.pb-backup-folder-problem { margin: 0; }
-/* "How to make a key", last in the key part: the steps open below it, so nothing above moves. */
-.pb-backup-how { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
-.pb-backup-how-steps { display: flex; flex-direction: column; gap: var(--space-2); }
-.pb-backup-how-list { margin: 0; padding-left: var(--space-5); max-width: 480px; font-size: 14px; line-height: 22px; color: var(--ink-muted); }
+/* The backup form keeps its field, action and result in the same boxes as state changes. */
+.pb-backup-state, .pb-backup-part { display: flex; flex-direction: column; gap: var(--space-2); }
+.pb-backup-line { display: flex; gap: var(--space-2); align-items: baseline; margin: 0; }
+.pb-backup-line > .pb-mark { flex: none; }
+.pb-backup-line > .pb-swap { min-width: 0; overflow-wrap: anywhere; }
+.pb-backup-next, .pb-backup-feedback, .pb-backup-folder, .pb-backup-path, .pb-backup .pb-backup-part .pb-hint { margin: 0; }
+.pb-backup-next { color: var(--ink-muted); }
+.pb-backup-feedback { min-height: 1lh; }
+.pb-backup-path { overflow-wrap: anywhere; }
+.pb-backup-part-title { margin: 0; font-weight: 600; }
+.pb-backup-part-title:not(.small) { font-size: 13px; line-height: 20px; }
+.pb-backup-paste { display: flex; align-items: center; gap: var(--space-2); padding-inline-end: var(--space-1); }
+.pb-backup-reference { flex: 1; min-width: 0; font-family: var(--font-mono); }
+.pb-backup-save, .pb-backup-now { flex: none; }
+.pb-backup-runs .pb-run-note { overflow-wrap: anywhere; }
+.pb-backup-runs .pb-run-note ul { padding-inline-start: var(--space-5); }
 /* Recent backups: quiet lines, oldest first and the newest at the bottom, like the chat, and the last
    thing on the page: a new run is added below everything. A failed one shows its whole reason. */
 .pb-backup-runs .pb-run-row { padding-left: 0; padding-right: 0; }
@@ -1420,7 +1399,7 @@ button.pb-queued-bubble:focus-visible { outline: 2px solid var(--focus); outline
 .pb-todo::before { content: ""; position: absolute; left: 0; right: 0; top: calc(var(--space-4) * -1); height: var(--space-4); background: linear-gradient(to bottom, transparent, var(--ground)); pointer-events: none; }
 .pb-todo-title { display: flex; align-items: baseline; justify-content: space-between; padding: 0; }
 .pb-todo-count { font-weight: 500; color: var(--ink-faint); }
-.pb-todo-list { list-style: none; margin: 0; padding: 0 var(--space-2); margin-inline: calc(var(--space-2) * -1); display: flex; flex-direction: column; gap: 2px; max-height: min(40vh, 240px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.pb-todo-list { --todo-row-gap: calc(var(--space-1) / 2); list-style: none; margin: 0; padding: 0 var(--space-2); margin-inline: calc(var(--space-2) * -1); display: flex; flex-direction: column; gap: var(--todo-row-gap); max-height: min(40vh, 240px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .pb-todo-item { box-sizing: border-box; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-2); width: calc(100% + var(--space-4)); min-height: 32px; margin: 0 calc(var(--space-2) * -1); padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink); text-align: left; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
 .pb-todo-item:hover { background: var(--fill); }
 .pb-todo-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
