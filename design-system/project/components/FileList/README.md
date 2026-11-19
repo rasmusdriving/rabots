@@ -7,3 +7,5 @@ You provide each file's name for people and its path.
 - "New file" sits at the top as a quiet button. It opens a name field; a plain name goes under `memory/` and gets `.md`.
 - Groups with no files are left out. With no files at all, one line says so.
 - On a narrow panel the list and the editor take turns, with a quiet "Files" button to go back.
+
+The selected file offers Download with its name on disk. Other file types are listed as well; they open a small panel with Download and no text editor.

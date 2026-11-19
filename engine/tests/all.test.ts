@@ -56,6 +56,8 @@ await import("./backup-upload.spec.js");
 await import("./restore.spec.js");
 await import("./steer.spec.js");
 await import("./settings7.spec.js");
+await import("./codex-limits.spec.js");
+await import("./downloads.spec.js");
 await import("./chat7.spec.js");
 await import("./step7c-access.spec.js");
 await import("./step7c-files.spec.js");
@@ -85,3 +87,5 @@ await import("./usage-history.spec.js");
 
 await import("./link-wire.spec.js");
 await import("./links.spec.js");
+
+await import("./vacation.spec.js");

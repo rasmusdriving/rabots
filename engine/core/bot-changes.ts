@@ -2,6 +2,7 @@
 // Everything happens at once and the person gets one quiet line per bot per turn saying what changed, from
 // what to what. One thing stays on a card: giving a bot more access, because the access level decides
 // whether that bot asks before it acts outside Pobots (decided 15 Nov 2026).
+import { away, vacationNeedsStop } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
 import { ACCESS_LEVELS, type AccessLevel, type Methods } from "../../shared/protocol.js";
@@ -96,6 +97,13 @@ export async function updateBotFor(eng: Engine, rt: BotRuntime, args: UpdateBotA
   const target = eng.findBot(args.bot);
   if (!target) return problem(`There is no bot called ${args.bot}. Use list_bots to see the others.`);
   const self = target === rt;
+  if (args.vacation !== undefined) {
+    if (target.folder.file.role === "main" || rt.folder.file.role !== "main") return problem("Only the main bot can change another bot’s vacation.");
+    if (args.start_fresh) return problem("Change vacation and ask for a fresh session in separate calls.");
+    if (args.vacation && !away(target) && vacationNeedsStop(eng, target)) {
+      return problem(`${target.folder.file.name} is working or has messages waiting. Stop its helper with stop_helper or ask the person to press Stop. If messages still wait, the person can stop it and send it on vacation from its settings.`);
+    }
+  }
   if (self && args.may_message !== undefined) return problem("You may message every bot already, so you have no list of bots to change. Leave out may_message.");
   if (self && args.may_steer !== undefined) return problem("As the main bot you may always steer other bots, so there is nothing to change. Leave out may_steer.");
   const f = target.folder.file;
@@ -205,7 +213,8 @@ export async function updateBotFor(eng: Engine, rt: BotRuntime, args: UpdateBotA
     current = "";
   }
   const jobChanges = job !== undefined && job !== "" && job !== (jobSection(current) ?? "");
-  if (!lines.length && !jobChanges && !forget.length && !args.start_fresh && !raiseTo) return problem("Nothing would change.");
+  const vacationChanges = args.vacation !== undefined && args.vacation !== away(target);
+  if (!lines.length && !jobChanges && !forget.length && !args.start_fresh && !raiseTo && !vacationChanges) return problem("Nothing would change.");
 
   // At once: the settings, the job, the rules, a fresh start. A failure stops what follows it.
   const done: string[] = [];
@@ -222,6 +231,10 @@ export async function updateBotFor(eng: Engine, rt: BotRuntime, args: UpdateBotA
     for (const r of forget) {
       eng.removeRule(r.id);
       done.push(`forgot the Always allowed rule ${quoted(r.label, 60)}`);
+    }
+    if (vacationChanges && args.vacation !== undefined) {
+      eng.setVacation({ botId: target.folder.id, vacation: args.vacation });
+      done.push(args.vacation ? "sent on vacation" : "back from vacation");
     }
     if (args.start_fresh) {
       const { started } = eng.startFresh(target.folder.id);

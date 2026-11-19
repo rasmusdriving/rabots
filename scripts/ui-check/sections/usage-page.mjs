@@ -40,14 +40,16 @@ export default async function section() {
     await b.cmd("Emulation.setUserAgentOverride", { userAgent });
     await b.cmd("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
     await b.cmd("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 2, mobile: true });
-    await b.cmd("Page.navigate", { url: `${pathToFileURL(page).href}?mock=1&theme=light` });
-    await until(`!!$(".pb-shell[data-phone] .app-side .pb-foot-settings")`, 6000);
-    await ev(`click($(".app-side .pb-foot-settings"))`);
-    await until(`!!$('.pb-setwin-tab[data-section="usage"]')`, 6000);
-    await ev(`click($('.pb-setwin-tab[data-section="usage"]'))`);
-    await read("30d");
-    const fit = `(() => { const pane = $(".app-appsettings-scroll"); const content = $(".pb-usage"); return pane.scrollWidth <= pane.clientWidth + 1 && content.scrollWidth <= content.clientWidth + 1; })()`;
-    const mobile = await ev(`({ fit: ${fit}, columns: getComputedStyle($(".pb-usage-overview")).gridTemplateColumns, labels: getComputedStyle($(".pb-usage-cell-label")).display })`);
+    // Changing device metrics can make the old page match the phone selector before navigation commits.
+    const query = `?mock=1&theme=light&screen=${width}`;
+    await b.cmd("Page.navigate", { url: `${pathToFileURL(page).href}${query}` });
+    const shell = await until(`location.search === ${JSON.stringify(query)} && !!$(".pb-shell[data-phone] .app-side .pb-foot-settings")`, 6000);
+    if (shell) await ev(`click($(".app-side .pb-foot-settings"))`);
+    const tab = shell && await until(`!!$('.pb-setwin-tab[data-section="usage"]')`, 6000);
+    if (tab) await ev(`click($('.pb-setwin-tab[data-section="usage"]'))`);
+    const cost = tab && await read("30d");
+    const fit = `(() => { const pane = $(".app-appsettings-scroll"); const content = $(".pb-usage"); return !!pane && !!content && pane.scrollWidth <= pane.clientWidth + 1 && content.scrollWidth <= content.clientWidth + 1; })()`;
+    const mobile = cost && await ev(`({ fit: ${fit}, columns: getComputedStyle($(".pb-usage-overview")).gridTemplateColumns, labels: getComputedStyle($(".pb-usage-cell-label")).display })`);
     check(`usage-page: ${width} px fits as one column with stacked table rows`, mobile?.fit && mobile.columns.split(" ").length === 1 && mobile.labels === "block", mobile);
     await choose("Limits");
     await until(`!!$(".pb-set7-meter")`, 6000);

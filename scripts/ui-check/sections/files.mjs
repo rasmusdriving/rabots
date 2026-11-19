@@ -165,7 +165,9 @@ export default async function section() {
     view?.label === "Screenshot 2026-11-13 08.12.png" && view.modal === "true" && view.focus === "Close" && view.scroll === before && Math.abs(view.w / view.h - 1920 / 1080) < 0.02 && view.w <= 1280 - 72, view);
   await aShot("large-view-dark");
   await key("Tab");
-  check("files: Tab stays inside the large view", (await ev(`document.activeElement?.closest(".pb-picture-view") ? document.activeElement.getAttribute("aria-label") : null`)) === "Close");
+  const tab = await ev(`document.activeElement?.closest(".pb-picture-view") && document.activeElement.getAttribute("aria-label")`);
+  await key("Tab");
+  check("files: Tab reaches Download and then goes back to Close", tab?.startsWith("Download ") && (await ev(`document.activeElement?.getAttribute("aria-label")`)) === "Close", tab);
   await key("Escape");
   const closed = await until(`!$(".pb-picture-view") && { focus: document.activeElement?.classList.contains("pb-picture") && document.activeElement.querySelector("img").alt, scroll: $(".app-main .pb-main-scroll").scrollTop }`);
   check("files: Escape closes the large view, the focus is back on the picture and the chat has not moved", closed?.focus === "Screenshot 2026-11-13 08.12.png" && closed.scroll === before, closed);

@@ -1340,7 +1340,7 @@ export class Store {
    * chats that a fresh start closed, fresh runs' threads and helpers' threads with nothing still
    * running. Threads of retired bots are left out.
    */
-  untitledChats(limit: number): { threadId: string; botId: string; kind: TitledChat["kind"]; fromSeq: number; toSeq?: number }[] {
+  untitledChats(limit: number, include: (botId: string) => boolean = () => true): { threadId: string; botId: string; kind: TitledChat["kind"]; fromSeq: number; toSeq?: number }[] {
     const out: { threadId: string; botId: string; kind: TitledChat["kind"]; fromSeq: number; toSeq?: number; at: string }[] = [];
     // Closed sessions of main chats.
     const fresh = this.db
@@ -1355,7 +1355,7 @@ export class Store {
       const from = f.t === prevThread ? prevSeq + 1 : 1;
       prevThread = f.t;
       prevSeq = f.s;
-      if (!this.getChatTitle(f.t, from)) out.push({ threadId: f.t, botId: f.b, kind: "main", fromSeq: from, toSeq: f.s, at: f.at });
+      if (include(f.b) && !this.getChatTitle(f.t, from)) out.push({ threadId: f.t, botId: f.b, kind: "main", fromSeq: from, toSeq: f.s, at: f.at });
     }
     // Runs and helpers.
     const threads = this.db
@@ -1368,6 +1368,7 @@ export class Store {
       )
       .all() as { t: string; b: string; k: string; at: string }[];
     for (const t of threads) {
+      if (!include(t.b)) continue;
       // A helper whose row still says running is not over yet.
       const parent = this.getThread(t.t)?.parentItemId;
       const row = parent ? this.getItem(parent) : undefined;

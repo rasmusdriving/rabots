@@ -1,4 +1,5 @@
 // Cards: approvals and questions from the harness, the bots' own asks, notes, and cards from Pobots itself.
+import { away } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import { type BotRuntime, callScope, type Helper, inBackground, type InternalDecision, type PendingCard, waitWords } from "./runtime.js";
 import type { CanUseTool, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
@@ -140,6 +141,7 @@ export async function askQuestions(eng: Engine, rt: BotRuntime, input: Record<st
 }
 
 export function openCard(eng: Engine, rt: BotRuntime, card: ApprovalCard | QuestionCard, activity: string, signal?: AbortSignal, helper?: Helper): Promise<InternalDecision> {
+  if (away(rt)) return Promise.resolve({ type: "withdrawn" });
   const startedBy = helper ? helper.purpose.startedBy : rt.turn?.startedBy;
   const outside = startedBy === "connection";
   // An outside message cannot reuse an answer meant for an earlier turn.

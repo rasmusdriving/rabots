@@ -204,6 +204,7 @@ interface Group {
   /** The last way the bot came to rest since the last push. */
   outcome?: RestOutcome;
   events: number;
+  quieted?: true;
 }
 
 export interface NotifierOptions {
@@ -281,6 +282,16 @@ export class Notifier {
     this.event(kind, card.kind === "system" ? undefined : card.botId, (g) => g.cards.add(card.id));
   }
 
+  /** Drop a bot's waiting pushes and retries when it goes on vacation. */
+  quietBot(botId: string): void {
+    for (const [key, g] of this.groups) {
+      if (g.botId !== botId) continue;
+      if (g.timer !== undefined) this.timers.clearTimeout(g.timer);
+      g.quieted = true;
+      this.groups.delete(key);
+    }
+  }
+
   /** A card went. Nothing to do now: the wait looks at the open cards again when it ends. */
   cardRemoved(_cardId: string): void {}
 
@@ -326,7 +337,7 @@ export class Notifier {
       this.groups.delete(g.key);
       return;
     }
-    this.track(this.dispatch(devices, due.message, due.ttl, () => this.due(what)));
+    this.track(this.dispatch(devices, due.message, due.ttl, () => g.quieted ? undefined : this.due(what)));
     g.phase = "fold";
     g.timer = this.timers.setTimeout(() => this.waitEnded(g), this.foldMs);
   }

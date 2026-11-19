@@ -1,4 +1,5 @@
 // Helpers: their rows, events and tasks, how they end and are stopped, and the turn the harness begins when they report back (docs/build/step-2e.md).
+import { away } from "./vacation.js";
 import type { Engine, HarnessSession } from "../engine.js";
 import { type BotRuntime, type Helper, type HelperEnd, type HelperStart, helperWork, inBackground, type LiveTask, ownBackgroundTasks, type PobotsHelper, type Purpose, purposeOf, type RunningTool, type Turn, waitWords } from "./runtime.js";
 import { randomUUID } from "node:crypto";
@@ -389,6 +390,7 @@ export function backgroundChanged(eng: Engine, rt: BotRuntime): void {
     log.info(`Bot ${rt.folder.id}: ${own ? `${own} command${own === 1 ? "" : "s"} of its own run${own === 1 ? "s" : ""} in the background` : "its commands in the background have ended"}`);
     rt.ownBackground = own;
   }
+  if (away(rt)) return;
   if (rt.aside.length && !eng.stopping) checkAsides(eng, rt);
   if (rt.busy || eng.stopping || !eng.bots.has(rt.folder.id) || rt.state === "waiting") return;
   const n = inBackground(rt);
@@ -577,7 +579,7 @@ export function afterHelpersChanged(eng: Engine, rt: BotRuntime): void {
 /** The last helper has ended and no turn followed: what waited for that happens now, and the bot rests. */
 export function settleAfterHelpers(eng: Engine, rt: BotRuntime): void {
   rt.settleTimer = undefined;
-  if (eng.stopping || rt.busy || inBackground(rt) || !eng.bots.has(rt.folder.id)) return;
+  if (away(rt) || eng.stopping || rt.busy || inBackground(rt) || !eng.bots.has(rt.folder.id)) return;
   rt.wakePurpose = undefined;
   const run = rt.pendingRun;
   rt.pendingRun = undefined;
@@ -608,6 +610,7 @@ export function finishPendingRun(eng: Engine, rt: BotRuntime, run: NonNullable<B
  * rules. It carries on what the helper's turn was for.
  */
 export function beginHarnessTurn(eng: Engine, rt: BotRuntime, session: HarnessSession): void {
+  if (away(rt)) return swallowTurn(eng, rt, session);
   if (rt.busy || eng.stopping || rt.session !== session) return;
   // While a Stop holds, only work started after it may report back in a turn (step 3b, third part).
   // When old and new work both reported, the old wins: the turn is ended, and the new result stays
@@ -656,7 +659,7 @@ export function beginHarnessTurn(eng: Engine, rt: BotRuntime, session: HarnessSe
 /** After a turn the harness began, a bot that waited for this bot's answer is told the last message. */
 export function tellAfterHelper(eng: Engine, rt: BotRuntime, to: string, text: string, hops: number): void {
   const asker = eng.bots.get(to);
-  if (!asker || eng.stopping || !eng.harnessReady(asker) || hops + 1 > MAX_HOPS) return;
+  if (!asker || away(asker) || eng.stopping || !eng.harnessReady(asker) || hops + 1 > MAX_HOPS) return;
   eng.enqueue(asker, text, { type: "bot", botId: rt.folder.id, expectsReply: false }, { hops: hops + 1 });
 }
 

@@ -18,6 +18,7 @@ import { ColorPicker } from "./ColorPicker";
 import { Confirm } from "./Dialog";
 import { SeesSetting } from "./SeesSetting";
 import { SteerSetting } from "./SteerSetting";
+import { VacationSetting } from "./VacationControls";
 import { CalendarSetting } from "./CalendarSetting";
 
 export function SettingsView({ bot }: { bot: Bot }) {
@@ -48,6 +49,7 @@ export function SettingsView({ bot }: { bot: Bot }) {
         <CalendarSetting bot={bot} />
         <RulesSetting bot={bot} />
         <SeesSetting bot={bot} />
+        <VacationSetting key={bot.id} bot={bot} />
         <RetireSetting bot={bot} />
       </div>
     </div>
@@ -370,7 +372,7 @@ function MemorySetting({ bot }: { bot: Bot }) {
   const tidying = !!bot.context?.tidying;
   // While the bot is in a turn (a card it waits on counts), tidying or has helpers working, the engine would refuse.
   const helpers = bot.helpers ?? 0;
-  const hint = tidying
+  const hint = bot.vacationSince ? "Bring this bot back before starting fresh." : tidying
     ? `${bot.name} is writing down what matters.`
     : helpers > 0
       ? helpers === 1

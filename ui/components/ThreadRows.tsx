@@ -242,7 +242,7 @@ export function Activity({ item, work = false }: { item: ActivityItem; work?: bo
 /** Which posts are open in the chat, while the app is open. */
 export const openPosts = new Set<string>();
 
-export function Notice({ item }: { item: NoticeItem }) {
+export function Notice({ item, botId }: { item: NoticeItem; botId?: string }) {
   // A bot's own post in a channel (15 Nov 2026), sent or not: the post itself opens below the line.
   const post = item.mark !== "fresh" ? item.detail?.trim() : undefined;
   // A calendar action (16 Nov 2026) carries the meeting's details the same way.
@@ -285,7 +285,7 @@ export function Notice({ item }: { item: NoticeItem }) {
           </div>
         ) : (
           <div className="pb-notice-post app-md" id={bodyId}>
-            <MarkdownText text={post} />
+            <MarkdownText text={post} botId={botId} />
           </div>
         )
       )}

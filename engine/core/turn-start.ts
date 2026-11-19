@@ -1,4 +1,6 @@
 // A turn's start: the message that starts it, the bot's session (made, resumed or fresh) and the hand-offs between sessions.
+import { EngineError } from "../errors.js";
+import { away, requirePresent } from "./vacation.js";
 import { leaveLive, takeAside } from "./aside.js";
 import type { Engine, HarnessSession } from "../engine.js";
 import { type BotRuntime, HarnessUnavailable, purposeOf, SWITCH_WORDS } from "./runtime.js";
@@ -40,6 +42,7 @@ export const FRESH_LINE =
   "Note from Pobots: this is a fresh session in the same chat. You wrote the note below for yourself before it started. Your memory folder holds the rest, and search_chat finds anything said earlier.";
 
 export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: { handed?: boolean } = {}): Promise<void> {
+  if (away(rt)) return;
   rt.busy = true;
   rt.current = item;
   rt.interruptRequested = false;
@@ -186,6 +189,7 @@ export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: 
     }
     session.send(text, [...(handoff ?? []), ...before], tidy ? { tidy: true } : pictures ? { pictures } : undefined);
   } catch (err) {
+    if (rt.current !== current || away(rt)) return;
     if (err instanceof HarnessUnavailable) {
       // A GPT bot while Codex is not there: blocked, with Codex's own sentence.
       log.warn(`Bot ${rt.folder.id}: ${err.message}`);
@@ -209,6 +213,8 @@ export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: 
  * instead of put to sleep, and a turn in its thread brings it back (core/aside.ts).
  */
 export async function ensureSession(eng: Engine, rt: BotRuntime, forceFresh = false): Promise<{ session: HarnessSession; handoff?: string[] }> {
+  requirePresent(rt);
+  const epoch = rt.epoch;
   const threadId = rt.turn?.threadId ?? rt.threadId;
   const freshRun = rt.turn?.fresh ?? false;
   const harness = rt.folder.file.harness;
@@ -224,6 +230,7 @@ export async function ensureSession(eng: Engine, rt: BotRuntime, forceFresh = fa
   }
   // What exists, read before anything else here when the bot's choice needs it (docs/sees.md, rule 6).
   const seesKnown = harness === "claude" && rt.folder.file.sees ? await eng.seesHub.ensureKnown(rt.folder.id, rt.folder.dir, rt.folder.file.sees) : undefined;
+  requirePresent(rt);
   let tools = toolsFor(eng, rt);
   let fingerprint = harness === "codex" ? toolFingerprint(tools) : undefined;
   // The list a Codex thread from before the late tools has (team.ts LATE_CODEX_TOOLS), when it differs.
@@ -342,6 +349,8 @@ export async function ensureSession(eng: Engine, rt: BotRuntime, forceFresh = fa
         }
       : {}),
   };
+  requirePresent(rt);
+  if (rt.epoch !== epoch) throw new EngineError("conflict", "The turn was stopped before its session started.");
   const make = eng.opts.createSession ?? ((s: SessionSettings, h: Harness) => (h === "codex" ? new CodexSession(s) : new ClaudeSession(s)));
   let session: HarnessSession;
   settings.onEvent = (e) => onHarnessEvent(eng, rt, session, e);

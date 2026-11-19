@@ -10,6 +10,7 @@ import { log } from "../log.js";
 import { type BotTool, TOOL_SERVER, type ToolResult } from "../claude/session.js";
 import { buildTools, ok, problem, type TeamHost, TIDY_ALLOWED_TOOLS, TOOL_NAMES } from "../team.js";
 import { messageBot } from "./asks.js";
+import { away } from "./vacation.js";
 import { shownWords } from "./restored-waiting.js";
 import { listTriggersFor, removeTriggerFor, setScheduleFor, setWebhookFor, webhookAddressFor } from "./trigger-tools.js";
 import { changeChannelFor, findChannel, listChannelsFor, removeRouteFor, setRouteFor } from "./channel-tools.js";
@@ -69,7 +70,7 @@ export function listBotsFor(eng: Engine, rt: BotRuntime): string {
   return others
     .map((b) => {
       const f = b.folder.file;
-      const may = eng.mayMessage(rt.folder.id, b.folder.id) ? "You may message it." : "You may not message it.";
+      const may = away(b) ? "It does not take messages while away." : eng.mayMessage(rt.folder.id, b.folder.id) ? "You may message it." : "You may not message it.";
       const what = shownWords(eng, b);
       return `- ${f.name} (id ${b.folder.id}${f.role === "main" ? ", the main bot" : ""}). Purpose: ${f.purpose || "not written yet"}. Now: ${what}. ${may}`;
     })

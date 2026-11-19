@@ -558,9 +558,20 @@ export class Store {
         return;
       }
       case "bot.updated": {
-        const exists = this.state.bots.some((b) => b.id === e.data.bot.id);
-        if (!exists) return this.event({ event: "bot.added", data: e.data });
-        this.set({ bots: this.state.bots.map((b) => (b.id === e.data.bot.id ? e.data.bot : b)) });
+        const { bot } = e.data;
+        const at = this.state.bots.findIndex((b) => b.id === bot.id);
+        if (at < 0) return this.event({ event: "bot.added", data: e.data });
+        const bots = this.state.bots.map((b) => b.id === bot.id ? bot : b);
+        if (bot.vacationSince && !this.state.bots[at]?.vacationSince && this.state.openBotId === bot.id) {
+          const next = bots.slice(at + 1).find((b) => !b.vacationSince) ?? bots.slice(0, at).findLast((b) => !b.vacationSince);
+          if (next) {
+            try { localStorage.setItem(LAST_BOT_KEY, next.id); } catch { /* Keep the choice in this window. */ }
+            this.set({ bots, openBotId: next.id, tabs: { ...this.state.tabs, [next.id]: "chat" },
+              ...(this.state.panel?.kind === "artifact" && this.state.panel.botId === bot.id ? { panel: null } : {}) });
+            return;
+          }
+        }
+        this.set({ bots });
         return;
       }
       case "item.upsert": {
@@ -645,7 +656,7 @@ export class Store {
       }
       case "bot.removed": {
         const bots = this.state.bots.filter((b) => b.id !== e.data.botId);
-        const open = this.state.openBotId === e.data.botId ? (bots.find((b) => b.role === "main") ?? bots[0])?.id ?? null : this.state.openBotId;
+        const open = this.state.openBotId === e.data.botId ? (bots.find((b) => b.role === "main") ?? bots.find((b) => !b.vacationSince))?.id ?? null : this.state.openBotId;
         const unsaved = this.state.unsaved?.botId === e.data.botId ? null : this.state.unsaved;
         const triggers = { ...this.state.triggers };
         delete triggers[e.data.botId];

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { emptyUsageFigures, USAGE_PROVIDERS, USAGE_PROVIDER_NAMES, USAGE_RANGES, USAGE_RANGE_NAMES, type HistoryProvider, type UsageOverview, type UsageRange } from "../../../shared/protocol";
 import { readUsageOverview } from "../../state/actions";
-import { useAppState } from "../../state/store";
 import { messageOf } from "../../engine/types";
 import { UsageLimits } from "./UsageLimits";
 import { UsageSummary } from "./UsageSummary";
@@ -21,7 +20,6 @@ export function UsageSection() {
   const [limitsRefresh, setLimitsRefresh] = useState(0);
   const [by, setBy] = useState<"model" | "day">("model");
   const limits = view === "limits";
-  const hubLimits = useAppState((s) => Boolean(s.settings?.hubs.length));
   const refreshed = useRef<typeof request | undefined>(undefined);
 
   useEffect(() => {
@@ -67,7 +65,7 @@ export function UsageSection() {
       <header className="pb-usage-top">
         <div className="pb-usage-scope">
           <h2 className="heading" id="usage-title">Usage</h2>
-          <span className="pb-usage-faint" aria-hidden="true">/</span><span className="small">{limits && hubLimits ? "Usage hubs" : "This computer"}</span>
+          <span className="pb-usage-faint" aria-hidden="true">/</span><span className="small">{limits ? "Plan limits" : "This computer"}</span>
           <span className="pb-usage-faint" aria-hidden="true">/</span>
           <select className="pb-input pb-select pb-usage-filter" aria-label="Filter by provider" value={provider} onChange={(e) => setProvider(e.target.value as HistoryProvider | "all")}>
             <option value="all">All providers</option>

@@ -2,6 +2,7 @@
 // chose, scoped to it. Cards and to-dos name it ("<title>, for <bot>") and their answers come back
 // to it; message_bot reaches its own bot and the bots it was allowed; show_artifact puts the page in
 // its thread. Its approvals and questions never hold the bot.
+import { away, vacationRefusal } from "./vacation.js";
 import { followUpWords, takePlace } from "./card-questions.js";
 import { randomUUID } from "node:crypto";
 import type { CanUseTool, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
@@ -243,6 +244,7 @@ async function messageFor(eng: Engine, rt: BotRuntime, tm: TaskManager, args: Me
   const names = [rt.folder.file.name, ...tm.mayMessage.map((id) => eng.nameOf(id))].join(", ");
   if (!target) return problem(`There is no bot called ${args.to}. You may message ${names}.`);
   const name = target.folder.file.name;
+  if (away(target)) return problem(vacationRefusal(target));
   if (target !== rt && !tm.mayMessage.includes(target.folder.id)) return problem(`You may not message ${name}. You may message ${names}.`);
   const text = args.text.trim();
   if (!text) return problem("The message is empty.");

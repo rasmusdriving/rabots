@@ -1,4 +1,5 @@
 // Triggers: schedules and webhooks that wake a bot, their runs, the webhook calls, and the schedule clock.
+import { away, requirePresent } from "./vacation.js";
 import type { Engine, HookOutcome, HookTarget } from "../engine.js";
 import type { TriggerRow } from "../store.js";
 import type { Methods, Trigger, TriggerRun, Upcoming } from "../../shared/protocol.js";
@@ -31,6 +32,7 @@ export const NO_SECRET = "x".repeat(43);
 
 export function toTrigger(eng: Engine, row: TriggerRow): Trigger {
   const last = eng.store.lastRun(row.id);
+  const resting = away(eng.bots.get(row.botId));
   return {
     id: row.id,
     botId: row.botId,
@@ -39,8 +41,9 @@ export function toTrigger(eng: Engine, row: TriggerRow): Trigger {
     prompt: row.prompt,
     where: row.where,
     enabled: row.enabled,
+    ...(resting ? { resting: true } : {}),
     ...(row.schedule ? { schedule: row.schedule } : {}),
-    ...(row.kind === "schedule" && row.enabled && row.nextAt ? { nextAt: row.nextAt } : {}),
+    ...(row.kind === "schedule" && row.enabled && !resting && row.nextAt ? { nextAt: row.nextAt } : {}),
     ...(last ? { lastRun: last } : {}),
     createdBy: row.createdBy,
     // An older trigger made by a bot has no maker noted: it made it itself.
@@ -186,6 +189,7 @@ export function afterTriggersMoved(eng: Engine): void {
  */
 export function fire(eng: Engine, row: TriggerRow, data?: { has: boolean; value?: unknown }): TriggerRun {
   const rt = eng.bot(row.botId);
+  requirePresent(rt);
   const base = { id: randomUUID(), triggerId: row.id, botId: row.botId, at: iso(eng.clock()) };
   if (!eng.harnessReady(rt) || eng.stopping) {
     return recordRun(eng, { ...base, status: "failed", note: "Claude is not ready on this computer, so the run could not start" });
@@ -262,7 +266,7 @@ export function hookTarget(eng: Engine, id: string, secret: string): HookTarget 
   const expected = trigger?.kind === "webhook" && trigger.secret ? trigger.secret : channel ? channel.secret : NO_SECRET;
   const same = sameSecret(secret, expected);
   if (!same || eng.stopping) return undefined;
-  if (trigger) return trigger.kind === "webhook" && trigger.enabled && eng.bots.has(trigger.botId) ? "trigger" : undefined;
+  if (trigger) return trigger.kind === "webhook" && trigger.enabled && eng.bots.has(trigger.botId) && !away(eng.bots.get(trigger.botId)) ? "trigger" : undefined;
   if (channel) return channel.enabled ? "channel" : undefined;
   return undefined;
 }
@@ -293,7 +297,7 @@ export function hookWithinLimits(eng: Engine, id: string, kind: HookTarget = "tr
 /** A webhook call that passed the checks. Never waits for the bot. */
 export function hookCall(eng: Engine, triggerId: string, data: { has: boolean; value?: unknown }, dedupe?: string): HookOutcome {
   const row = eng.store.getTrigger(triggerId);
-  if (!row || row.kind !== "webhook" || !row.enabled || !eng.bots.has(row.botId)) return { status: 404 };
+  if (!row || row.kind !== "webhook" || !row.enabled || !eng.bots.has(row.botId) || away(eng.bots.get(row.botId))) return { status: 404 };
   const at = Date.now();
   const key = dedupe !== undefined && dedupe !== "" ? dedupeKey(dedupe) : undefined;
   if (key && eng.store.hookSeen(row.id, key, at, HOOK_DEDUPE_MS)) return { status: 200, duplicate: true };
@@ -316,6 +320,7 @@ export function checkSchedules(eng: Engine): void {
   eng.lastCheck = at;
   for (const row of eng.store.listTriggers()) {
     if (row.kind !== "schedule" || !row.enabled || !row.nextAt || !row.schedule || !eng.bots.has(row.botId)) continue;
+    if (away(eng.bots.get(row.botId))) continue;
     const due = Date.parse(row.nextAt);
     if (!(due <= at)) continue;
     const last = lastDue(row.schedule, due, at, eng.tz);
@@ -363,7 +368,7 @@ export function planTick(eng: Engine): void {
   const at = eng.clock();
   let delay = TICK_MS;
   for (const row of eng.store.listTriggers()) {
-    if (row.kind === "schedule" && row.enabled && row.nextAt) delay = Math.min(delay, Date.parse(row.nextAt) - at);
+    if (row.kind === "schedule" && row.enabled && row.nextAt && !away(eng.bots.get(row.botId))) delay = Math.min(delay, Date.parse(row.nextAt) - at);
   }
   const backupAt = eng.backup.nextLook(at);
   if (backupAt !== undefined) delay = Math.min(delay, backupAt - at);
@@ -382,6 +387,7 @@ export function computeUpcoming(eng: Engine): Upcoming[] {
   const out: Upcoming[] = [];
   for (const row of eng.store.listTriggers()) {
     if (row.kind !== "schedule" || !row.enabled || !row.nextAt || !row.schedule || !eng.bots.has(row.botId)) continue;
+    if (away(eng.bots.get(row.botId))) continue;
     const t = Date.parse(row.nextAt);
     if (t < end) out.push({ at: iso(t), botId: row.botId, triggerId: row.id, name: row.name });
   }
@@ -398,6 +404,7 @@ export function refreshUpcoming(eng: Engine): void {
 
 /** "Next run today 16:30" for a bot with a schedule coming, or nothing. */
 export function idleActivity(eng: Engine, rt: BotRuntime): string {
+  if (away(rt)) return "On vacation";
   const held = heldWords(eng, rt);
   if (held) return held;
   const at = eng.clock();

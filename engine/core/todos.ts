@@ -1,7 +1,10 @@
+import { downloadFileName } from "../../shared/downloads.js";
+import { asDownload } from "../downloads.js";
 // To-dos for the person (step 7c): the bots' to-do tools, answers and closing from the page, and a to-do's files.
+import { requirePresent } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
-import { ANSWER_MAX, answerText, changedTodo, closedNews, fileInFolder, isTodoId, listWords, newTodo, notOpenWords, pictureType, type TodoArgs, type TodoContext } from "../todos.js";
+import { ANSWER_MAX, answerText, changedTodo, closedNews, todoFileInFolder, isTodoId, listWords, newTodo, notOpenWords, pictureType, type TodoArgs, type TodoContext } from "../todos.js";
 import { checkShowPath } from "../artifacts.js";
 import { pageArtifact, toArtifact } from "./artifacts.js";
 import type { ToolResult } from "../claude/session.js";
@@ -92,6 +95,7 @@ export function answerTodo(eng: Engine, params: Methods["todo.answer"]["params"]
   if (!row || row.status !== "open") throw new EngineError("not_found", "This to-do is no longer on your list.");
   const rt = eng.bots.get(row.todo.botId);
   if (!rt) throw new EngineError("not_found", "The bot of this to-do is gone.");
+  requirePresent(rt);
   const todo = row.todo;
   const button = params.buttonId === undefined ? undefined : todo.buttons.find((b) => b.id === params.buttonId);
   if (params.buttonId !== undefined && !button) throw new EngineError("bad_request", "That button is not on this to-do any more. Open it again.");
@@ -136,6 +140,8 @@ export function answerTodo(eng: Engine, params: Methods["todo.answer"]["params"]
 export function closeTodo(eng: Engine, params: Methods["todo.close"]["params"]): void {
   const row = eng.store.getTodo(params.todoId);
   if (!row || row.status !== "open") throw new EngineError("not_found", "This to-do is no longer on your list.");
+  const owner = eng.bots.get(row.todo.botId);
+  if (owner) requirePresent(owner);
   eng.store.saveTodo({ ...row, status: params.how, closedAt: now() });
   eng.opts.emit("todo.removed", { todoId: row.todo.id, reason: params.how });
   const rt = eng.bots.get(row.todo.botId);
@@ -153,9 +159,9 @@ export function todoFile(eng: Engine, todoId: string, index: number): ServedFile
   const block = row?.status === "open" ? row.todo.blocks[index] : undefined;
   const rt = row ? eng.bots.get(row.todo.botId) : undefined;
   if (!block || block.type !== "file" || !rt) return undefined;
-  const f = fileInFolder(rt.folder.dir, block.path);
+  const f = todoFileInFolder(rt.folder.dir, block.path);
   if (typeof f === "string") return undefined;
-  const type = pictureType(f.full);
-  const inline = !!type && block.picture;
-  return { full: f.full, type: inline ? type! : "application/octet-stream", size: f.size, name: block.name, inline };
+  const name = downloadFileName(f.rel);
+  const type = block.picture ? pictureType(f.full) : undefined;
+  return type ? { full: f.full, type, size: f.size, name, inline: true } : asDownload(f, name);
 }

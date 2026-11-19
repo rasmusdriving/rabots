@@ -49,7 +49,7 @@ export function HelperTask({ item, bot, depth }: { item: UserItem; bot: Bot; dep
           <time dateTime={item.at}>{clockTime(item.at)}</time>
         </div>
         <div className="pb-msg-body pb-task-body app-md" id={bodyId} data-open={open || undefined} data-long={long || undefined} style={{ ["--task-lines" as string]: TASK_LINES }}>
-          <MarkdownText text={item.text} />
+          <MarkdownText text={item.text} botId={bot.id} />
         </div>
         {(long || open) && (
           <button type="button" className="pb-task-more app-activity-btn" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen(!open)}>
@@ -129,7 +129,7 @@ export function FromBot({ item, from }: { item: UserItem; from: Bot | undefined 
           <span className="pb-msg-from">{ask ? "asked, waits for the answer" : "passed this on"}</span>
           <time dateTime={item.at}>{clockTime(item.at)}</time>
         </div>
-        <div className="pb-msg-body app-from-bot">{item.text}</div>
+        <div className="pb-msg-body app-from-bot app-md"><MarkdownText text={item.text} botId={from?.id} /></div>
         {item.queued ? <div className="app-you-note app-from-note">Queued</div> : item.steered ? <div className="app-you-note app-from-note">{STEERED}</div> : null}
       </div>
     </article>

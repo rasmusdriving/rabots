@@ -86,7 +86,7 @@ export function cleanTitle(raw: string): string | undefined {
 }
 
 /** Makes a title from the text, or gives back undefined. Never throws. */
-export type TitleMaker = (text: string, model: string) => Promise<string | undefined>;
+export type TitleMaker = (text: string, model: string, canStart?: () => boolean) => Promise<string | undefined>;
 
 /**
  * The real maker: one `claude -p` call with no tools, in a folder of its own that holds nothing
@@ -167,7 +167,7 @@ export function titlePrompt(text: string): string {
  */
 export function routedTitleMaker(o: {
   claude: TitleMaker;
-  codex: (prompt: string, model: string) => Promise<{ title?: string; why?: string }>;
+  codex: (prompt: string, model: string, canStart?: () => boolean) => Promise<{ title?: string; why?: string }>;
   isGpt: (model: string) => boolean;
   codexOk: () => boolean;
   /** Whether the Claude default may be used (Claude ready and switched on); left out, it may. */
@@ -191,11 +191,13 @@ export function routedTitleMaker(o: {
     tell(`Chat titles: ${why}, so this one is made by ${o.fallbackModel}`);
     return o.claude(text, o.fallbackModel);
   };
-  return async (text, model) => {
+  return async (text, model, canStart = () => true) => {
+    if (!canStart()) return undefined;
     if (!o.isGpt(model)) return o.claude(text, model);
     if (text.length > TITLE_INPUT_MAX + 200) return undefined;
     if (!o.codexOk()) return fallback(text, `Codex is not ready or is switched off for ${model}`);
-    const r = await o.codex(titlePrompt(text), model);
+    const r = await o.codex(titlePrompt(text), model, canStart);
+    if (!canStart()) return undefined;
     const title = r.title ? cleanTitle(r.title) : undefined;
     if (title) {
       tell(`Chat titles: titles are made by ${model} through Codex`);
@@ -223,6 +225,7 @@ export interface TitleHost {
   /** The model to use now, and whether titles can be made now (Claude ready and on, or a GPT model and Codex ready and on). */
   model(): string;
   canMake(): boolean;
+  canTitle?(botId: string): boolean;
   /** A chat got its title. */
   titled(botId: string, chat: ChatTitle): void;
   /** Timings for tests. */
@@ -247,7 +250,7 @@ export class Titles {
 
   /** Adds a chat to the queue, unless it is there already. */
   add(job: TitleJob): void {
-    if (this.stopped) return;
+    if (this.stopped || !this.allowed(job.botId)) return;
     const key = (j: TitleJob) => `${j.threadId}:${j.fromSeq}`;
     const same = this.queue.findIndex((j) => key(j) === key(job));
     if (same >= 0) this.queue[same] = { ...this.queue[same]!, ...job };
@@ -277,10 +280,11 @@ export class Titles {
       if (this.backfilled >= BACKFILL_MAX) return this.endBackfill();
       // Only while titles can be made and nothing else waits; otherwise look again later.
       if (this.host.canMake() && !this.busy && !this.queue.length) {
-        const next = this.host.store.untitledChats(1)[0];
-        if (!next) return this.endBackfill();
-        this.backfilled++;
-        this.add({ ...next, backfill: true });
+        const next = this.host.store.untitledChats(1, (botId) => this.allowed(botId))[0];
+        if (next) {
+          this.backfilled++;
+          this.add({ ...next, backfill: true });
+        } else if (!this.host.store.untitledChats(1).length) return this.endBackfill();
       }
       this.backfillTimer = setTimeout(step, every);
       this.backfillTimer.unref?.();
@@ -324,9 +328,14 @@ export class Titles {
     }
   }
 
+  private allowed(botId: string): boolean {
+    return this.host.canTitle?.(botId) ?? true;
+  }
+
   private async run(job: TitleJob): Promise<void> {
     const store = this.host.store;
-    if (!store.isOpen || !this.host.canMake()) return;
+    const canStart = () => !this.stopped && this.allowed(job.botId);
+    if (!store.isOpen || !this.host.canMake() || !canStart()) return;
     const items = store.chatRange(job.threadId, job.fromSeq, job.toSeq);
     if (!items.length) {
       // Nothing was said: a closed chat is marked so the backfill does not come back to it.
@@ -338,8 +347,8 @@ export class Titles {
     // Already titled from all of it, or (open) it has not grown enough since.
     if (had && had.title && had.uptoSeq >= last && (had.toSeq ?? null) === (job.toSeq ?? null)) return;
     if (had && had.title && job.toSeq === undefined && job.kind === "main" && store.saidBetween(job.threadId, had.uptoSeq, last) < REGROW) return;
-    const title = await this.host.maker(titleInput(items, job.kind), this.host.model());
-    if (!store.isOpen || this.stopped) return;
+    const title = await this.host.maker(titleInput(items, job.kind), this.host.model(), canStart);
+    if (!store.isOpen || !canStart()) return;
     if (!title) {
       log.debug("Chat titles: no title came back");
       return;

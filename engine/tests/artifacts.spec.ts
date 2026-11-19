@@ -671,7 +671,9 @@ describe("artifacts: the key and the files under /page/", () => {
     put(dir, "artifacts/status/app.js", "console.log(1)");
     put(dir, "artifacts/status/img/logo.png", Buffer.from([137, 80, 78, 71]));
     put(dir, "artifacts/status/run.py", "print(1)");
+    put(dir, "artifacts/status/Status [åäö].zip", "zip fixture\r\n");
     put(dir, "artifacts/status/.env", "SECRET=1");
+    symlinkSync(join(dir, "artifacts/status/.env"), join(dir, "artifacts/status/hidden.txt"));
     put(dir, "artifacts/status/.dot/x.js", "x");
     put(dir, "artifacts/other/index.html", page("Other"));
     put(dir, "artifacts/other/secret.js", "other");
@@ -822,6 +824,22 @@ describe("artifacts: the key and the files under /page/", () => {
         const png = await get(port, `/page/${key}/img/logo.png`);
         assert.equal(png.headers["content-type"], "image/png");
         assertSealed(png, "an image", "file", key, host);
+        const relative = encodeURIComponent("Status [åäö].zip");
+        for (const download of [
+          await get(port, `/page/${key}/${relative}?download`),
+          await get(port, `/page/${key}/${relative}`, { headers: { "sec-fetch-mode": "navigate" } }),
+        ]) {
+          assert.equal(download.status, 200);
+          assert.equal(download.body, "zip fixture\r\n");
+          assert.equal(download.headers["content-type"], "application/octet-stream");
+          assert.equal(download.headers["content-disposition"], "attachment; filename=\"Status [___].zip\"; filename*=UTF-8''Status%20%5B%C3%A5%C3%A4%C3%B6%5D.zip");
+          assert.equal(download.headers["content-security-policy"], "sandbox; default-src 'none'");
+          assert.equal(download.headers["x-content-type-options"], "nosniff");
+        }
+        assert.equal((await get(port, `/page/${key}/${relative}`)).status, 404);
+        for (const bad of [".env?download", "hidden.txt?download", "link.js?download", "sib/secret.js?download"]) {
+          assert.equal((await get(port, `/page/${key}/${bad}`)).status, 404);
+        }
         const head = await get(port, path, { method: "HEAD" });
         assert.equal(head.status, 200);
         assert.equal(head.body, "");

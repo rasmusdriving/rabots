@@ -32,7 +32,7 @@ export default async function section() {
     const T = (n) => S(`${theme}: ${n}`);
     await open("", { theme });
     await goTo("Kaja", "settings");
-    const closed = await until(`${part} && { title: $(".app-sees .pb-section-title").textContent, summary: ${summary}, hint: $$(".app-sees .pb-hint").map((h) => h.textContent).join("|"), body: !!$(".app-sees-body"), reads: window.pobotsSees.reads(), last: !!$(".app-sees + .pb-section-last") }`);
+    const closed = await until(`${part} && { title: $(".app-sees .pb-section-title").textContent, summary: ${summary}, hint: $$(".app-sees .pb-hint").map((h) => h.textContent).join("|"), body: !!$(".app-sees-body"), reads: window.pobotsSees.reads(), last: !!$(".app-sees ~ .pb-section-last") }`);
     check(T("a Claude bot's settings have the part, closed, saying it sees everything; nothing is read for a bot without a choice"),
       closed?.title === "What Kaja sees" && closed.summary === "Sees everything" && closed.hint.includes("A change holds from Kaja's next message.") && !closed.body && closed.reads === 0 && closed.last, closed);
     // The part above fills in when its own list comes; measure after that.

@@ -117,6 +117,7 @@ function replace(view: PhoneView, before: PhoneView | null, first = false): void
 // ------------------------------------------------------------ following the store and history
 
 let applying = false;
+let lastBots: AppState["bots"] | undefined;
 
 /** Shows a view: the screen, the bot or channel, the page's tab, the panel and settings, in one change. */
 function apply(v: PhoneView): void {
@@ -139,6 +140,8 @@ function sync(): void {
   if (applying || leaving || !isPhone()) return;
   const s = store.get();
   if (!s.ready) return;
+  const previousBots = lastBots;
+  lastBots = s.bots;
   const v = viewOf(s);
   const now = entry.view;
   if (!now) return replace(v, null);
@@ -146,6 +149,14 @@ function sync(): void {
   // The bot of this screen is gone (retired): Bots, in place of the entry.
   if (now.bot && !s.bots.some((b) => b.id === now.bot) && v.screen === "bot") {
     store.showPhoneView({ screen: "bots", settings: s.appSettings });
+    return;
+  }
+  // A vacation sends this bot off in place of the page and its confirm. The new chat goes
+  // directly back to Bots; Back should not lead through the departing bot's old pages.
+  if (now.bot && v.bot && now.bot !== v.bot &&
+      previousBots?.some((b) => b.id === now.bot && !b.vacationSince) &&
+      s.bots.some((b) => b.id === now.bot && b.vacationSince)) {
+    leavePhone(true);
     return;
   }
   // A layer of builder B (a dialog, say) is the newest entry and is being left for somewhere new:
@@ -229,6 +240,7 @@ export function phoneGo(change: () => void): void {
 
 /** Set while the window steps back over the phone's entries. */
 let leaving = false;
+let fromVacation = false;
 /** Lands the step back without its popstate if that never comes (lib/phone-back.ts, MOVE_LANDS_MS). */
 let leavingNet: ReturnType<typeof setTimeout> | undefined;
 
@@ -237,14 +249,23 @@ export function phoneEntriesLeaving(state: unknown): boolean {
   return leaving || (!isPhone() && depthIn(state) > 0);
 }
 
-function leavePhone(): void {
+function leavePhone(vacation = false): void {
   // Already stepping back (the window became a phone and the laptop again before it landed): that
   // move settles on what the window is when it lands.
   if (leaving) return;
   const steps = depthIn(stateNow());
   // (An entry counting more steps than there are entries was carried over somehow: settled in place.)
   if (steps > 0 && steps < history.length) {
+    // The vacation also unmounts its confirm. This move owns the layer's entry, so its cleanup
+    // must not start a second Back while we are already going back over it.
+    if (vacation && layersOf(history.state).length) {
+      try {
+        const { [LAYER_STATE_KEY]: _gone, ...state } = stateNow();
+        history.replaceState(state, "");
+      } catch { /* The move will still try to go back over the layers. */ }
+    }
     leaving = true;
+    fromVacation = vacation;
     // A layer that opens before the move lands adds its entry after it (lib/phone-back.ts).
     holdForMove();
     leavingNet = setTimeout(() => leaving && landed(), MOVE_LANDS_MS);
@@ -257,16 +278,27 @@ function leavePhone(): void {
       moveLanded();
     }
   }
-  settleOnLaptop();
+  if (vacation) replaceVacationPath();
+  else settleOnLaptop();
+}
+
+function replaceVacationPath(): void {
+  const bots: PhoneView = { screen: "bots" };
+  const view = viewOf(store.get());
+  replace(bots, null, true);
+  if (!sameView(view, bots)) push(view, bots);
 }
 
 /** The step back over the phone's entries has landed: the entry it is on is made what shows. */
 function landed(): void {
   clearTimeout(leavingNet);
   leaving = false;
+  const vacation = fromVacation;
+  fromVacation = false;
   // Back where the phone started. A window that became a phone again meanwhile starts here anew,
   // and a layer that opened meanwhile adds its entry over this one now.
   if (!isPhone()) settleOnLaptop();
+  else if (vacation) replaceVacationPath();
   else replace(viewOf(store.get()), null, true);
   moveLanded();
 }

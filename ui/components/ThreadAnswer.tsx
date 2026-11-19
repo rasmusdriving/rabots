@@ -310,7 +310,7 @@ export function Answer({ block, bot, bots, foldWork, thinking }: { block: Answer
 export const AnswerText = memo(function AnswerText({ item, work }: { item: BotItem; work: boolean }) {
   return (
     <div className="pb-msg-body app-md pb-arrive" data-turn={item.turnId} data-item={item.id} data-work={work || undefined}>
-      <MarkdownText text={item.text} />
+      <MarkdownText text={item.text} botId={item.botId} />
     </div>
   );
 });

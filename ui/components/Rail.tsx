@@ -283,7 +283,7 @@ function QuestionCard({ card, bot }: { card: Question; bot: Bot | undefined }) {
         </div>
       )}
       {/* Protocol 23: ask the bot about it before answering. Not on a helper's card: its helper cannot be reached from here. */}
-      {!card.helper && <CardQuestions id={card.id} place="card" questions={card.questions} botName={bot?.name ?? "The bot"} disabled={busy} onAsk={(text) => askCard(card.id, text)} />}
+      {!card.helper && <CardQuestions id={card.id} place="card" botId={card.botId} questions={card.questions} botName={bot?.name ?? "The bot"} disabled={busy} onAsk={(text) => askCard(card.id, text)} />}
     </section>
   );
 }

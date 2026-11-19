@@ -315,7 +315,10 @@ describe("step 7b: usage", () => {
 
   test("a hub's key is kept only in a file only the engine's user reads, never in config.json, an event or the settings", async () => {
     const { engine, store, events, dirs } = setup(undefined, () => true, undefined, {
-      settingsHub: { fetcher: async () => ({ ok: false, status: 401, text: async () => "" }) },
+      settingsHub: {
+        fetcher: async () => ({ ok: false, status: 401, text: async () => "" }),
+        readClaude: async () => ({ id: "claude-local", via: "This Mac", windows: [] }),
+      },
     });
     const KEY = "kkkkkkkkkkkkkkkkkkkkkkkk-very-secret";
     const r = engine.usageHubAdd({ url: "https://hub-mac.example.net:8443/management.html", key: KEY });

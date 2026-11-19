@@ -156,7 +156,7 @@ export function setup(
   dirs?: { dataDir: string; botsDir: string },
   sessionExists: (id: string) => boolean = () => true,
   timings?: EngineOptions["timings"],
-  extra: Pick<EngineOptions, "readSees" | "clock" | "timeZone" | "browser" | "browserTimings" | "backup" | "notify" | "settingsHub" | "titleMaker" | "titleTimings" | "checkClaude" | "selfUpdate"> & { settingsFile?: import("../settings.js").SettingsFile; context?: ContextSettings; fullText?: boolean; claudeReady?: boolean; backupConfig?: BackupConfig; notifyConfig?: NotifyConfig } = {},
+  extra: Pick<EngineOptions, "readSees" | "clock" | "timeZone" | "browser" | "browserTimings" | "backup" | "notify" | "settingsHub" | "titleMaker" | "titleTimings" | "checkClaude" | "checkCodex" | "selfUpdate"> & { settingsFile?: import("../settings.js").SettingsFile; context?: ContextSettings; fullText?: boolean; claudeReady?: boolean; backupConfig?: BackupConfig; notifyConfig?: NotifyConfig } = {},
 ) {
   const root = dirs ?? { dataDir: tempDir(), botsDir: tempDir() };
   const { context, fullText, claudeReady, backupConfig, notifyConfig, settingsFile, ...rest } = extra;

@@ -93,7 +93,7 @@ function TriggerList({ bot, triggers, error }: { bot: Bot; triggers: Trigger[] |
 /** "Done · 07:31 · Next today 16:30". The parts keep their places, so a run finishing changes words only. */
 function TriggerMeta({ trigger, now }: { trigger: Trigger; now: number }) {
   const last = trigger.lastRun;
-  const next = !trigger.enabled ? "Switched off" : trigger.nextAt ? `Next ${nextWords(trigger.nextAt, new Date(now))}` : trigger.kind === "webhook" ? "Waits for a call" : "";
+  const next = !trigger.enabled ? "Switched off" : trigger.resting ? "Resting while on vacation" : trigger.nextAt ? `Next ${nextWords(trigger.nextAt, new Date(now))}` : trigger.kind === "webhook" ? "Waits for a call" : "";
   return (
     <span className="pb-trigger-meta">
       {last ? (
@@ -631,7 +631,7 @@ function TriggerPage({ bot, trigger }: { bot: Bot; trigger: Trigger }) {
     }
   };
 
-  const nextLine = !trigger.enabled ? "Switched off" : trigger.nextAt ? `Next ${nextWords(trigger.nextAt, new Date(now))}` : trigger.kind === "webhook" ? "Waits for a call" : "";
+  const nextLine = !trigger.enabled ? "Switched off" : trigger.resting ? "Resting while on vacation" : trigger.nextAt ? `Next ${nextWords(trigger.nextAt, new Date(now))}` : trigger.kind === "webhook" ? "Waits for a call" : "";
   const id = `trigger-${trigger.id}`;
 
   return (
@@ -654,7 +654,7 @@ function TriggerPage({ bot, trigger }: { bot: Bot; trigger: Trigger }) {
             <input className="pb-switch" type="checkbox" role="switch" checked={trigger.enabled} aria-label={`${trigger.name} on`} onChange={(e) => toggle(e.target.checked)} />
             <span>{trigger.enabled ? "On" : "Off"}</span>
           </label>
-          <button className="pb-btn pb-btn-sm" type="button" onClick={runNow}>
+          <button className="pb-btn pb-btn-sm" type="button" disabled={!!trigger.resting} onClick={runNow}>
             Run now
           </button>
         </header>

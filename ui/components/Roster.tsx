@@ -1,7 +1,7 @@
 // The left side, on the ground: the name, the bots with a quiet add control, then at the bottom the
 // channels (with their own add control), the browser, the machines, and the icon row (step 7b):
 // settings, usage, and the update arrow when Claude Code, Codex or (on a public install) Pobots has an update.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bot, Channel } from "../../shared/protocol";
 import { usePhone } from "../lib/phone";
 import { openBrowserFromRoster } from "../state/actions";
@@ -9,12 +9,16 @@ import { phoneGo, phoneOpen } from "../state/screens";
 import { store, useAppState } from "../state/store";
 import { countWord, MACHINE_CONNECTED, MACHINE_WORD, STATE_WORD } from "../lib/words";
 import { BrowserIcon, Face, ForwardIcon, GearIcon, Mark, PlusIcon, SpeechIcon, UpdateIcon, UsageIcon } from "./bits";
+import { VacationShelf } from "./VacationShelf";
+import { useRailExit, useRailLeaving } from "./rail-leaving";
 import { UpdateDialog } from "./SettingsWindow";
 import { anyUpdateRunning, labelsWords, updateTodo } from "../lib/pobots-update";
 
 /** `covered`: on a phone, another screen or a sheet shows; the roster stays laid out underneath, out of sight, so it keeps its place. */
 export function Roster({ covered = false }: { covered?: boolean } = {}) {
   const bots = useAppState((s) => s.bots);
+  const { active, away } = useMemo(() => ({ active: bots.filter((b) => !b.vacationSince), away: bots.filter((b) => !!b.vacationSince) }), [bots]);
+  const { rows, finish } = useRailLeaving(active, (b) => b.id);
   const machines = useAppState((s) => s.machines);
   const openBotId = useAppState((s) => s.openBotId);
   const openChannelId = useAppState((s) => s.openChannelId);
@@ -52,13 +56,12 @@ export function Roster({ covered = false }: { covered?: boolean } = {}) {
             <PlusIcon />
           </button>
         </div>
-        <ul className="app-list" aria-labelledby="bots-title">
-          {bots.map((bot) => (
-            <li key={bot.id}>
-              <BotRow bot={bot} open={!openChannelId && !appSettings && bot.id === openBotId} phone={phone} />
-            </li>
+        <ul className="app-list pb-vacation-list" aria-labelledby="bots-title">
+          {rows.map(({ key, item, leaving, arriving }) => (
+            <BotSlot key={key} bot={item} leaving={leaving} arriving={arriving} finish={finish} open={!openChannelId && !appSettings && key === openBotId} phone={phone} />
           ))}
         </ul>
+        <VacationShelf bots={away} selected={!openChannelId && !appSettings ? openBotId : null} phone={phone} />
       </div>
       <div className="app-side-foot">
         <Channels />
@@ -217,6 +220,15 @@ function ChannelRow({ channel, open, phone }: { channel: Channel; open: boolean;
       <span className="pb-channel-name">{channel.name}</span>
       <span className="pb-channel-word">{word}</span>
     </button>
+  );
+}
+
+function BotSlot({ bot, open, phone, leaving, arriving, finish }: { bot: Bot; open: boolean; phone: boolean; leaving: boolean; arriving?: true; finish(id: string): void }) {
+  const ref = useRailExit<HTMLLIElement>(bot.id, leaving, finish);
+  return (
+    <li ref={ref} className="pb-vacation-motion" data-entering={arriving && !leaving || undefined} data-leaving={leaving || undefined} inert={leaving || undefined}>
+      <div className="pb-vacation-inner"><div className="pb-vacation-live-row"><BotRow bot={bot} open={open} phone={phone} /></div></div>
+    </li>
   );
 }
 

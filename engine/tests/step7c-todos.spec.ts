@@ -86,7 +86,7 @@ describe("step 7c: to-dos, the bot's tools", () => {
     const served = w.engine.todoFile(todo.id, 4)!;
     assert.deepEqual([served.inline, served.type, served.name], [true, "image/png", "chart.png"]);
     const pdfServed = w.engine.todoFile(todo.id, 5)!;
-    assert.deepEqual([pdfServed.inline, pdfServed.type, pdfServed.name], [false, "application/octet-stream", "Import report"]);
+    assert.deepEqual([pdfServed.inline, pdfServed.type, pdfServed.name], [false, "application/octet-stream", "report.pdf"]);
     assert.equal(w.engine.todoFile(todo.id, 0), undefined);
     assert.equal(w.engine.todoFile(todo.id, 99), undefined);
     w.engine.shutdown();

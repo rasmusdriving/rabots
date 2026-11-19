@@ -1,4 +1,5 @@
 // start_helper: a helper on any model, its own session and row (step 3a and the workers step); results that wait for a turn of their own, and a GPT bot's slow tool calls.
+import { away } from "./vacation.js";
 import { sessionFor } from "./aside.js";
 import type { Engine, HarnessSession } from "../engine.js";
 import { type BotRuntime, type CallContext, callScope, HarnessUnavailable, type Helper, type HelperEnd, type HelperStart, type PobotsHelper, TIDY_REFUSAL, type Wake } from "./runtime.js";
@@ -136,6 +137,7 @@ export function startPobotsRow(eng: Engine, rt: BotRuntime, session: HarnessSess
 
 /** start_helper: links the call to its row (or makes one), starts the helper's own session, and waits or returns at once. */
 export async function startHelperFor(eng: Engine, rt: BotRuntime, args: StartHelperArgs, signal?: AbortSignal): Promise<ToolResult> {
+  const epoch = rt.epoch;
   const call = callScope.getStore();
   const title = args.title?.trim() ?? "";
   const task = args.task?.trim() ?? "";
@@ -150,6 +152,7 @@ export async function startHelperFor(eng: Engine, rt: BotRuntime, args: StartHel
     await new Promise((r) => setTimeout(r, 20));
     h = find();
   }
+  if (away(rt) || rt.epoch !== epoch) return problem("The bot stopped before it could start the helper.");
   const why = startHelperProblem(eng, rt, args as unknown as Record<string, unknown>, h);
   if (why) return problem(why);
   if (!h) {
@@ -340,14 +343,14 @@ export function onPobotsHelperEvent(eng: Engine, rt: BotRuntime, h: Helper, sess
 
 /** A result for the bot, told in a turn of its own: now when it is free, else after what it is doing. */
 export function wake(eng: Engine, rt: BotRuntime, w: Wake): void {
-  if (eng.stopping || !eng.bots.has(rt.folder.id)) return;
+  if (away(rt) || eng.stopping || !eng.bots.has(rt.folder.id)) return;
   rt.wakes.push(w);
   pumpWakes(eng, rt);
 }
 
 /** Starts the next waiting result's turn when the bot is free. Like a turn the harness begins by itself: no message in the chat, the purpose of the call it answers. */
 export function pumpWakes(eng: Engine, rt: BotRuntime): void {
-  if (rt.busy || !rt.wakes.length || eng.stopping || !eng.bots.has(rt.folder.id)) return;
+  if (away(rt) || rt.busy || !rt.wakes.length || eng.stopping || !eng.bots.has(rt.folder.id)) return;
   const w = rt.wakes[0]!;
   // A fresh run's own thread only while its session lives, live or set aside (core/aside.ts); else the main chat.
   const own = w.purpose.threadId === rt.threadId || sessionFor(rt, w.purpose.threadId);

@@ -26,6 +26,8 @@
 //      open the socket with the person's identity.
 // The login value is never logged or echoed back.
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { asDownload, fileDisposition, folderDownload } from "./downloads.js";
+import { listFiles as listBotFiles } from "./files.js";
 import { createReadStream, createWriteStream, realpathSync, statSync } from "node:fs";
 import { createServer, type IncomingHttpHeaders, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo, Socket } from "node:net";
@@ -210,11 +212,6 @@ export class FrameSlot {
   }
 }
 
-/** A file name for the plain `filename=` of a download: printable ASCII, no quotes or backslashes. */
-function asciiName(name: string): string {
-  return name.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "_") || "file";
-}
-
 export class EngineServer {
   private http: Server | undefined;
   private wss: WebSocketServer | undefined;
@@ -344,6 +341,7 @@ export class EngineServer {
     if (raw === "/api/push/renew") return this.renew(req, res);
     // Step 7c: a file of a to-do's modal, from its bot's folder. Read only, the attachments' rule.
     if (raw.startsWith("/api/todos/")) return this.todoFile(req, res, raw);
+    if (raw.startsWith("/api/bots/")) return this.botDownload(req, res, raw);
 
     // Nothing else over plain HTTP changes anything. The uploads and the renewal above pass
     // `this.access(req, true)` first, which holds the same origin rule as the socket; anything new
@@ -517,13 +515,19 @@ export class EngineServer {
     }
     let found;
     try {
-      found = engine.pageRequest(key, m[2] ?? "");
+      const forced = new URLSearchParams((req.url ?? "").split("?")[1]).has("download");
+      const mode = forced ? "download" : header(req.headers, "sec-fetch-mode") === "navigate" ? "navigate" : "resource";
+      found = engine.pageRequest(key, m[2] ?? "", mode);
     } catch (err) {
       log.error("An artifact file could not be looked up", err);
       return refuse(500, "Internal server error");
     }
     if (!found.ok) return refuse(404, "Not found");
     const own = ownSources(header(req.headers, "host"), key);
+    if (found.download) {
+      for (const [name, value] of Object.entries(sealHeaders("file", own))) res.setHeader(name, value);
+      return this.sendServed(req, res, "page", asDownload(found, found.name), "no-store");
+    }
     res.writeHead(200, { ...sealHeaders(found.isPage ? "page" : "file", own), "Content-Type": found.type, "Content-Length": found.size });
     if (req.method === "HEAD") return void res.end();
     const stream = createReadStream(found.full);
@@ -758,6 +762,7 @@ export class EngineServer {
       log.debug(`Refused an attachment request: ${access.reason}`);
       return this.plain(res, 401, access.message);
     }
+    const download = new URLSearchParams((req.url ?? "").split("?")[1]).has("download");
     let found;
     try {
       found = this.engine?.attachmentFile(id, which);
@@ -766,7 +771,7 @@ export class EngineServer {
       return this.plain(res, 500, "Internal server error");
     }
     if (!found) return this.plain(res, 404, "Not found");
-    this.sendServed(req, res, access.via, found, "private, max-age=31536000, immutable");
+    this.sendServed(req, res, access.via, download ? asDownload(found, found.name) : found, "private, max-age=31536000, immutable");
   }
 
   /**
@@ -791,16 +796,46 @@ export class EngineServer {
       return this.plain(res, 500, "Internal server error");
     }
     if (!found) return this.plain(res, 404, "Not found");
-    this.sendServed(req, res, access.via, found, "private, no-cache");
+    const download = new URLSearchParams((req.url ?? "").split("?")[1]).has("download");
+    this.sendServed(req, res, access.via, download ? asDownload(found, found.name) : found, "private, no-cache");
+  }
+
+  /** The Files tab inventory and the checked bytes behind a bot-folder link. */
+  private botDownload(req: IncomingMessage, res: ServerResponse, raw: string): void {
+    res.setHeader("Cache-Control", "no-store");
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      res.setHeader("Allow", "GET, HEAD");
+      req.resume();
+      return this.plain(res, 405, "Method not allowed");
+    }
+    const access = this.access(req, false);
+    this.fileOrigin(req, res, access);
+    if (!access.allowed) return this.plain(res, 401, access.message);
+    const m = /^\/api\/bots\/([a-z0-9_-]{1,128})\/(download|downloads)$/i.exec(raw);
+    const rt = m && this.engine?.bots.get(m[1]!);
+    if (!rt) return this.plain(res, 404, "Not found");
+    try {
+      if (m[2] === "downloads") {
+        const body = JSON.stringify({ files: listBotFiles(rt.folder.dir, true) });
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cross-Origin-Resource-Policy": "same-origin" });
+        return void res.end(req.method === "HEAD" ? undefined : body);
+      }
+      const path = new URLSearchParams((req.url ?? "").split("?")[1]).get("path") ?? "";
+      const found = folderDownload(rt.folder.dir, path);
+      if (!found) return this.plain(res, 404, "Not found");
+      this.sendServed(req, res, access.via, found, "no-store");
+    } catch (err) {
+      log.error("A bot's downloads could not be read", err);
+      this.plain(res, 500, "Internal server error");
+    }
   }
 
   /** Sends a stored file: a checked picture inline, anything else as a download that cannot run here. */
   private sendServed(req: IncomingMessage, res: ServerResponse, via: string, found: ServedFile, cache: string): void {
-    const disposition = `${found.inline ? "inline" : "attachment"}; filename="${asciiName(found.name)}"; filename*=UTF-8''${encodeURIComponent(found.name).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`;
     res.writeHead(200, {
       "Content-Type": found.type,
       "Content-Length": found.size,
-      "Content-Disposition": disposition,
+      "Content-Disposition": fileDisposition(found.name, found.inline),
       "Content-Security-Policy": found.inline ? ATTACHMENT_CSP_PICTURE : ATTACHMENT_CSP_DOWNLOAD,
       // The page reads it from its own origin; the desktop window (a file page, with the token) from another.
       ...(via === "tailscale" ? { "Cross-Origin-Resource-Policy": "same-origin" } : {}),
@@ -1056,6 +1091,8 @@ export class EngineServer {
         return { bot: engine.createBot(params as Methods["bot.create"]["params"]) };
       case "bot.update":
         return { bot: await engine.updateBot(params as Methods["bot.update"]["params"]) };
+      case "bot.vacation":
+        return engine.setVacation(params as Methods["bot.vacation"]["params"]);
       case "bot.retire":
         engine.retireBot((params as Methods["bot.retire"]["params"]).botId);
         return {};

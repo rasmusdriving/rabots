@@ -98,8 +98,8 @@ export class CodexTitles {
   }
 
   /** One title from `prompt` on `model`, one at a time. Never throws. */
-  make(prompt: string, model: string): Promise<CodexTitleResult> {
-    const next = this.chain.then(() => this.makeOne(prompt, model));
+  make(prompt: string, model: string, canStart = () => true): Promise<CodexTitleResult> {
+    const next = this.chain.then(() => this.makeOne(prompt, model, canStart));
     this.chain = next.catch(() => undefined);
     return next.catch((err: unknown) => ({ why: firstLine(err) }));
   }
@@ -120,12 +120,15 @@ export class CodexTitles {
     rpc?.stop();
   }
 
-  private async makeOne(prompt: string, model: string): Promise<CodexTitleResult> {
+  private async makeOne(prompt: string, model: string, canStart: () => boolean): Promise<CodexTitleResult> {
     if (this.stopped) return { why: "Pobots is stopping" };
+    if (!canStart()) return { why: "the bot is on vacation" };
     clearTimeout(this.idleTimer);
     try {
       const rpc = await this.ensure();
+      if (!canStart()) return { why: "the bot is on vacation" };
       const threadId = await this.openThread(rpc, model);
+      if (!canStart()) return { why: "the bot is on vacation" };
       const turnMs = this.o.titleMs ?? CODEX_TITLE_MS;
       const done = new Promise<{ status: string; text: string; error?: string }>((resolve) => {
         this.waiting = { threadId, text: "", resolve };

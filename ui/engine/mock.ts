@@ -165,6 +165,7 @@ import { MockFiles } from "./mock-files";
 import { MockBackup } from "./mock-backup";
 import { MockNotify } from "./mock-notify";
 import { MockSettings } from "./mock-settings";
+import { MockVacation, requireMockPresent } from "./mock-vacation";
 import { MockTodos } from "./mock-todos";
 import { MockCardQuestions } from "./mock-cardquestions";
 import { cardAnswerLevers, seedCardAnswer } from "./mock-cardanswer";
@@ -313,6 +314,7 @@ export class MockEngine implements EngineClient {
   private activity = new MockActivity();
   /** Step 7c: the person's to-dos. */
   private todos!: MockTodos;
+  private vacation: MockVacation;
   private cardQuestions!: MockCardQuestions;
   /** What a bot sees (ui/engine/mock-sees.ts). */
   private sees!: MockSees;
@@ -414,6 +416,7 @@ export class MockEngine implements EngineClient {
     // A new install's first start and About you (&aboutyou=1, protocol 24).
     this.firstStart = new MockFirstStart(this, flags.get("aboutyou"));
     window.pobotsFirstStart = this.firstStart.levers();
+    this.vacation = new MockVacation(this, () => this.todos.state());
     window.pobotsMock = {
       botWrites: (botId, path, text) => this.botWrites(botId, path, text),
       expire: (cardId) => this.expire(cardId),
@@ -642,8 +645,14 @@ export class MockEngine implements EngineClient {
     return this.attach.upload(request);
   }
 
-  attachmentUrl(id: string, which: "preview" | "full"): string | undefined {
-    return this.attach.url(id, which);
+  attachmentUrl(id: string, which: "preview" | "full" | "download"): string | undefined {
+    return this.attach.url(id, which === "download" ? "full" : which);
+  }
+
+  botDownloadUrl(botId: string, path?: string): string | undefined {
+    if (!path) return undefined;
+    const file = this.files.get(botId)?.get(path.replace(/^\.\//, ""));
+    return file && `data:application/octet-stream,${encodeURIComponent(file.text)}`;
   }
 
   todoFileUrl(todoId: string, index: number): string | undefined {
@@ -701,6 +710,7 @@ export class MockEngine implements EngineClient {
     "browser.answer": (p) => this.browser.handlers["browser.answer"](p),
     "browser.own": (p) => this.browser.handlers["browser.own"](p),
     "browser.close": (p) => this.browser.handlers["browser.close"](p),
+    "bot.vacation": (p) => this.vacation.set(p),
     "bot.retire": (p) => {
       this.retire(p.botId);
       return {};
@@ -892,7 +902,7 @@ export class MockEngine implements EngineClient {
     "taskManager.send": (p) => taskManagerSend(this, p),
     "taskManager.stop": (p) => taskManagerStop(this, p),
     "taskManager.end": (p) => taskManagerEnd(this, p),
-    "bot.startFresh": (p) => this.startFresh(p.botId),
+    "bot.startFresh": (p) => { requireMockPresent(this.bot(p.botId)); return this.startFresh(p.botId); },
     "artifact.list": (p) => ({ artifacts: this.listArtifacts(p.botId) }),
     "artifact.open": (p) => {
       const a = (this.artifactLists.get(this.bot(p.botId).id) ?? []).find((x) => x.id === p.artifactId);
@@ -950,7 +960,7 @@ export class MockEngine implements EngineClient {
   }
 
   private snapshot(): Snapshot {
-    return structuredClone({ status: this.status, bots: this.bots, cards: this.cards, models: this.models(), machines: MACHINES, upcoming: this.upcomingList, channels: this.channels.map(publicChannel), browser: this.browser.state(), backup: this.backup.state(), connections: this.connections.list(), notify: this.notify.state(), chat: this.chat, settings: this.settings7.view(), providers: this.settings7.providers(), todos: this.todos.state(), calendar: this.calendar.handlers["calendar.get"]({}).calendar, aboutYou: this.firstStart.text });
+    return structuredClone({ status: this.status, bots: this.bots, cards: this.cards.filter((c) => c.kind === "system" || !this.bot(c.botId).vacationSince), models: this.models(), machines: MACHINES, upcoming: this.upcomingList, channels: this.channels.map(publicChannel), browser: this.browser.state(), backup: this.backup.state(), connections: this.connections.list(), notify: this.notify.state(), chat: this.chat, settings: this.settings7.view(), providers: this.settings7.providers(), todos: this.todos.state().filter((t) => !this.bot(t.botId).vacationSince), calendar: this.calendar.handlers["calendar.get"]({}).calendar, aboutYou: this.firstStart.text });
   }
 
   /**
@@ -1050,7 +1060,7 @@ export class MockEngine implements EngineClient {
   }
 
   putBot(bot: Bot): void {
-    bot = withLiveTurn(this, restWaitView(this, withManagers(this, withWorking(this, bot))));
+    bot = bot.vacationSince ? { ...bot, state: "idle", activity: "On vacation" } : withLiveTurn(this, restWaitView(this, withManagers(this, withWorking(this, bot))));
     this.bots = this.bots.map((b) => (b.id === bot.id ? bot : b));
     this.emit({ event: "bot.updated", data: { bot } });
   }
@@ -1305,7 +1315,7 @@ export class MockEngine implements EngineClient {
 
   // ------------------------------------------------------------ chat
 
-  send(botId: string, rawText: string, opts: { holdAt?: number } = {}, attachmentIds: string[] = [], mode?: FollowUp): { item: UserItem } { return turns.send(this, botId, rawText, opts, attachmentIds, mode); }
+  send(botId: string, rawText: string, opts: { holdAt?: number } = {}, attachmentIds: string[] = [], mode?: FollowUp): { item: UserItem } { requireMockPresent(this.bot(botId)); return turns.send(this, botId, rawText, opts, attachmentIds, mode); }
 
   runTurn(botId: string, message: UserItem, opts: { holdAt?: number }): Promise<void> { return turns.runTurn(this, botId, message, opts); }
 

@@ -15,7 +15,7 @@ ws.on("message", (d) => { const f = JSON.parse(String(d)); if (f.t === "res") { 
 await new Promise((r) => ws.on("open", r));
 // The running engine may be one release behind or ahead of the source: try the neighbours too.
 let hello;
-for (const protocol of [proto, proto - 1, proto + 1]) {
+for (const protocol of [proto, proto - 1, proto + 1, proto - 2, proto + 2]) {
   try {
     hello = await req("hello", { protocol, client: "state-check" });
     break;
@@ -25,7 +25,7 @@ for (const protocol of [proto, proto - 1, proto + 1]) {
 }
 if (!hello) throw new Error("The running engine speaks another version than the source and its neighbours.");
 const snap = await req("snapshot");
-console.log("engine", hello.engineVersion, "| bots:", snap.bots.map((b) => `${b.name}: ${b.state}`).join(", "), "| open cards:", snap.cards.length);
+console.log("engine", hello.engineVersion, "| bots:", snap.bots.map((b) => `${b.name}: ${b.vacationSince ? "idle (on vacation)" : b.state}`).join(", "), "| open cards:", snap.cards.length);
 if (snap.status.codex) console.log("codex ready:", snap.status.codex.ready, snap.status.codex.problem ?? "", "| GPT models:", snap.models.filter((m) => m.harness === "codex").map((m) => m.label).join(", ") || "none");
 const b = await req("browser.state");
 console.log("browser available:", b.available, b.problem ?? "", "| open:", b.spaces.map((x) => x.owner).join(", ") || "none");

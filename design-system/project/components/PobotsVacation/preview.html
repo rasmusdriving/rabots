@@ -1,0 +1,28 @@
+<!-- @dsCard group="Sidebar" height=290 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Bots on vacation</title></head>
+<body class="body" style="background:var(--ground);color:var(--ink);margin:var(--space-4)">
+<section class="pb-vacation-shelf" aria-label="Bots on vacation">
+  <button class="pb-btn pb-btn-sm pb-btn-quiet pb-vacation-toggle" type="button" aria-expanded="true" aria-controls="vacation-preview" onclick="const closed=this.getAttribute('aria-expanded')==='true';this.setAttribute('aria-expanded',String(!closed)); const rows=document.getElementById('vacation-preview'); rows.toggleAttribute('data-collapsed',closed); rows.inert=closed;">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 4.75 6 7.75l3-3"/></svg>
+    <span>On vacation</span><span class="pb-vacation-count">1</span>
+  </button>
+  <div id="vacation-preview" class="pb-vacation-motion">
+    <div class="pb-vacation-inner">
+      <div class="pb-vacation-row">
+        <a class="pb-row" href="#read">
+          <span class="pb-avatar pb-avatar-sm" data-state="idle"><span class="pb-eyes"><i></i><i></i></span></span>
+          <span class="pb-row-text"><span class="pb-row-name">Mira</span><span class="pb-row-line">Since 19 Nov 2026</span></span>
+        </a>
+        <button class="pb-btn pb-btn-sm pb-btn-quiet pb-vacation-quick">Bring back</button>
+      </div>
+    </div>
+  </div>
+</section>
+<div id="read" class="pb-vacation-chat" style="margin-top:var(--space-5)">
+  <p class="pb-section-text">This bot is on vacation. You can read its chat.</p>
+  <button class="pb-btn pb-btn-sm">Bring back</button>
+</div>
+</body>
+</html>

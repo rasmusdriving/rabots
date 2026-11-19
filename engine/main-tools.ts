@@ -71,6 +71,7 @@ const updateShape = {
     .optional()
     .describe("What it sees of the person's services, plugins and skills (Claude bots), by the names get_bot shows."),
   forget_rules: z.array(z.string().max(100)).max(100).optional().describe('Ids of its Always allowed rules to forget (get_bot), or ["all"].'),
+  vacation: z.boolean().optional().describe("Send another bot on vacation (true) or bring it back (false). A working bot must be stopped first."),
   start_fresh: z.boolean().optional().describe("true: a fresh session now, after it writes down what matters. Not while it works."),
 };
 

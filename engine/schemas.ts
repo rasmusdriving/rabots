@@ -98,6 +98,7 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
       sees: botSees.nullable().optional(),
     }),
   }),
+  "bot.vacation": z.object({ botId: id, vacation: z.boolean(), stop: z.boolean().optional() }),
   "bot.retire": z.object({ botId: id }),
   "bot.startFresh": z.object({ botId: id }),
   "bot.files": z.object({ botId: id }),

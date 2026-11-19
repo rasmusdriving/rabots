@@ -1,4 +1,5 @@
 // Start-up: loading the bots, preparing their folders, tidying what a stop left, and sending what waited.
+import { away, recoverVacation } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import { type BotFolder, pickColor, readBotFolders } from "../bots.js";
 import { log } from "../log.js";
@@ -37,8 +38,9 @@ export function init(eng: Engine): void {
   for (const { folder } of withThreads) {
     const role = folder === keep?.folder ? "main" : "bot";
     const may = folder.file.mayMessage.filter((id) => ids.has(id));
-    if (folder.file.role !== role || may.length !== folder.file.mayMessage.length) {
+    if (folder.file.role !== role || may.length !== folder.file.mayMessage.length || (role === "main" && folder.file.vacationSince)) {
       folder.file.role = role;
+      if (role === "main") delete folder.file.vacationSince;
       folder.file.mayMessage = may;
       eng.saveSettings(folder);
     }
@@ -71,7 +73,10 @@ export function init(eng: Engine): void {
   eng.uploadsTimer.unref();
   for (const rt of eng.bots.values()) loadHold(eng, rt);
   // Engine 0.26.0: task managers come back, resting.
-  for (const rt of eng.bots.values()) restoreTaskManagers(eng, rt);
+  for (const rt of eng.bots.values()) {
+    restoreTaskManagers(eng, rt);
+    recoverVacation(eng, rt);
+  }
   settleQuestionsAtStart(eng);
   for (const rt of eng.bots.values()) rt.activity = idleActivity(eng, rt);
   eng.upcomingList = computeUpcoming(eng);
@@ -170,7 +175,7 @@ export function tidyAfterStop(eng: Engine): void {
 
 export function sendQueuedAfterStart(eng: Engine): void {
   for (const rt of eng.bots.values()) {
-    if (rt.busy || !rt.queue.length || eng.stopping) continue;
+    if (away(rt) || rt.busy || !rt.queue.length || eng.stopping) continue;
     // A GPT bot's message is taken up and ends blocked with Codex's sentence when Codex is not there.
     if (rt.folder.file.harness === "claude" && !eng.opts.claude.ready) {
       // Messages held by a Stop stay held and waiting: they wait for the person, not for Claude.

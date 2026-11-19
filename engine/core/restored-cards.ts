@@ -5,6 +5,7 @@
 // the thread as a new message from the person (Orchestrator.ts, queued after a running turn). Pobots
 // does the same for approvals: nothing runs by itself after a restart. The bot is told it was
 // approved and does the step again, and that one repeat goes through without a second card.
+import { away } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime, InternalDecision, PendingCard } from "./runtime.js";
 import type { ApprovalCard, QuestionCard, UserItem } from "../../shared/protocol.js";
@@ -72,17 +73,18 @@ export function restoreCards(eng: Engine): void {
       eng.store.removeCard(card.id);
       continue;
     }
-    if (card.kind === "note") {
-      eng.cards.set(card.id, { card, rt, resolve: () => undefined });
-      continue;
-    }
-    restore(eng, rt, card);
-    back++;
+    if (away(rt)) continue;
+    restoreBotCard(eng, rt, card);
+    if (card.kind !== "note") back++;
   }
   if (back) log.info(`${back} open card${back === 1 ? "" : "s"} came back after the restart`);
 }
 
-function restore(eng: Engine, rt: BotRuntime, card: Asking): void {
+export function restoreBotCard(eng: Engine, rt: BotRuntime, card: Exclude<PendingCard["card"], { kind: "system" }>): void {
+  if (card.kind === "note") {
+    eng.cards.set(card.id, { card, rt, resolve: () => undefined });
+    return;
+  }
   const pending: PendingCard = { card, rt, restored: true, resolve: (d) => answered(eng, rt, card, d) };
   if (card.kind === "approval" && card.expiresAt) {
     // The time it had left; one already past it goes at once.
@@ -105,7 +107,7 @@ export function becomesMessage(pending: PendingCard, type: string): boolean {
  */
 export function answered(eng: Engine, rt: BotRuntime, card: Asking, d: InternalDecision, after: "restart" | "asked" = "restart"): void {
   // Withdrawn: the bot was retired, or Pobots stops again (the card stays for the next start).
-  if (d.type === "withdrawn" || !eng.bots.has(rt.folder.id)) return;
+  if (d.type === "withdrawn" || away(rt) || !eng.bots.has(rt.folder.id)) return;
   try {
     if (card.kind === "question" && (d.type === "choice" || d.type === "text")) {
       const answer = d.type === "choice" ? (card.choices.find((c) => c.id === d.choiceId)?.label ?? d.choiceId) : d.text;

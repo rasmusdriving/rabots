@@ -54,9 +54,10 @@ export interface EngineClient {
    */
   upload?(request: UploadRequest): Promise<Attachment>;
   /** The address of a stored picture's preview or of the file itself, for an <img> or a download. */
-  attachmentUrl(id: string, which: "preview" | "full"): string | undefined;
+  attachmentUrl(id: string, which: "preview" | "full" | "download"): string | undefined;
   /** Step 7c: the address of the file of block `index` of a to-do; `version` (its updatedAt) makes a changed file load again. */
-  todoFileUrl?(todoId: string, index: number, version: string): string | undefined;
+  todoFileUrl?(todoId: string, index: number, version: string, download?: boolean): string | undefined;
+  botDownloadUrl?(botId: string, path?: string): string | undefined;
 }
 
 /** What a failed request rejects with. `message` is one plain sentence for the person. */

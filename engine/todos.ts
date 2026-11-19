@@ -4,8 +4,9 @@
 // holds the words: the tool results, the person's answer as a message, and the bot's list. The
 // engine keeps them (store.ts, table todos) and wakes the bot (engine.ts).
 import { randomBytes } from "node:crypto";
-import { closeSync, openSync, readSync, realpathSync, statSync } from "node:fs";
-import { basename, isAbsolute, relative, resolve, sep } from "node:path";
+import { closeSync, openSync, readSync } from "node:fs";
+import { downloadFileName } from "../shared/downloads.js";
+import { fileInFolder } from "./downloads.js";
 import type { Artifact, Todo, TodoBlock, TodoButton } from "../shared/protocol.js";
 import { TODO_BLOCKS_MAX, TODO_BUTTONS_MAX } from "../shared/protocol.js";
 import { sniffHead } from "./attachments.js";
@@ -107,29 +108,18 @@ export interface TodoContext {
   page(path: string): Artifact | string;
 }
 
-/** A file in the bot's folder, checked: inside it (also through links), a file. Plain words when not. */
-export function fileInFolder(botDir: string, given: string): { rel: string; full: string; size: number } | string {
+/** A file in the bot's folder, or plain words the bot can act on. */
+export function todoFileInFolder(botDir: string, given: string) {
   const raw = given.trim();
   if (!raw || raw.includes("\0")) return "Give the path of a file in your folder.";
-  let root = resolve(botDir);
-  let realRoot = root;
-  try {
-    realRoot = realpathSync(root);
-  } catch {
-    // the folder as given
-  }
-  const full = isAbsolute(raw) ? resolve(raw) : resolve(root, raw);
-  const inside = (base: string, p: string) => p === base || p.startsWith(base + sep);
-  if (!inside(root, full) && inside(realRoot, full)) root = realRoot;
-  if (!inside(root, full) || full === root) return `${line(raw, 120)} is outside your folder. Copy the file into your folder first.`;
-  try {
-    const real = realpathSync(full);
-    if (!inside(realRoot, real)) return `${line(raw, 120)} is a link to a place outside your folder. Copy the file itself into your folder.`;
-    const st = statSync(real);
-    if (!st.isFile()) return `${line(raw, 120)} is not a file.`;
-    return { rel: relative(root, full).split(sep).join("/"), full: real, size: st.size };
-  } catch {
-    return `There is no file at ${line(raw, 120)} in your folder.`;
+  const f = fileInFolder(botDir, raw);
+  const name = line(raw, 120);
+  switch (f) {
+    case "outside": return `${name} is outside your folder. Copy the file into your folder first.`;
+    case "linked-outside": return `${name} is a link to a place outside your folder. Copy the file itself into your folder.`;
+    case "not-file": return `${name} is not a file.`;
+    case "missing": return `There is no file at ${name} in your folder.`;
+    default: return f;
   }
 }
 
@@ -204,9 +194,10 @@ export function buildBlocks(raw: BlockArg[] | undefined, ctx: TodoContext): Todo
         return;
       }
       case "file": {
-        const f = fileInFolder(ctx.botDir, String(b.path ?? ""));
+        const f = todoFileInFolder(ctx.botDir, String(b.path ?? ""));
         if (typeof f === "string") throw new Error(`${n} (file): ${f}`);
-        blocks.push({ type: "file", path: f.rel, name: line(b.label, LABEL_MAX) || basename(f.rel), picture: !!pictureType(f.full), size: f.size });
+        // Protocol 28 keeps the display label in name. The download takes its name from path.
+        blocks.push({ type: "file", path: f.rel, name: line(b.label, LABEL_MAX) || downloadFileName(f.rel), picture: !!pictureType(f.full), size: f.size });
         return;
       }
       case "page": {

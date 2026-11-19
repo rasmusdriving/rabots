@@ -1,4 +1,5 @@
 // The team: messages between bots (ask and tell), their waiting answers and late answers.
+import { away, vacationRefusal } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import type { AskOutcome, BotRuntime, PendingAsk } from "./runtime.js";
 import { randomUUID } from "node:crypto";
@@ -60,7 +61,7 @@ export function settleAsk(eng: Engine, ask: PendingAsk, outcome: { answer: strin
   }
   // Delivered later, as a message from the bot that answered.
   const asker = eng.bots.get(ask.from);
-  if (!asker || eng.stopping || !("answer" in outcome) || !eng.harnessReady(asker)) return;
+  if (!asker || away(asker) || eng.stopping || !("answer" in outcome) || !eng.harnessReady(asker)) return;
   // An answer to a question asked before a Stop that holds waits with the held messages (step 3b, third part).
   const held = !!asker.hold && ask.epoch < asker.epoch;
   eng.enqueue(asker, outcome.answer, { type: "bot", botId: ask.to, expectsReply: false }, { hops: ask.hops, lateAnswer: true, held });
@@ -70,6 +71,7 @@ export async function messageBot(eng: Engine, rt: BotRuntime, args: MessageBotAr
   const target = eng.findBot(args.to);
   if (!target) return problem(`There is no bot called ${args.to}. Use list_bots to see the others.`);
   const name = target.folder.file.name;
+  if (away(target)) return problem(vacationRefusal(target));
   if (target === rt) return problem("You cannot send a message to yourself.");
   if (!eng.mayMessage(rt.folder.id, target.folder.id)) {
     return problem(`You may not message ${name}. You can message the main bot, or ask the person to add ${name} to your list.`);
