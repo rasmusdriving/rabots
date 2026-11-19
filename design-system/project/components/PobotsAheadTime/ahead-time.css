@@ -1,12 +1,13 @@
-/* Ahead, part B: the person's time. A "your time" row is an Ahead row with its end under the time;
-   while it runs the end reads "Now" and the row rests on a soft fill. The week note sits at the top.
+/* Ahead, part B: the person's time. A "your time" row is an Ahead row with its time as a range;
+   while it runs the end reads "Now" and the row rests on a soft fill. The week note is one line in
+   the row above the days and stands in full in Overview.
    Tokens only; the only motion is the row's own quiet background change. */
 
 .pb-ahead-yt { min-width: 0; }
 /* One line, cut with an ellipsis: a row that changes ("Moved to 23 Nov 08:00", "Late") keeps its box. */
 .pb-ahead-yt .pb-ahead-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pb-ahead-yt[data-now] .pb-ahead-row { background: var(--fill); }
-.pb-ahead-yt[data-now] .pb-ahead-end { color: var(--accent-text); font-weight: 600; opacity: 1; }
+.pb-ahead-yt[data-now] .pb-ahead-end { font-family: var(--font-sans); font-size: 12px; color: var(--accent-text); font-weight: 600; }
 
 /* The main bot's week note. */
 .pb-ahead-week-note { background: var(--fill); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); min-width: 0; }

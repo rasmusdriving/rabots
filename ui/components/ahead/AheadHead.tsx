@@ -37,7 +37,7 @@ export function AheadHead() {
         </span>
         <div className="app-head-text">
           <h1>Ahead</h1>
-          <div className="pb-row-line">{today ? `${longDate(today)} · ${week ? "next five working days" : "next 14 days"}` : "Next 14 days"}</div>
+          <div className="pb-row-line">{today ? `${longDate(today)} · ${week ? (phone ? "day by day" : "next five working days") : "next 14 days"}` : "Next 14 days"}</div>
         </div>
         <div className="pb-ahead-controls">
           {HEAD_CONTROLS.map((C, i) => (

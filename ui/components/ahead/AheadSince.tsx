@@ -1,3 +1,6 @@
+// "Since you looked" (protocol 31, part C): what is new or moved since the last visit. `useSince`
+// gives it short for the row above the days ("2 new, 1 moved", or "Nothing new") and in full for
+// Overview ("2 new, 1 moved since today 20:26").
 import { useAheadPage } from "./ahead-context";
 import { addDays, shortDate } from "./ahead-words";
 
@@ -8,18 +11,21 @@ function since(iso: string, today: string, timeZone: string): string {
   return `${day === today ? "today" : day === addDays(today, -1) ? "yesterday" : shortDate(day)} ${time}`;
 }
 
-export function AheadSince() {
+export interface Since {
+  /** True when something is new or moved. */
+  news: boolean;
+  short: string;
+  full: string;
+}
+
+export function useSince(): Since | undefined {
   const { model, today } = useAheadPage();
   const v = model.view;
-  if (!v?.screen?.seenAt) return null;
+  if (!v?.screen?.seenAt) return undefined;
   const all = [...v.earlier, ...v.rows, ...v.later];
   const added = all.filter((r) => r.changed?.kind === "new").length;
   const moved = all.filter((r) => r.changed?.kind === "moved").length;
   const bits = [added ? `${added} new` : "", moved ? `${moved} moved` : ""].filter(Boolean);
-  return (
-    <p className="pb-ahead-since small" data-ahead-since="">
-      {bits.length > 0 && <span className="pb-ahead-change-dot" aria-hidden="true" />}
-      {`${bits.length ? bits.join(", ") : "Nothing new"} since ${since(v.screen.seenAt, today, v.screen.timeZone)}`}
-    </p>
-  );
+  const short = bits.length ? bits.join(", ") : "Nothing new";
+  return { news: bits.length > 0, short, full: `${short} since ${since(v.screen.seenAt, today, v.screen.timeZone)}` };
 }

@@ -92,3 +92,4 @@ await import("./vacation.spec.js");
 await import("./ahead.spec.js");
 await import("./ahead-screen.spec.js");
 await import("./ahead-time.spec.js");
+await import("./ahead-grid.spec.js");

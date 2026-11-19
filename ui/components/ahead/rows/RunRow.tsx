@@ -1,9 +1,19 @@
 // A one-off scheduled run that is on. Tapping opens the bot's schedules.
-import type { AheadRunRow } from "../../../../shared/protocol";
+import type { AheadRunRow, Bot } from "../../../../shared/protocol";
 import { phoneGo } from "../../../state/screens";
 import { store, useAppState } from "../../../state/store";
 import { BotMark } from "./BotMark";
 import { RowShell } from "./RowShell";
+
+/** Opens the bot's schedules, where the run is. */
+export function openSchedules(bot: Bot): void {
+  store.leave(() =>
+    phoneGo(() => {
+      store.setTab(bot.id, "triggers");
+      store.openBot(bot.id);
+    }),
+  );
+}
 
 export function RunRow({ row }: { row: AheadRunRow }) {
   const bot = useAppState((s) => s.bots.find((b) => b.id === row.botId));
@@ -17,17 +27,7 @@ export function RunRow({ row }: { row: AheadRunRow }) {
       title={row.title}
       meta={`Scheduled run · ${who}`}
       label={`Scheduled run, ${row.title}, ${who}, at ${row.time}`}
-      onOpen={
-        bot
-          ? () =>
-              store.leave(() =>
-                phoneGo(() => {
-                  store.setTab(bot.id, "triggers");
-                  store.openBot(bot.id);
-                }),
-              )
-          : undefined
-      }
+      onOpen={bot ? () => openSchedules(bot) : undefined}
     />
   );
 }

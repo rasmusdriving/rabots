@@ -48,12 +48,17 @@ export default async function section() {
       // The week note, at the top, above the days.
       check(
         `ahead-time: the week note stands at the top, from the main bot, at ${where}`,
-        await ev('(() => { const n = $("[data-ahead-week-note]"); const d = $("[data-ahead-day]"); return !!n && !!d && n.getBoundingClientRect().bottom <= d.getBoundingClientRect().top && n.textContent.includes("A calm week") && /^From /.test(n.querySelector(".pb-ahead-week-note-from").textContent); })()'),
+        await ev('(() => { const n = $("[data-ahead-week-note-line]"); const d = $("[data-ahead-day]"); return !!n && !!d && n.getBoundingClientRect().bottom <= d.getBoundingClientRect().top && n.getAttribute("aria-label").includes("A calm week"); })()'),
       );
+      // In full one tap away, in Overview.
+      await ev('click($("[data-ahead-week-note-line]"))');
+      check(`ahead-time: the week note opens in full in Overview, from the main bot, at ${where}`, !!(await until('(() => { const n = $("[data-ahead-overview] [data-ahead-week-note]"); return !!n && n.textContent.includes("A calm week") && /^From /.test(n.querySelector(".pb-ahead-week-note-from").textContent); })()')));
+      await ev('click(btn("Close"))');
+      await until('!$("[data-ahead-overview]")');
 
       // The rows: time and end, the amber tag, the length, Late.
       const first = await ev(`(() => { const r = ${rowOf(FIRST)}; if (!r) return null; return { tag: r.querySelector(".pb-ahead-tag")?.textContent, amber: r.querySelector(".pb-ahead-tag")?.dataset.for, meta: r.querySelector(".pb-ahead-meta").textContent, when: r.querySelector(".pb-ahead-when").textContent }; })()`);
-      check(`ahead-time: a your-time row shows time and end, Your time in amber, the length and the bot at ${where}`, first?.tag === "Your time" && first.amber === "you" && /30 min · \S/.test(first.meta) && /^\d{2}:\d{2}\d{2}:\d{2}$/.test(first.when), first);
+      check(`ahead-time: a your-time row shows time and end, Your time in amber, the length and the bot at ${where}`, first?.tag === "Your time" && first.amber === "you" && /30 min · \S/.test(first.meta) && /^\d{2}:\d{2}-\d{2}:\d{2}$/.test(first.when), first);
       check(`ahead-time: one placed after its latest day says Late at ${where}`, await ev(`${rowOf(SECOND)}?.querySelector(".pb-ahead-meta").textContent.includes("Late")`));
       check(`ahead-time: not running yet, so no Now at ${where}`, await ev(`!${rowOf(FIRST)}.hasAttribute("data-now")`));
       await houseRules(`ahead-time page ${where}`);
@@ -96,7 +101,7 @@ export default async function section() {
       check(`ahead-time: the box a running slot was moved from no longer says Now at ${where}`, await ev(`!${rowOf(FIRST)}.hasAttribute("data-now") && ${rowOf(FIRST)}.querySelector(".pb-ahead-end")?.textContent !== "Now"`));
       // The week note goes when the main bot clears it.
       await ev('window.pobotsAheadTime.weekNote("")');
-      check(`ahead-time: a cleared week note goes at ${where}`, !!(await until('!$("[data-ahead-week-note]")')));
+      check(`ahead-time: a cleared week note goes at ${where}`, !!(await until('!$("[data-ahead-week-note-line]") && !$("[data-ahead-week-note]")')));
     }
   }
 

@@ -13,8 +13,8 @@ export function MeetingRow({ row }: { row: AheadMeetingRow }) {
       mark={<span className="pb-ahead-meeting" />}
       title={row.title}
       tone="meeting"
-      meta={row.free ? "Free" : undefined}
-      label={`Meeting, ${row.title}, ${row.allDay ? "all day" : `${row.time}${row.end ? ` to ${row.end}` : ""}`}`}
+      meta={row.free ? "Marked free" : undefined}
+      label={`Meeting, ${row.title}, ${row.allDay ? "all day" : `${row.time}${row.end ? ` to ${row.end}` : ""}`}${row.free ? ", marked free" : ""}`}
     />
   );
 }

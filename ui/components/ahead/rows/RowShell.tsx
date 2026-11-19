@@ -1,5 +1,6 @@
-// One row of Ahead: the time, a small mark, the title and a quiet line under it. A grid of three
-// columns, so rows line up down the day. A button when tapping it does something.
+// One row of Ahead: the time (a range for what has an end, "08:30-08:55"), a small mark, the title
+// and, at the right, one quiet line of facts. One line high, so rows line up down the day and a row
+// that changes keeps its box. A button when tapping it does something.
 import { createContext, useContext, type ReactNode } from "react";
 import type { AheadChange } from "../../../../shared/protocol";
 import { changeWords, shortDate } from "../ahead-words";
@@ -31,13 +32,15 @@ export function RowShell({ day, time, end, mark, title, meta, tone, label, onOpe
     <>
       <span className="pb-ahead-when">
         {dated ? shortDate(day) : time}
-        {dated ? time && <span className="pb-ahead-end">{time}</span> : end && <span className="pb-ahead-end">{end}</span>}
+        {dated ? time && <span className="pb-ahead-end" data-word="">{time}</span> : end && <span className="pb-ahead-end" data-word={/^\d/.test(end) ? undefined : ""}>{/^\d/.test(end) ? `-${end}` : end}</span>}
       </span>
       <span className="pb-ahead-mark" aria-hidden="true">
         {mark}
+        {/* New or moved since the last visit: beside the mark, so every title starts on the same line. */}
+        {word && <span className="pb-ahead-change-dot" />}
       </span>
       <span className="pb-ahead-body">
-        <span className="pb-ahead-title">{word && <span className="pb-ahead-change-dot" aria-hidden="true" />}{title}</span>
+        <span className="pb-ahead-title">{title}</span>
         {(word || meta) && <span className="pb-ahead-meta">
           {word && !tone && <>{word}{meta && " · "}</>}
           {meta}

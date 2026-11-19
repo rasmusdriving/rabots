@@ -1,102 +1,111 @@
-import { useRef, useState, type DragEvent } from "react";
-import type { AheadItemRow, AheadView } from "../../../shared/protocol";
+// Week on a laptop, Day on a phone (docs/build/step-ahead-redesign.md): the shell around the grid.
+// It picks the days (the next five working days; on a phone the one chosen in the strip), lays each
+// day out, keeps the lines for what lies outside the working hours once they are there, hands a drop
+// on to the engine, and opens a day as a list. Under the grid one quiet foot line of fixed height:
+// "Done this week" and "Other days are in Agenda".
+import { useMemo, useRef, useState } from "react";
+import { AHEAD_DEFAULTS, type AheadItemRow, type AheadRow, type AheadView } from "../../../shared/protocol";
 import { messageOf } from "../../engine/types";
+import { usePhone } from "../../lib/phone";
 import { useAppState } from "../../state/store";
-import { Rows, useVisible } from "./AheadDays";
+import { useVisible } from "./AheadDays";
+import { AheadDaySwitch } from "./AheadDaySwitch";
 import { useAheadPage } from "./ahead-context";
 import { workWeek } from "./ahead-screen-view";
-import { dayHead, shortDate } from "./ahead-words";
-import { AheadRowView } from "./rows";
-import { ShowDate } from "./rows/RowShell";
+import { longDate } from "./ahead-words";
+import { AheadGrid, type GridDay } from "./grid/AheadGrid";
+import { DaySheet } from "./grid/DaySheet";
+import { useGridDrag, type DropTarget } from "./grid/grid-drag";
+import { gridRange, placeDay, stretchOf } from "./grid/grid-layout";
+import { movedAway } from "./grid/row-facts";
 
-const TYPE = "application/x-pobots-ahead";
+type Sheet = { kind: "day"; day: string } | { kind: "earlier" } | { kind: "done" };
 
 export function AheadWeek({ view }: { view: AheadView }) {
   const { model } = useAheadPage();
-  const workDays = useAppState((s) => s.ahead?.workDays);
-  const days = workWeek(view.today, workDays);
+  const phone = usePhone();
+  const settings = useAppState((s) => s.ahead);
+  const week = useMemo(() => workWeek(view.today, settings?.workDays), [view.today, settings?.workDays]);
+  const [picked, setPicked] = useState<string>();
+  const one = picked && week.includes(picked) ? picked : week[0]!;
+  const days = phone ? [one] : week;
+  const range = useMemo(() => gridRange(settings?.workStart ?? AHEAD_DEFAULTS.workStart, settings?.workEnd ?? AHEAD_DEFAULTS.workEnd), [settings?.workStart, settings?.workEnd]);
   const visible = useVisible();
   const earlier = visible(view.earlier);
   const rows = visible(view.rows);
   const later = visible(view.later);
-  const omitted = rows.some((r) => !days.includes(r.day) || (r.source === "item" && !days.includes(r.item.day))) || later.length > 0;
-  // A local move leaves its old box as a receipt. Put the item at the foot of its new
-  // column, so existing cards in either column keep their positions.
-  const arriving = [...earlier, ...rows, ...later].flatMap((r) =>
-    r.source === "item" && r.item.kind !== "your-time" && r.item.state === "open" && r.item.day !== r.day
-      ? [{ ...r, day: r.item.day, changed: undefined }]
-      : [],
-  );
-  const dragged = useRef<AheadItemRow | null>(null);
-  const [source, setSource] = useState<string>();
-  const [target, setTarget] = useState<string>();
+  const done = visible(view.done);
+  const [sheet, setSheet] = useState<Sheet>();
   const [moving, setMoving] = useState(false);
   const [error, setError] = useState<string>();
+  const root = useRef<HTMLDivElement>(null);
 
-  const end = () => {
-    dragged.current = null;
-    setSource(undefined);
-    setTarget(undefined);
-  };
-  const start = (e: DragEvent, r: AheadItemRow) => {
-    if (moving) { e.preventDefault(); return; }
-    e.dataTransfer.setData(TYPE, r.key);
-    e.dataTransfer.effectAllowed = "move";
-    dragged.current = r;
-    setSource(`${r.key}:${r.day}`);
-    setError(undefined);
-  };
-  const over = (e: DragEvent, day: string) => {
-    if (!dragged.current || dragged.current.day === day || !e.dataTransfer.types.includes(TYPE)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setTarget(day);
-  };
-  const drop = async (e: DragEvent, day: string) => {
-    const r = dragged.current;
-    if (!r || e.dataTransfer.getData(TYPE) !== r.key || day === r.day) return;
-    e.preventDefault();
-    dragged.current = null;
-    setTarget(undefined);
+  // A move leaves its old box where it was until the person leaves the screen; the item itself
+  // shows at its new day and time as well.
+  const arrived: AheadRow[] = [...earlier, ...rows, ...later].flatMap((r) => (movedAway(r) && r.source === "item" ? [{ ...r, day: r.item.day, time: r.item.time, changed: undefined }] : []));
+  // In the order of the clock, as the engine hands rows over: what has no time first.
+  const onDay = (day: string) => [...rows.filter((r) => r.day === day), ...arrived.filter((r) => r.day === day)].sort((x, y) => (x.time ?? "").localeCompare(y.time ?? ""));
+  const grid: GridDay[] = days.map((day) => ({ day, layout: placeDay(onDay(day), range), earlier: day === view.today ? earlier.length : 0 }));
+
+  // The lines outside the working hours come from the whole week as read (not from what a filter
+  // lets through, and on a phone not from the one day shown), and once there they stay for the
+  // visit: the hours never change their height under the person's eyes.
+  const outside = useRef({ before: false, after: false });
+  for (const r of [...view.rows, ...arrived]) {
+    if (!week.includes(r.day)) continue;
+    const s = stretchOf(r);
+    if (s && s.end <= range.start) outside.current.before = true;
+    if (s && s.start >= range.end) outside.current.after = true;
+  }
+
+  const drop = async (row: AheadItemRow, to: DropTarget) => {
     setMoving(true);
+    setError(undefined);
     try {
-      await model.act(r.item, "move", day);
+      await model.act(row.item, "move", to.day, { time: to.time });
     } catch (err) {
       setError(messageOf(err));
     } finally {
-      setSource(undefined);
       setMoving(false);
     }
   };
+  const drag = useGridDrag(root, range, !phone && !moving, (row, to) => void drop(row, to));
 
+  const omitted = rows.some((r) => !week.includes(r.day) || (r.source === "item" && !week.includes(r.item.day))) || later.length > 0;
   return (
-    <div data-ahead-week="" className="pb-fade-in">
-      {earlier.length > 0 && <details className="pb-ahead-week-earlier">
-        <summary className="pb-ahead-fold">{`From earlier · ${earlier.length}`}</summary>
-        <ShowDate.Provider value={true}><Rows rows={earlier} /></ShowDate.Provider>
-      </details>}
-      <div className="pb-ahead-week">
-        {days.map((day) => {
-          const list = [...rows.filter((r) => r.day === day), ...arriving.filter((r) => r.day === day)];
-          return (
-            <section key={day} className="pb-ahead-week-col" aria-labelledby={`ahead-week-${day}`} data-ahead-week-day={day} data-drop-target={target === day || undefined}
-              onDragOver={(e) => over(e, day)} onDragLeave={(e) => {
-                if (!(e.relatedTarget instanceof Node) || !e.currentTarget.contains(e.relatedTarget)) setTarget((was) => was === day ? undefined : was);
-              }} onDrop={(e) => void drop(e, day)}>
-              <h3 className="pb-ahead-week-title label" id={`ahead-week-${day}`}>{dayHead(day, view.today)} <span>{shortDate(day)}</span></h3>
-              {list.length ? list.map((r) => {
-                const draggable = r.source === "item" && r.item.kind !== "your-time" && r.item.state === "open" && r.item.day === r.day;
-                return <div key={r.key} className="pb-ahead-week-slot" draggable={draggable || undefined} data-drag-source={source === `${r.key}:${r.day}` || undefined}
-                  onDragStart={draggable ? (e) => start(e, r) : undefined} onDragEnd={draggable ? () => { if (dragged.current) end(); } : undefined}>
-                  <AheadRowView row={r} />
-                </div>;
-              }) : <p className="small pb-ahead-week-empty">Nothing planned</p>}
-            </section>
-          );
-        })}
+    <div className="pb-ahead-weekview" data-ahead-weekview="">
+      {phone && <AheadDaySwitch days={week} day={one} today={view.today} onPick={setPicked} />}
+      <AheadGrid
+        root={root}
+        today={view.today}
+        days={grid}
+        range={range}
+        single={phone}
+        before={outside.current.before}
+        after={outside.current.after}
+        drag={phone ? undefined : { state: drag.drag, start: drag.start, swallow: drag.swallow }}
+        onOpenDay={(day) => setSheet({ kind: "day", day })}
+        onOpenEarlier={() => setSheet({ kind: "earlier" })}
+      />
+      <div className="pb-ahead-grid-foot small">
+        {done.length > 0 ? (
+          <button type="button" className="pb-ahead-grid-foot-btn" aria-haspopup="dialog" data-ahead-done="" onClick={() => setSheet({ kind: "done" })}>
+            {`Done this week · ${done.length}`}
+          </button>
+        ) : (
+          <span />
+        )}
+        {error ? (
+          <span className="app-hint-error" role="alert">
+            {error}
+          </span>
+        ) : (
+          omitted && <span className="pb-ahead-grid-foot-note">Other days are in Agenda.</span>
+        )}
       </div>
-      {omitted && <p className="pb-hint pb-ahead-week-note">Other days are in Agenda.</p>}
-      {error && <p className="pb-hint app-hint-error" role="alert">{error}</p>}
+      {sheet?.kind === "day" && <DaySheet title={longDate(sheet.day)} rows={onDay(sheet.day)} onClose={() => setSheet(undefined)} />}
+      {sheet?.kind === "earlier" && <DaySheet title="From earlier" rows={earlier} dated empty="Nothing from earlier" onClose={() => setSheet(undefined)} />}
+      {sheet?.kind === "done" && <DaySheet title="Done this week" rows={done} dated done empty="Nothing done this week yet" onClose={() => setSheet(undefined)} />}
     </div>
   );
 }

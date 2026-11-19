@@ -1,7 +1,6 @@
 // A "your time" row (Ahead part B): the time and its end, the bot, what to look at, how long. While
 // it runs the end is softly replaced by "Now"; no card, nothing else moves. Tapping opens its own
-// sheet (YourTimeSheet), not the item sheet.
-import { useState } from "react";
+// sheet (YourTimeSheet, shown by the page), not the item sheet.
 import type { AheadItemRow } from "../../../../shared/protocol";
 import { useAppState } from "../../../state/store";
 import { useAheadPage } from "../ahead-context";
@@ -9,13 +8,11 @@ import { longDate, shortDate } from "../ahead-words";
 import { BotMark } from "../rows/BotMark";
 import { RowShell } from "../rows/RowShell";
 import { endOf, isLate, lengthWords, useRunning } from "./time-words";
-import { YourTimeSheet } from "./YourTimeSheet";
 
 const STATE_WORD = { done: "Done", dropped: "Dropped" } as const;
 
 export function YourTimeRow({ row }: { row: AheadItemRow }) {
-  const { today } = useAheadPage();
-  const [open, setOpen] = useState(false);
+  const { today, openItem } = useAheadPage();
   const bot = useAppState((s) => (row.item.botId ? s.bots.find((b) => b.id === row.item.botId) : undefined));
   const item = row.item;
   const runs = useRunning(item, today);
@@ -49,9 +46,8 @@ export function YourTimeRow({ row }: { row: AheadItemRow }) {
           </>
         }
         label={`Your time, ${item.title}, ${[moved ? `moved to ${longDate(item.day)} ${item.time ?? ""}`.trim() : undefined, ...bits.slice(moved ? 1 : 0)].filter(Boolean).join(", ")}${time ? `, at ${time}` : ""}${running ? ", now" : ""}`}
-        onOpen={() => setOpen(true)}
+        onOpen={() => openItem(item)}
       />
-      {open && <YourTimeSheet item={item} onClose={() => setOpen(false)} />}
     </div>
   );
 }

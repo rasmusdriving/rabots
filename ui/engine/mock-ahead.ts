@@ -3,15 +3,17 @@
 // the to-dos with a date and, with ?ahead=1, a few meetings.
 //
 // ?ahead= picks the start: (absent) off, on (on, nothing on it), 1 (on, with items of the scene's
-// bots, a dated to-do, a meeting or two, an item from earlier and one later).
+// bots, a dated to-do, a meeting or two, an item from earlier and one later), busy (a full working
+// week of meetings with the bots' things among them, ui/engine/mock-ahead-busy.ts).
 // Levers on window.pobotsAhead: state(), add(botId, title, dayOffset, kind?) adds an item as a bot
 // would (the window then holds it behind "1 new · Show"), items().
-import type { AheadCarry, AheadItem, AheadItemRow, AheadKind, AheadMeetingRow, AheadRow, AheadSettings, AheadView, Methods } from "../../shared/protocol";
+import type { AheadCarry, AheadItem, AheadItemRow, AheadKind, AheadMeetingRow, AheadRow, AheadRunRow, AheadSettings, AheadView, Methods } from "../../shared/protocol";
 import { AHEAD_DAYS, AHEAD_DEFAULTS } from "../../shared/protocol";
 import type { MockEngine } from "./mock";
 import { isoDay } from "./mock-data";
 import { EngineError } from "./types";
 import { MockAheadTime } from "./mock-ahead-time";
+import { seedBusy } from "./mock-ahead-busy";
 
 export interface AheadLevers {
   state(): AheadSettings;
@@ -48,12 +50,15 @@ export class MockAhead {
   settings: AheadSettings = { ...AHEAD_DEFAULTS };
   private list: AheadItem[] = [];
   private meetings: AheadMeetingRow[] = [];
+  /** One-off runs of the busy week, beside those of the scene's own schedules. */
+  private runs: AheadRunRow[] = [];
   private n = 1;
   private time: MockAheadTime;
 
   constructor(private readonly mock: MockEngine, flag?: string) {
-    if (flag === "on" || flag === "1") this.settings.enabled = true;
+    if (flag === "on" || flag === "1" || flag === "busy") this.settings.enabled = true;
     if (flag === "1") this.seed();
+    if (flag === "busy") this.busy();
     // Part B: "your time" (ui/engine/mock-ahead-time.ts).
     const self = this;
     this.time = new MockAheadTime({ get settings() { return self.settings; }, get list() { return self.list; }, meetingRows: () => self.meetings, put: (b, x) => self.put(b, x) }, mock, flag);
@@ -79,6 +84,15 @@ export class MockAhead {
       { source: "meeting", key: "meeting:m2", day: plusDays(1), time: "12:00", end: "13:00", title: "Lunch walk", free: true },
       { source: "meeting", key: "meeting:m3", day: plusDays(4), allDay: true, title: "Team day" },
     ];
+  }
+
+  private busy(): void {
+    const ids = this.mock.bots.map((b) => b.id);
+    this.mock.bots = this.mock.bots.map((b, i) => (b.role === "main" || i > 2 ? b : { ...b, ahead: i === 1 ? "time" : "items" }));
+    const week = seedBusy((botId, p) => this.put(botId, p), ids);
+    this.meetings = week.meetings;
+    this.runs = week.runs;
+    this.settings.weekNote = { text: week.weekNote, at: new Date().toISOString() };
   }
 
   private put(botId: string | null, p: Pick<AheadItem, "kind" | "title" | "day"> & Partial<AheadItem>): AheadItem {
@@ -114,6 +128,7 @@ export class MockAhead {
         const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(next);
         return [{ source: "run" as const, key: `run:${t.id}`, day, time, triggerId: t.id, botId: t.botId, title: t.name }];
       }),
+      ...this.runs.filter((r) => live(r.botId) && !away(r.botId)),
     ];
     const rows: AheadRow[] = [];
     const earlier: AheadRow[] = [];
