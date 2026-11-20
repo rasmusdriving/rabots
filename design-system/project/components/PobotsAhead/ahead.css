@@ -12,6 +12,13 @@
 .pb-ahead-page { width: 100%; padding: 0 0 var(--space-6); min-width: 0; }
 /* The row above the days spans the panel in both views, so it stays put when the view is switched. The agenda reads at 720px. */
 .pb-ahead-content > .pb-ahead-days, .pb-ahead-content > .pb-ahead-day, .pb-ahead-content > .pb-ahead-empty { max-width: 720px; margin-inline: auto; }
+/* Protocol 33: the calendar's line, while Ahead is on and the calendar is not set up. Quiet words and two
+   quiet actions, between the row above the days and the days. Its box is set when the page opens and
+   kept until the person leaves, so nothing under it moves. */
+.pb-ahead-setup { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-3); row-gap: var(--space-1); max-width: 720px; margin: 0 auto var(--space-2); padding: var(--space-2) var(--space-1); }
+.pb-ahead-setup > .pb-hint { flex: 1 1 320px; min-width: 0; }
+.pb-ahead-setup-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.pb-ahead-setup-actions[hidden] { display: none; }
 .pb-ahead-head .app-head-text { min-width: 0; flex: 1; }
 .pb-ahead-controls { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-left: auto; }
 

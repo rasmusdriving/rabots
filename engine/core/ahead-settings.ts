@@ -7,6 +7,7 @@ import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
 import { AHEAD_DEFAULTS, AHEAD_LEVELS, AHEAD_SCHEDULING_DEFAULT, AHEAD_SCHEDULING_MAX, type AheadLevel, type AheadSettings, type Methods } from "../../shared/protocol.js";
 import { flowAddress } from "./calendar-settings.js";
+import { serviceOf, serviceWords } from "./calendar-service.js";
 import { guideWords } from "./guides.js";
 import { EngineError } from "../errors.js";
 import { away } from "./vacation.js";
@@ -141,7 +142,7 @@ export function aheadSettingsWords(eng: Engine): string {
   const calendar = !!flowAddress(eng);
   const blocks = s.todoBlocks
     ? calendar
-      ? "To-dos in the calendar: on (change_settings ahead_todo_blocks): every new to-do gets a block of the person's time on Ahead and in their Outlook calendar."
+      ? `To-dos in the calendar: on (change_settings ahead_todo_blocks): every new to-do gets a block of the person's time on Ahead and in their ${serviceWords(serviceOf(flowAddress(eng))).cal} calendar.`
       : `To-dos in the calendar: on, but the calendar is not set up, so no blocks are made (change_settings ahead_todo_blocks). ${guideWords("calendar")}`
     : "To-dos in the calendar: off (change_settings ahead_todo_blocks).";
   const how = `How to schedule the person (change_settings ahead_scheduling${s.scheduling ? "" : ", now the default"}): "${schedulingOf(s)}"`;

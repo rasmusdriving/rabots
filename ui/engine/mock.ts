@@ -414,7 +414,10 @@ export class MockEngine implements EngineClient {
     window.pobotsActivity = this.activity.levers;
     window.pobotsUsage = { waitMs: 0 };
     if (flags.get("seesset") === "1") this.bots = this.bots.map((b) => (b.harness === "codex" ? b : { ...b, sees: CODING_SEES() }));
-    this.calendar = new MockCalendar(this, flags.get("calendar") ?? undefined);
+    // Ahead with meetings (?ahead=1, busy, time) has a calendar, as the engine needs one for them (protocol 33);
+    // ?ahead=on without ?calendar= is Ahead without a calendar, with the line that says so.
+    const aheadMeetings = ["1", "busy", "time"].includes(flags.get("ahead") ?? "");
+    this.calendar = new MockCalendar(this, flags.get("calendar") ?? (aheadMeetings && scene !== "first-run" ? "set" : undefined));
     window.pobotsCalendar = this.calendar.levers();
     if (flags.get("calendar") === "1" && scene !== "first-run") this.calendar.seed();
     this.ahead = new MockAhead(this, scene === "first-run" ? undefined : (flags.get("ahead") ?? undefined));

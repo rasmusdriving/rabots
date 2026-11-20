@@ -13,6 +13,7 @@ import type { AheadItem } from "../../../shared/protocol";
 import { AheadContext, type AheadPageContext } from "./ahead-context";
 import { useAhead, useHideMeetings } from "./ahead-state";
 import { AheadBlocks } from "./AheadBlocks";
+import { AheadCalendarLine, calendarNeeded } from "./AheadCalendarLine";
 import { AheadDays } from "./AheadDays";
 import { AheadHead } from "./AheadHead";
 import { ItemSheet } from "./ItemSheet";
@@ -36,6 +37,8 @@ function AheadVisit({ covered }: { covered: boolean }) {
   const ctx = useMemo<AheadPageContext>(() => ({ today, model, openItem: setSheet, only, setOnly, hideMeetings, setHideMeetings, label, setLabel, week, setWeek }), [today, model, only, hideMeetings, setHideMeetings, label, week, setWeek]);
   const v = model.view;
   const empty = v && !v.earlier.length && !v.rows.length && !v.later.length;
+  // The line above the days says what the calendar needs; the empty state does not say it again.
+  const calendarLine = useAppState((s) => calendarNeeded(!!s.ahead?.enabled, s.calendar));
   return (
     <AheadContext.Provider value={ctx}>
       <main className="pb-main app-main app-ahead" aria-label="Ahead" inert={covered || undefined} aria-hidden={covered || undefined}>
@@ -50,7 +53,8 @@ function AheadVisit({ covered }: { covered: boolean }) {
             {v && (
               <div className="pb-fade-in pb-ahead-content">
                 <AheadBlocks />
-                {week ? <AheadWeek view={v} /> : empty ? <Empty meetings={v.meetings} /> : <AheadDays view={agendaView(v)} />}
+                <AheadCalendarLine />
+                {week ? <AheadWeek view={v} /> : empty ? <Empty meetings={calendarLine ? "on" : v.meetings} /> : <AheadDays view={agendaView(v)} />}
                 {!week && <AheadDone rows={v.done} />}
               </div>
             )}

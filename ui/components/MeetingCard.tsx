@@ -4,6 +4,7 @@
 // T3 Code's pending approval (ComposerPendingApprovalActions.tsx) shows the request and two choices;
 // this is the same, with the meeting written out so nothing is approved unseen.
 import type { CardAttendee, CardMeeting } from "../../shared/protocol";
+import { useAppState } from "../state/store";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -58,7 +59,9 @@ function personTag(a: CardAttendee, checks: boolean): string {
 export function MeetingDetail({ meeting: m }: { meeting: CardMeeting }) {
   const zone = ownZone() && ownZone() !== m.timeZone ? ` (${m.timeZone})` : "";
   const checks = m.action === "create" || m.action === "move";
-  const teams = m.action === "create" ? "Teams meeting, a link is added" : m.teams ? "Teams meeting" : "No Teams link";
+  // Protocol 33: Google Meet when the calendar is a Google one; Teams as before otherwise.
+  const meet = useAppState((s) => s.calendar?.service) === "google" ? "Google Meet" : "Teams";
+  const teams = m.action === "create" ? `${meet} meeting, a link is added` : m.teams ? `${meet} meeting` : `No ${meet} link`;
   return (
     <div className="pb-meet">
       <span className="pb-meet-what">{m.subject}</span>

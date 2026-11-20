@@ -1,5 +1,6 @@
 // The main bot's tools for Pobots' own settings: reading and changing them. Making, changing and retiring bots is in bot-changes.ts.
 import { aheadOn, setAheadSettings } from "./ahead-settings.js";
+import { aheadSetupToolWords } from "./ahead-setup.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
 import type { NotifyKind, ProviderId, ProvidersState, SettingsPatch } from "../../shared/protocol.js";
@@ -75,6 +76,7 @@ function aboutYouLine(eng: Engine): string {
 /** change_settings (main bot): no card; a quiet line in its chat tells the person what changed (decided 14 Nov 2026). */
 export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSettingsArgs): ToolResult {
   const changes: string[] = [];
+  let setupWords = "";
   try {
     // Checked first, so a bad part changes nothing.
     const target = args.bot_follow_up ? eng.findBot(args.bot_follow_up.bot) : undefined;
@@ -102,6 +104,8 @@ export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSetti
     if (args.ahead !== undefined && args.ahead !== aheadOn(eng)) {
       setAheadSettings(eng, { enabled: args.ahead });
       changes.push(`Ahead from ${args.ahead ? "off to on" : "on to off"}`);
+      // Engine 0.42.0: on without a calendar, the setup words go back in this answer (no second turn).
+      if (args.ahead) setupWords = aheadSetupToolWords(eng);
     }
     if (args.ahead_time) changes.push(...setAheadTime(eng, args.ahead_time).map((c) => `Ahead, ${c}`));
     // Protocol 32: to-dos in the calendar, and how the bots schedule the person.
@@ -141,7 +145,7 @@ export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSetti
   }
   if (!changes.length) return ok("Nothing changed: the settings already had those values.");
   noteChanges(eng, rt, changes);
-  return ok(`Changed, and the person has a note about it:\n- ${changes.join("\n- ")}`);
+  return ok(`Changed, and the person has a note about it:\n- ${changes.join("\n- ")}${setupWords}`);
 }
 
 /** Bot ids from ids or names. An unknown one is refused in plain words. */

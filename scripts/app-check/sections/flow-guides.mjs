@@ -13,7 +13,7 @@ export default async function section() {
   const s = await sideChannel(run.endpoint);
   try {
     const dir = join(root, "dist", "engine", "guides");
-    const files = ["calendar-flow.md", "teams-channel-flows.md", "flows/calendar.definition.json", "flows/teams-to-bots.definition.json", "flows/bot-answers-to-teams.definition.json"];
+    const files = ["calendar-flow.md", "teams-channel-flows.md", "flows/calendar.definition.json", "flows/teams-to-bots.definition.json", "flows/bot-answers-to-teams.definition.json", "google-calendar.md", "google/calendar.gs", "google/appsscript.json"];
     const missing = files.filter((f) => !existsSync(join(dir, f)));
     check("flow-guides: the guides and the definitions are in the build beside the engine", !missing.length, missing.join(", "));
     const same = existsSync(join(dir, "calendar-flow.md")) && readFileSync(join(dir, "calendar-flow.md"), "utf8") === readFileSync(join(root, "docs", "guides", "calendar-flow.md"), "utf8");

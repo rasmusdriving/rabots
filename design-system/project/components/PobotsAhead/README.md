@@ -10,6 +10,12 @@ Nothing jumps. When a bot changes something while the person looks, hold it behi
 
 Tapping an item opens the sheet: Done, Drop, Move to a picked day, Open again, the way to the bot's chat. The bot is told at its next turn.
 
+## The calendar's line
+
+Ahead needs the calendar for its meetings and free time. While Ahead is on and the calendar is not set up, or its last check found a problem, one quiet line stands between the row above the days and the days: "Your calendar is not set up, so Ahead shows no meetings or free time. The main bot can set it up with you." (with a problem: "Your calendar has a problem, ... The main bot can help you fix it."). After it, two quiet actions: "Ask the main bot", which opens the main bot's chat, and "Calendar settings". No colour, no icon, no close button: it goes by itself once the calendar is set up. The empty state then does not say "Meetings show here once the calendar is set up" again.
+
+It never jumps. Whether it shows is decided when the screen opens: a line that would come while the person looks waits for the next visit. When the calendar is set up while the person looks, the line keeps its box, says "Your calendar is set up. Meetings and free time show on Ahead from now on." without the actions, and is gone at the next visit.
+
 ## Working the screen
 
 Above the days stands one row of fixed height, whatever it holds. From the left: "Carrying", which opens Overview; a small chip per bot with something on Ahead (its face, how much, and in amber how much waits on the person), and "You" for the person's own items; the main bot's week note cut to one line (the words "Week note" when there is no room for a line); and at the right end what changed since the last visit ("2 new, 1 moved" or "Nothing new"). A chip is also the filter: tap it to show only that bot's rows, tap it again for everyone. On a wide page the chips carry the bots' names.

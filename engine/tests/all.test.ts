@@ -95,3 +95,5 @@ await import("./ahead-screen.spec.js");
 await import("./ahead-time.spec.js");
 await import("./ahead-grid.spec.js");
 await import("./todo-blocks.spec.js");
+await import("./ahead-setup.spec.js");
+await import("./google-calendar.spec.js");

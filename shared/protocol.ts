@@ -43,7 +43,7 @@ export * from "./usage-overview.js";
 export * from "./ahead.js";
 import type { AheadAction, AheadItem, AheadLevel, AheadSettings, AheadView } from "./ahead.js";
 
-export const PROTOCOL_VERSION = 32;
+export const PROTOCOL_VERSION = 33;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -684,6 +684,11 @@ export interface NoticeItem extends ItemBase {
   detail?: string;
   /** For "fresh": the tidy turn this notice ends, so the app can show its steps on request. */
   tidyTurnId?: string;
+  /**
+   * Protocol 33: the line says why the bot's next turn starts by itself (Ahead switched on in Settings
+   * while the calendar is not ready). The window shows no "reported back" line for that turn.
+   */
+  startsTurn?: boolean;
 }
 
 export type Item = UserItem | BotItem | ActivityItem | NoticeItem | HelperItem | ArtifactItem | BrowserItem;
@@ -2025,9 +2030,14 @@ export interface Snapshot {
   calendar: CalendarState;
 }
 
+/** Which calendar the address leads to (protocol 33): Outlook through Power Automate, or Google Calendar through Apps Script. */
+export type CalendarService = "outlook" | "google";
+
 export interface CalendarState {
   /** True when the flow's address is set. */
   connected: boolean;
+  /** Protocol 33: which calendar, from the address. "outlook" when none is set. */
+  service: CalendarService;
   /** The mailbox the flow acts for, from the last good check. */
   mailbox?: { name?: string; address: string };
   /** When the connection was last checked, ISO 8601. */

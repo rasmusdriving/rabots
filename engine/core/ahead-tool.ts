@@ -16,6 +16,8 @@ import { actionLine, tellBot } from "./ahead-news.js";
 import { aheadItemsChanged } from "./todo-block-sync.js";
 import { aheadLevel, aheadSettings, schedulingOf, todoBlocksOn } from "./ahead-settings.js";
 import { addYourTime, moveYourTime, weekNote } from "./ahead-time.js";
+import { flowAddress } from "./calendar-settings.js";
+import { serviceOf, serviceWords } from "./calendar-service.js";
 
 export const AHEAD_TOOL = "ahead_item";
 
@@ -55,7 +57,7 @@ export function aheadToolFor(eng: Engine, rt: BotRuntime, opts: { threadId?: str
       ...(main ? ["You may act on any bot's items; name the bot on add, and on list for one bot."] : []),
       ...(time && !main ? ["your-time asks for the person's time to look at something; day means not before; Pobots picks a free slot in working hours."] : []),
       ...(main ? ["You are responsible for the person's time: add or move any your-time; with a time you set it, else Pobots picks a free slot. Yours are focus blocks. week_note: title is the note atop Ahead, empty clears; offer it Monday mornings."] : []),
-      ...(blocks ? ["Each to-do has a block of the person's time (shown as block of to-do), kept in their Outlook calendar; it closes with its to-do."] : []),
+      ...(blocks ? [`Each to-do has a block of the person's time (shown as block of to-do), kept in their ${serviceWords(serviceOf(flowAddress(eng))).cal} calendar; it closes with its to-do.`] : []),
       ...(time ? [`How to schedule the person (their words): "${scheduling}"`] : []),
       ...(main ? ["When the person gives feedback on their scheduling, rewrite that text with change_settings ahead_scheduling."] : []),
     ].join(" "),

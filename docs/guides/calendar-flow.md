@@ -2,6 +2,8 @@
 
 This guide connects Pobots to a person's own Outlook calendar through a flow in their own Power Automate. It is written for a bot to go through together with its person, and a person can follow it alone. The flow's definition is in [flows/calendar.definition.json](flows/calendar.definition.json), next to this file.
 
+For Google Calendar, see [google-calendar.md](google-calendar.md) instead.
+
 Pobots works without it. Without the flow, the bots have no calendar tools, Ahead shows no meetings, and to-dos do not get blocks in the calendar. Everything else works as before.
 
 ## What it gives
@@ -27,6 +29,14 @@ The main bot has the Calendar switch on from the start. For other bots it is in 
 - **Pobots** at engine 0.25.0 or later.
 
 The calendar flow does not need a public address for Pobots. Pobots calls the flow; the flow never calls Pobots.
+
+## Without premium
+
+Check this first, before anything is built. Without Power Automate premium the flow cannot be saved or run, and there is no other way for Pobots to reach an Outlook calendar. Then:
+
+- The bots have no calendar tools, and Ahead shows no meetings or free time. Ahead's own to-dos and everything else in Pobots work as before.
+- The person can ask their IT for a Power Automate plan with premium connectors (for example Power Automate Premium per user). Whether they get one is their organisation's decision.
+- A person who uses Google Calendar instead follows [google-calendar.md](google-calendar.md), which needs no paid plan.
 
 ## Set it up
 

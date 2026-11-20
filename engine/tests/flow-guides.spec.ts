@@ -67,8 +67,8 @@ describe("flow guides", () => {
 
   test("the main bot's team paragraph names both guides; another bot's does not", () => {
     const main = teamPrompt("main");
-    assertGuides(main, "the main bot's team paragraph", 2);
-    assert.ok(main.includes(guidePath("calendar")) && main.includes(guidePath("teams")));
+    assertGuides(main, "the main bot's team paragraph", 3);
+    assert.ok(main.includes(guidePath("calendar")) && main.includes(guidePath("teams")) && main.includes(guidePath("google")));
     assert.match(main, /everything else works without them/);
     assert.match(main, /give them the steps, never the path/);
     assert.equal(namedGuides(teamPrompt("bot")).length, 0);

@@ -75,14 +75,23 @@ function Connection({ calendar }: { calendar: CalendarState }) {
     }
   };
 
+  // Protocol 33: the words follow the calendar the address leads to; for Outlook they are as before.
+  const google = calendar.connected && calendar.service === "google";
+  const thing = google ? "script" : "flow";
+  const via = google
+    ? "your Google Calendar through a script in your Google account"
+    : calendar.connected
+      ? "your Outlook calendar through a flow in your Power Automate"
+      : "your Outlook calendar through a flow in your Power Automate, or your Google Calendar through a script in your Google account";
+
   return (
     <section className="pb-section pb-calendar" aria-labelledby="set-calendar">
       <SectionHead id="set-calendar" title="Calendar" state={state} />
       <p className="pb-section-text">
-        Bots with the calendar tools use your Outlook calendar through a flow in your Power Automate. The main bot has them; switch them on for other bots in their Settings. A meeting with other people always waits for your approval first.
+        Bots with the calendar tools use {via}. The main bot has them; switch them on for other bots in their Settings. A meeting with other people always waits for your approval first.
       </p>
       <p className="pb-section-text" data-guide="calendar">
-        The main bot has a guide for setting up the flow and can go through it with you.
+        {google ? "The main bot has a guide for setting up the script and can go through it with you." : "The main bot has a guide for setting up the flow and can go through it with you."}
       </p>
       <p className="pb-reply-state" data-set={words.mark === "check" || undefined} data-calendar-state={words.mark}>
         <Mark state={words.mark} />
@@ -108,7 +117,7 @@ function Connection({ calendar }: { calendar: CalendarState }) {
         }}
       >
         <label className="pb-label" htmlFor={field}>
-          {calendar.connected ? "Replace the flow's address with" : "The flow's address"}
+          {calendar.connected ? `Replace the ${thing}'s address with` : `The ${thing}'s address`}
         </label>
         <div className="pb-add-row">
           <input
@@ -140,7 +149,11 @@ function Connection({ calendar }: { calendar: CalendarState }) {
         <ProblemLine text={problem || (state.phase === "error" ? state.message : "")} />
         <span className="pb-hint" id={`${field}-hint`}>
           {calendar.connected ? "The address is set. It is not shown again. " : ""}
-          The flow&apos;s trigger, When an HTTP request is received, gives you this address. Pobots checks it at once.
+          {google
+            ? "The script's web app gives you this address, with its key at the end. Pobots checks it at once."
+            : calendar.connected
+              ? "The flow's trigger, When an HTTP request is received, gives you this address. Pobots checks it at once."
+              : "The flow's trigger, When an HTTP request is received, or the Google script's web app gives you this address. Pobots checks it at once."}
         </span>
       </form>
       {removing && (

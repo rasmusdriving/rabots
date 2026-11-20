@@ -78,7 +78,7 @@ export function teamPrompt(role: "main" | "bot", harness: Harness = "claude"): s
       : []),
     ...(role === "main"
       ? [
-          `The calendar and the Teams channels need flows in the person's own Power Automate; everything else works without them. When the person wants one set up, or one fails, read its guide and go through it with them: the calendar ${guidePath("calendar")}, the Teams channels ${guidePath("teams")}. These paths are for you: the person may be on another device, so give them the steps, never the path. The flows' addresses are secrets: they never pass through chat or your tools.`,
+          `The calendar and the Teams channels need flows in the person's own Power Automate; everything else works without them. A person on Google Calendar connects it with a script in their own Google account instead of the calendar flow. When the person wants one set up, or one fails, read its guide and go through it with them: the calendar ${guidePath("calendar")}, Google Calendar ${guidePath("google")}, the Teams channels ${guidePath("teams")}. These paths are for you: the person may be on another device, so give them the steps, never the path. The flows' addresses are secrets: they never pass through chat or your tools.`,
         ]
       : []),
     ...(role === "main"
