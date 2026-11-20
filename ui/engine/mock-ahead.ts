@@ -20,7 +20,7 @@ import { seedBusy } from "./mock-ahead-busy";
 export interface AheadLevers {
   state(): AheadSettings;
   /** Protocol 32: a to-do from a bot with its block of time, as add_todo makes it while blocks are on. Returns both ids. */
-  todoBlock(botId: string, title: string, dayOffset: number, time: string, minutes: number, more?: { due?: string; outlook?: AheadItem["outlook"]; why?: string }): { todoId: string; itemId: string };
+  todoBlock(botId: string, title: string, dayOffset: number, time: string, minutes: number, more?: { due?: string; outlook?: AheadItem["outlook"]; why?: string; wish?: AheadItem["wish"] }): { todoId: string; itemId: string };
   items(): AheadItem[];
   move(id: string, dayOffset: number): void;
   workDays(days: AheadSettings["workDays"]): void;
@@ -101,7 +101,8 @@ export class MockAhead {
     // Today on a working day; at a weekend the Friday before, so they stand in this week's grid.
     const wd = new Date().getDay();
     const day = wd === 6 ? -1 : wd === 0 ? -2 : 0;
-    this.levers().todoBlock(bot.id, "Send the sample summary", day, "14:00", 5, { why: "The import is done and the example team waits for it." });
+    // Engine 0.44.0: its bot asked for it after 13:00 (a wish the window keeps and does not show).
+    this.levers().todoBlock(bot.id, "Send the sample summary", day, "14:00", 5, { why: "The import is done and the example team waits for it.", wish: { notBefore: "13:00" } });
     this.levers().todoBlock(bot.id, "Review the sample deck", day, "15:00", 45, { due: `${plusDays(day)}T16:30` });
   }
 
@@ -281,7 +282,7 @@ export class MockAhead {
         const todoId = this.mock.addTodoForAhead({ botId, title, minutes, ...(more.due ? { due: more.due } : {}), ...(more.why ? { why: more.why } : {}) });
         const item = this.put(botId, {
           kind: "your-time", title, day: plusDays(dayOffset), time, minutes, forTodo: todoId, link: { todoId }, createdAt: at, changedAt: at,
-          ...(more.why ? { why: more.why } : {}), ...(more.due ? { latestBy: more.due.slice(0, 10) } : {}),
+          ...(more.why ? { why: more.why } : {}), ...(more.due ? { latestBy: more.due.slice(0, 10) } : {}), ...(more.wish ? { wish: more.wish } : {}),
           outlook: more.outlook ?? { state: "made", eventId: `AAMk-mock-${todoId}`, at },
         });
         this.mock.emit({ event: "ahead.items", data: {} });

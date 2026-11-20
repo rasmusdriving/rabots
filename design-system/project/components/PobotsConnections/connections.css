@@ -17,3 +17,9 @@
 .pb-link-code .pb-input { font-family: var(--font-mono); min-width: 0; }
 .pb-link-row .pb-btn { min-block-size: calc(var(--space-7) - var(--space-4)); }
 .pb-link-form .pb-dialog-actions { margin-top: 0; }
+.pb-link-summary .pb-link-lasts { margin-block-start: var(--space-1); }
+/* Files from another Pobots sit under its message, on the left like the message. */
+.pb-msg-connection .pb-msg-pictures, .pb-msg-connection .pb-msg-files { justify-content: flex-start; max-width: 100%; margin-block-start: var(--space-2); }
+/* Protocol 35: the bot a connection belongs to, a small face and its name. Always there, so the row keeps its height. */
+.pb-link-owner { display: flex; align-items: flex-start; gap: var(--space-2); margin-block-start: var(--space-1); color: var(--ink); }
+.pb-link-owner .pb-avatar { --size: calc(var(--space-4) + var(--space-1)); margin-block-start: calc(var(--space-1) / 2); }

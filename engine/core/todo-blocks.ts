@@ -6,7 +6,7 @@
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
 import type { TodoArgs } from "../todos.js";
-import { AHEAD_OPEN_MAX, AHEAD_TITLE_MAX, AHEAD_WHY_MAX, TODO_MINUTES_DEFAULT, type AheadItem, type Todo } from "../../shared/protocol.js";
+import { AHEAD_OPEN_MAX, AHEAD_TITLE_MAX, AHEAD_WHY_MAX, TODO_MINUTES_DEFAULT, type AheadItem, type AheadWish, type Todo } from "../../shared/protocol.js";
 import { newAheadId } from "./ahead-store.js";
 import { aheadSettings, schedulingOf, setAheadSettings, todoBlocksOn } from "./ahead-settings.js";
 import { flowAddress } from "./calendar-settings.js";
@@ -15,6 +15,7 @@ import { dayWords, isDay, timeOf } from "./ahead-days.js";
 import { latestEndOf, noneWords, place, tellMain, type PlaceAsk } from "./ahead-time.js";
 import { stretchOf } from "./ahead-slots.js";
 import { aheadItemsChanged, todoBlocksSynced } from "./todo-block-sync.js";
+import { byMainBot, wishRules, wishWords, type WishPlan } from "./todo-block-wish.js";
 
 const clip = (s: string | undefined, max: number) => (s ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
@@ -46,17 +47,21 @@ async function calendarWords(eng: Engine, id: string): Promise<string> {
 
 const howLong = `Next time give minutes: how long it takes the person.`;
 
+/** Why a block is after its by-when: no free time before it, or none that keeps to when the bot asked. */
+const lateWhy = (wish: AheadWish | undefined, who = "you") => (wish ? `there was no free time before it that keeps to when ${who} asked` : "there was no free time before");
+
 /**
- * Places a block for a to-do that has none yet. The words for the bot's answer, starting with a
- * space, or "" while blocks are off.
+ * Places a block for a to-do that has none yet, keeping to when the bot asked (`wish`, checked by
+ * planWish). The words for the bot's answer, starting with a space, or "" while blocks are off.
  */
-export async function newBlock(eng: Engine, rt: BotRuntime, todo: Todo, threadId?: string): Promise<string> {
+export async function newBlock(eng: Engine, rt: BotRuntime, todo: Todo, threadId?: string, wish?: AheadWish): Promise<string> {
   if (!todoBlocksOn(eng)) return "";
   const minutes = todo.minutes ?? TODO_MINUTES_DEFAULT;
   const due = dueRules(eng, todo);
-  const r = await place(eng, { minutes, ...due, counts: false });
+  const byMain = byMainBot(rt);
+  const r = await place(eng, { minutes, ...due, ...wishRules(eng, wish, minutes, { byMain }), counts: false });
   if (!r.slot.ok) {
-    const why = r.slot.why === "full" ? `there is no free time in the person's working hours in the next 31 days` : noneWords(eng, r.slot.why, minutes).replace(/ Ask for less\.$/, "").replace(/\.$/, "");
+    const why = r.slot.why === "full" ? `there is no free time in the person's working hours in the next 31 days${wish ? " that keeps to when you asked" : ""}` : noneWords(eng, r.slot.why, minutes).replace(/ Ask for less\.$/, "").replace(/\.$/, "");
     return ` It has no block of time: ${why[0]!.toLowerCase()}${why.slice(1)}.${r.slot.why === "hours" ? " Give fewer minutes with update_todo." : ""}`;
   }
   // The to-do may have closed while the calendar was read.
@@ -81,25 +86,29 @@ export async function newBlock(eng: Engine, rt: BotRuntime, todo: Todo, threadId
     minutes,
     ...(due.latestBy ? { latestBy: due.latestBy } : {}),
     forTodo: todo.id,
+    ...(wish ? { wish } : {}),
   };
   eng.store.ahead.put(item);
   aheadItemsChanged(eng);
-  if (r.slot.late) tellMain(eng, `Note from Pobots: the to-do "${todo.title}" from ${rt.folder.file.name} is due ${todo.due!.replace("T", " ")}, and its block is ${spanOf(eng, item)}, which is late: there was no free time before. Move it with ahead_item (${item.id}) if something else can wait.`, rt.folder.id);
+  if (r.slot.late) tellMain(eng, `Note from Pobots: the to-do "${todo.title}" from ${rt.folder.file.name} is due ${todo.due!.replace("T", " ")}, and its block is ${spanOf(eng, item)}, which is late: ${lateWhy(wish, "the bot")}. Move it with ahead_item (${item.id}) if something else can wait.`, rt.folder.id);
   const where = await calendarWords(eng, item.id);
-  const late = r.slot.late ? ` That is after its by-when: there was no free time before. The main bot is told.` : "";
+  const kept = wishWords(eng, wish, r.slot, byMain);
+  const late = r.slot.late ? ` That is after its by-when: ${lateWhy(wish)}.${byMain ? "" : " The main bot is told."}` : "";
   const meetings = r.meetings === "problem" ? " The calendar could not be read, so meetings were not checked." : "";
-  return ` Its block is ${spanOf(eng, item)}, ${where}.${late}${meetings}${todo.minutes ? "" : ` You gave no minutes, so it got ${minutes}. ${howLong}`}`;
+  return ` Its block is ${spanOf(eng, item)}, ${where}.${kept}${late}${meetings}${todo.minutes ? "" : ` You gave no minutes, so it got ${minutes}. ${howLong}`}`;
 }
 
 /**
  * After update_todo: the block follows the to-do. Minutes or by_when place it again; a new title or
  * why is shown on Ahead. A to-do with no block gets one on its first change while blocks are on;
- * one whose block was removed never gets a new one by itself.
+ * one whose block was removed never gets a new one by itself. Engine 0.44.0: a new wish (`plan`,
+ * checked by planWish) always places it again; placed again for minutes or by_when it keeps the
+ * old wish while the block is still where the bot or Pobots put it (a move by the person wins).
  */
-export async function changedBlock(eng: Engine, rt: BotRuntime, before: Todo, after: Todo, args: TodoArgs): Promise<string> {
+export async function changedBlock(eng: Engine, rt: BotRuntime, before: Todo, after: Todo, args: TodoArgs, plan?: WishPlan): Promise<string> {
   const block = eng.store.ahead.blockOf(after.id);
-  if (!block) return newBlock(eng, rt, after);
-  if (block.state !== "open") return args.minutes !== undefined || args.by_when !== undefined ? " Its block was removed earlier, so it has none." : "";
+  if (!block) return newBlock(eng, rt, after, undefined, plan?.wish);
+  if (block.state !== "open") return args.minutes !== undefined || args.by_when !== undefined || plan?.touched ? " Its block was removed earlier, so it has none." : "";
   const at = new Date(eng.clock()).toISOString();
   let next: AheadItem = { ...block, title: clip(after.title, AHEAD_TITLE_MAX) };
   const why = clip(after.why, AHEAD_WHY_MAX);
@@ -109,35 +118,48 @@ export async function changedBlock(eng: Engine, rt: BotRuntime, before: Todo, af
   const minutes = after.minutes ?? block.minutes ?? TODO_MINUTES_DEFAULT;
   const minutesChanged = minutes !== (block.minutes ?? TODO_MINUTES_DEFAULT);
   const dueChanged = before.due !== after.due;
+  const touched = !!plan?.touched;
+  const byMain = byMainBot(rt);
+  // The wish it is placed by: the new one, or the old one while the block is still the bot's.
+  const wish = touched ? plan!.wish : block.changedBy === "bot" ? block.wish : undefined;
   let words = "";
-  if (minutesChanged || dueChanged) {
+  if (minutesChanged || dueChanged || touched) {
     // A new by-when that the block already meets keeps it where it is (the person may have put it there).
     const s = block.time ? stretchOf(block.day, block.time, minutes, eng.tz) : undefined;
-    const fits = !minutesChanged && s && (!due.latestBy || block.day <= due.latestBy) && (due.latestEnd === undefined || s.end <= due.latestEnd);
+    const fits = !minutesChanged && !touched && s && (!due.latestBy || block.day <= due.latestBy) && (due.latestEnd === undefined || s.end <= due.latestEnd);
     if (!fits) {
-      const r = await place(eng, { minutes, ...due, except: block.id, counts: false });
+      const r = await place(eng, { minutes, ...due, ...wishRules(eng, wish, minutes, touched ? { byMain } : undefined), except: block.id, counts: false });
       if (!r.slot.ok) {
-        const reason = r.slot.why === "full" ? "there is no free time in the next 31 days" : `${minutes} minutes does not fit in the person's working day`;
+        const reason = r.slot.why === "full" ? `there is no free time in the next 31 days${wish ? " that keeps to when you asked" : ""}` : `${minutes} minutes does not fit in the person's working day`;
         return ` Its block stays ${spanOf(eng, block)}: ${reason}.`;
       }
       const cur = eng.store.ahead.get(block.id);
       if (!cur || cur.state !== "open") return "";
       next = { ...next, day: r.slot.day, time: r.slot.time };
       if (r.slot.day !== block.day) next.movedFrom = block.day;
-      words = r.slot.late ? " That is after its by-when: there was no free time before." : "";
+      // Placed again after the person moved it: the old wish is gone with their move.
+      if (!touched && block.changedBy !== "bot") delete next.wish;
+      words = `${touched ? wishWords(eng, wish, r.slot, byMain) : ""}${r.slot.late ? ` That is after its by-when: ${lateWhy(wish)}.` : ""}`;
     }
     next.minutes = minutes;
     if (due.latestBy) next.latestBy = due.latestBy;
     else delete next.latestBy;
+    if (touched) {
+      if (plan!.wish) next.wish = plan!.wish;
+      else delete next.wish;
+    }
   }
   const same = JSON.stringify({ ...next }) === JSON.stringify(block);
-  if (same) return "";
-  next = { ...next, changedAt: at, changedBy: "bot" };
-  eng.store.ahead.put(next);
-  aheadItemsChanged(eng);
-  if (!minutesChanged && !dueChanged) return "";
+  if (!same) {
+    next = { ...next, changedAt: at, changedBy: "bot" };
+    eng.store.ahead.put(next);
+    aheadItemsChanged(eng);
+  }
+  if (!minutesChanged && !dueChanged && !touched) return "";
+  if (same && !touched) return "";
   const where = await calendarWords(eng, next.id);
-  return ` Its block is now ${spanOf(eng, next)}, ${where}.${words}`;
+  const moved = next.day !== block.day || next.time !== block.time;
+  return ` Its block ${moved || !touched ? "is now" : "stays"} ${spanOf(eng, next)}, ${where}.${words}`;
 }
 
 /** The to-do closed: its block closes with it, done when it was answered or done, dropped otherwise. */

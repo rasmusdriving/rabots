@@ -109,8 +109,8 @@ export function finishTurn(eng: Engine, rt: BotRuntime, outcome: { ok: boolean; 
   }
   const origin = rt.current?.from;
   if (origin?.type === "connection" && origin.mode === "ask") {
-    eng.links.reply(origin.id, origin.messageId, interrupted ? "The other main bot was stopped before it answered."
-      : turn?.lastText || "The other main bot did not write an answer.");
+    eng.links.reply(origin.id, origin.messageId, interrupted ? "The other bot was stopped before it answered."
+      : turn?.lastText || "The other bot did not write an answer.");
   }
   // Engine 0.31.0: his questions about a card get this turn's last message as their answer.
   questionTurnEnds(eng, rt, turn?.id, turn?.lastText ?? "");

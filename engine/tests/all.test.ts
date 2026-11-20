@@ -88,6 +88,9 @@ await import("./usage-history.spec.js");
 
 await import("./link-wire.spec.js");
 await import("./links.spec.js");
+await import("./link-files.spec.js");
+await import("./link-lasts.spec.js");
+await import("./link-owner.spec.js");
 
 await import("./vacation.spec.js");
 await import("./ahead.spec.js");
@@ -95,5 +98,7 @@ await import("./ahead-screen.spec.js");
 await import("./ahead-time.spec.js");
 await import("./ahead-grid.spec.js");
 await import("./todo-blocks.spec.js");
+await import("./todo-block-wish.spec.js");
 await import("./ahead-setup.spec.js");
+await import("./schema-keys.spec.js");
 await import("./google-calendar.spec.js");

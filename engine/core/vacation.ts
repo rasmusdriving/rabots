@@ -143,6 +143,8 @@ export function setVacation(eng: Engine, params: Methods["bot.vacation"]["params
   let missedOnce = 0;
   if (params.vacation) leave(eng, rt, new Date(at).toISOString(), stop);
   else missedOnce = bringBack(eng, rt, at);
+  // Messages that waited on its connections go to it now (engine 0.44.0).
+  if (!params.vacation) eng.links.flush();
   for (const row of eng.store.listTriggers(rt.folder.id)) eng.opts.emit("trigger.changed", { botId: row.botId, trigger: toTrigger(eng, row) });
   afterTriggersMoved(eng);
   return { bot: eng.toBot(rt), missedOnce };

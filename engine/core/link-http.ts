@@ -4,7 +4,7 @@ import { lookup } from "node:dns/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { BlockList, isIP } from "node:net";
-import { LINK_BODY_MAX } from "./link-wire.js";
+import { linkBodyMax, type LinkWire } from "./link-wire.js";
 
 const blocked = new BlockList();
 for (const [address, bits] of [
@@ -24,12 +24,15 @@ export function linkPublicIP(address: string): boolean {
   return family === 6 && !address.includes("%") && global6.check(address, "ipv6") && !blocked.check(address, "ipv6");
 }
 
-export type LinkFetch = (base: string, id: string, proof: string, body: Buffer, signal: AbortSignal) => Promise<{ status: number; body: Buffer }>;
+/** A 404 comes back as itself (a Pobots before 0.44.0 answers it on wire 2's path); other statuses fail. */
+/** `long`: the exchange carries a file or its pieces, which take longer than a message. */
+export type LinkFetch = (base: string, id: string, proof: string, body: Buffer, signal: AbortSignal, wire?: LinkWire, long?: boolean) => Promise<{ status: number; body: Buffer }>;
 
 export function linkFetch(loopback?: string): LinkFetch {
-  return (base, id, proof, body, cancelled) => {
-    const url = new URL(`/hook/link/${id}`, base);
-    const signal = AbortSignal.any([cancelled, AbortSignal.timeout(4_500)]);
+  return (base, id, proof, body, cancelled, wire = 1, long = false) => {
+    const url = new URL(`/hook/link/${id}${wire === 2 ? "/2" : ""}`, base);
+    // A piece of a file, and the receiver's check of a whole file, take longer than a message.
+    const signal = AbortSignal.any([cancelled, AbortSignal.timeout(wire === 2 && long ? 30_000 : 4_500)]);
     const local = url.protocol === "http:" && url.origin === loopback && url.hostname === "127.0.0.1";
     if (!local && url.protocol !== "https:") return Promise.reject(new Error("Public address is not HTTPS"));
     const hostname = url.hostname.replace(/^\[|\]$/g, "");
@@ -48,6 +51,11 @@ export function linkFetch(loopback?: string): LinkFetch {
         },
       }, res => {
         const status = res.statusCode ?? 0;
+        if (status === 404) {
+          res.destroy();
+          resolve({ status, body: Buffer.alloc(0) });
+          return;
+        }
         if (status !== 200 && status !== 409 && status !== 429 && status !== 503) {
           res.destroy();
           reject(new Error("Public address did not answer"));
@@ -57,7 +65,7 @@ export function linkFetch(loopback?: string): LinkFetch {
         let size = 0;
         res.on("data", (chunk: Buffer) => {
           size += chunk.length;
-          if (size > LINK_BODY_MAX) {
+          if (size > linkBodyMax(wire)) {
             res.destroy(new Error("Answer too large"));
             return;
           }

@@ -10,6 +10,15 @@ export const LINK_CLOCK_SKEW = 120_000;
 export const LINK_TEXT_MAX = 20_000;
 export const LINK_CODE_MAX = 2048;
 export const LINK_BODY_MAX = 128 * 1024;
+/** Wire 1 (0.37.0 to 0.43.0) and wire 2 (0.44.0: files and the end of a connection). */
+export type LinkWire = 1 | 2;
+/** Wire 2 bodies carry one piece of a file. */
+export const LINK_BODY_MAX_2 = 1024 * 1024;
+export const LINK_CHUNK = 512 * 1024;
+export const LINK_FILES_MAX = 5;
+export const LINK_FILE_MAX = 10 * 1024 * 1024;
+export const LINK_FILES_TOTAL = 20 * 1024 * 1024;
+export const linkBodyMax = (wire: LinkWire) => wire === 2 ? LINK_BODY_MAX_2 : LINK_BODY_MAX;
 const PREFIX = "pobots-link-1.";
 const DOMAIN = "pobots-link-1";
 const BAD_CODE = "That pairing code is not complete or has a typo.";
@@ -133,15 +142,38 @@ export function agree(ours: Identity, theirs: Invite): LinkKeys {
   }
 }
 
+/** A file named in a wire 2 message. The bytes follow in pieces. */
+export interface LinkFile {
+  name: string;
+  size: number;
+  sha256: string;
+}
+
 export interface LinkMessage {
   id: string;
   at: number;
   kind: "ask" | "tell" | "answer";
   text: string;
   replyTo?: string;
+  /** Wire 2 only. */
+  files?: LinkFile[];
 }
 
-export function readLinkMessage(value: unknown, now: number): LinkMessage | undefined {
+function readFiles(value: unknown): LinkFile[] | undefined {
+  if (!Array.isArray(value) || value.length < 1 || value.length > LINK_FILES_MAX) return;
+  const files: LinkFile[] = [];
+  let total = 0;
+  for (const f of value as Record<string, unknown>[]) {
+    if (!f || typeof f !== "object" || Object.keys(f).length !== 3 || typeof f.name !== "string" || !f.name.trim() ||
+        f.name.length > 200 || /[\/\\\p{C}]/u.test(f.name) || !Number.isSafeInteger(f.size) || (f.size as number) < 1 ||
+        (f.size as number) > LINK_FILE_MAX || typeof f.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(f.sha256)) return;
+    total += f.size as number;
+    files.push({ name: f.name, size: f.size as number, sha256: f.sha256 });
+  }
+  return total <= LINK_FILES_TOTAL ? files : undefined;
+}
+
+export function readLinkMessage(value: unknown, now: number, wire: LinkWire = 1): LinkMessage | undefined {
   if (!value || typeof value !== "object") return;
   const m = value as LinkMessage;
   if (typeof m.id !== "string" || !LINK_ID.test(m.id) || !Number.isSafeInteger(m.at) ||
@@ -149,7 +181,9 @@ export function readLinkMessage(value: unknown, now: number): LinkMessage | unde
       !m.text.trim() || m.text.length > LINK_TEXT_MAX) return;
   if (m.kind === "answer" ? typeof m.replyTo !== "string" || !LINK_ID.test(m.replyTo)
     : (m.kind !== "ask" && m.kind !== "tell") || m.replyTo !== undefined) return;
-  return { id: m.id, at: m.at, kind: m.kind, text: m.text, ...(m.replyTo ? { replyTo: m.replyTo } : {}) };
+  const files = wire === 2 && m.files !== undefined ? readFiles(m.files) : undefined;
+  if (wire === 2 && m.files !== undefined && !files) return;
+  return { id: m.id, at: m.at, kind: m.kind, text: m.text, ...(m.replyTo ? { replyTo: m.replyTo } : {}), ...(files ? { files } : {}) };
 }
 
 export function payloadDigest(body: Buffer): Buffer {
@@ -171,12 +205,13 @@ export function checkAuth(key: Buffer, id: string, header: string, now: number):
   if (timingSafeEqual(Buffer.from(expected), Buffer.from(header)) && Math.abs(now - at) <= LINK_CLOCK_SKEW) return { exchange, digest, at };
 }
 
-function associated(kind: "request" | "response", id: string, exchange: string): Buffer {
-  return Buffer.from(`${DOMAIN}:${kind}:${id}:${exchange}`);
+// Wire 2 names itself, so a frame cannot be moved from one path to the other.
+function associated(kind: "request" | "response", id: string, exchange: string, wire: LinkWire): Buffer {
+  return Buffer.from(`${wire === 2 ? "pobots-link-2" : DOMAIN}:${kind}:${id}:${exchange}`);
 }
 
-export function seal(keys: LinkKeys, kind: "request" | "response", id: string, exchange: string, value: unknown): Buffer {
-  const aad = associated(kind, id, exchange);
+export function seal(keys: LinkKeys, kind: "request" | "response", id: string, exchange: string, value: unknown, wire: LinkWire = 1): Buffer {
+  const aad = associated(kind, id, exchange, wire);
   const nonce = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", keys.send.box, nonce);
   cipher.setAAD(aad);
@@ -185,9 +220,9 @@ export function seal(keys: LinkKeys, kind: "request" | "response", id: string, e
   return Buffer.concat([sign(null, Buffer.concat([aad, data]), keys.sign), data]);
 }
 
-export function open(keys: LinkKeys, kind: "request" | "response", id: string, exchange: string, body: Buffer): unknown {
-  if (body.length <= 92 || body.length > LINK_BODY_MAX) return;
-  const aad = associated(kind, id, exchange);
+export function open(keys: LinkKeys, kind: "request" | "response", id: string, exchange: string, body: Buffer, wire: LinkWire = 1): unknown {
+  if (body.length <= 92 || body.length > linkBodyMax(wire)) return;
+  const aad = associated(kind, id, exchange, wire);
   const data = body.subarray(64);
   try {
     if (!verify(null, Buffer.concat([aad, data]), keys.verify, body.subarray(0, 64))) return;

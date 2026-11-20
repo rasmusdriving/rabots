@@ -331,6 +331,8 @@ export interface ToolContext {
   ahead?: boolean;
   /** Protocol 32: while to-dos get a block of time, how to schedule the person (add_todo then takes minutes). */
   todoBlocks?: string;
+  /** Engine 0.44.0: a bot that is not the main bot owns a connection, so it gets message_pobots (only for its own). */
+  connections?: boolean;
 }
 
 /** The kinds as start_helper's description names them, in a few words each. */
@@ -452,9 +454,21 @@ const todoShape = {
 /** Protocol 32: shown while to-dos get a block of time. */
 const todoMinutes = z.number().int().min(TODO_MINUTES_MIN).max(TODO_MINUTES_MAX).optional().describe(`How long it takes the person, ${TODO_MINUTES_MIN} to ${TODO_MINUTES_MAX}. The length of its block in their calendar.`);
 
+/** Engine 0.44.0, shown with minutes: when the block lands (engine/core/todo-block-wish.ts). */
+const todoWhen = {
+  block_at: z.string().max(25).optional().describe("An exact start for its block, a day and a time: 2026-11-23T14:00. When that is taken, the block goes to the nearest free time after it in working hours. Give it alone, without block_not_before or block_not_after."),
+  block_not_before: z.string().max(25).optional().describe("Its block starts no earlier than this: a day (2026-11-24), a time of day on any day (13:00), or a day and a time (2026-11-24T13:00, from then on)."),
+  block_not_after: z.string().max(25).optional().describe("A time of day its block ends by, on any day: 16:00."),
+};
+const todoBlockShape = { ...todoShape, minutes: todoMinutes, ...todoWhen };
+
 /** What add_todo says while every to-do gets a block of the person's time, with the person's own instruction. */
 export function todoBlocksWords(scheduling: string): string {
-  return `Every to-do gets a block of the person's time on Ahead and in their Outlook calendar, shown as busy, placed before by_when. Give minutes. How to schedule the person (their words, kept up to date by the main bot): "${scheduling}"`;
+  return (
+    `Every to-do gets a block of the person's time on Ahead and in their Outlook calendar, shown as busy, placed in the first free time before by_when. Give minutes. ` +
+    `Say when it should land with block_at, block_not_before and block_not_after, following how the person wants to be scheduled: "after 13:00" is block_not_before 13:00, "mornings" is block_not_after 12:00, "Tuesday at 10" is block_at that day at 10:00. Pobots keeps to it around meetings and says where the block landed. ` +
+    `How to schedule the person (their words, kept up to date by the main bot): "${scheduling}"`
+  );
 }
 
 const effort = z.enum(["low", "medium", "high", "xhigh", "max"]);
@@ -638,13 +652,15 @@ export function buildTools(role: "main" | "bot", host: TeamHost, ctx: ToolContex
       description:
         `Put a to-do on the person's list in Pobots (under Needs you): something they must do or decide that can wait, such as input on a customer task, or an email to send now that the work is done. You build the window they open from blocks and buttons. No notification is sent. When they act on it, you get their answer in your chat as a message from them. ${FOLLOW_UP_RULE} For an answer you need now use ask_human; for news with nothing to act on use notify_human.` +
         (ctx.todoBlocks ? ` ${todoBlocksWords(ctx.todoBlocks)}` : ""),
-      shape: ctx.todoBlocks ? { ...todoShape, minutes: todoMinutes } : todoShape,
+      shape: ctx.todoBlocks ? todoBlockShape : todoShape,
       handler: async (args) => host.addTodo(args as TodoArgs),
     },
     {
       name: TOOL_NAMES.updateTodo,
-      description: `Change one of your open to-dos by its id. Give only what changes; blocks and buttons are replaced whole when given. ${FOLLOW_UP_RULE} The person's questions and your answers stay with it.`,
-      shape: { id: z.string().min(1).max(60).describe("The to-do's id, from add_todo or list_todos."), ...partialShape(ctx.todoBlocks ? { ...todoShape, minutes: todoMinutes } : todoShape) },
+      description:
+        `Change one of your open to-dos by its id. Give only what changes; blocks and buttons are replaced whole when given. ${FOLLOW_UP_RULE} The person's questions and your answers stay with it.` +
+        (ctx.todoBlocks ? ` A new block_at, block_not_before or block_not_after moves its block and its calendar event; an empty one clears that wish.` : ""),
+      shape: { id: z.string().min(1).max(60).describe("The to-do's id, from add_todo or list_todos."), ...partialShape(ctx.todoBlocks ? todoBlockShape : todoShape) },
       handler: async (args) => host.updateTodo(args as TodoArgs & { id?: string }),
     },
     {
@@ -675,6 +691,7 @@ export function buildTools(role: "main" | "bot", host: TeamHost, ctx: ToolContex
   if (main) tools.push(...mainTools(host, models, ctx.ahead === true), ...linkTools(host));
   // A bot that is not the main bot changes what it sees itself, on either harness (docs/sees.md).
   else tools.push(changeWhatISeeTool(host, ctx.harness));
+  if (!main && ctx.connections) tools.push(...linkTools(host).filter(t => t.name === TOOL_NAMES.messagePobots));
   return tools;
 }
 

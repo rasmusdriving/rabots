@@ -38,6 +38,8 @@ export interface MockLevers {
   triggerIds(botId: string): string[];
   /** The engine writes a new activity line for a bot, as "Next run ..." for an idle one. */
   setActivity(botId: string, activity: string): void;
+  /** Protocol 35 checks: a bot goes on vacation or comes back, stopping what it does. */
+  vacation(botId: string, on: boolean): void;
   /** A Power Automate flow posts this body to a channel's address. Says what the engine answered. */
   channelPost(channelId: string, body: ChannelPost): PostOutcome;
   /** The ids of the channels, in order. */

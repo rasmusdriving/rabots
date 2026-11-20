@@ -399,6 +399,10 @@ export class EngineServer {
       log.debug("Refused a hook call (not found)");
       return refuse(404, "Not found");
     };
+    // Connections: /hook/link/<id> is wire 1, /hook/link/<id>/2 is wire 2 (0.44.0, files).
+    if (req.method === "POST" && engine && parts.length === 5 && parts[2] === "link" && parts[3] && parts[4] === "2") {
+      return linkHook(engine.links, req, res, parts[3], wrong, 2);
+    }
     if (req.method !== "POST" || !engine || parts.length !== 4 || !parts[2] || !parts[3]) return wrong();
     if (parts[2] === "link") return linkHook(engine.links, req, res, parts[3], wrong);
     const id = parts[2];

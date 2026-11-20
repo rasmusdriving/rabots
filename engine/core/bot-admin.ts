@@ -287,6 +287,8 @@ export function retireBot(eng: Engine, botId: string): void {
   }
   eng.bots.delete(botId);
   eng.order = eng.order.filter((id) => id !== botId);
+  // Its connections go back to the main bot, each with a quiet line (engine 0.44.0).
+  eng.links.release(botId, name);
   // A tag that reached it reaches nothing now.
   for (const ch of eng.store.listChannels()) {
     if (!ch.routes.some((r) => r.botId === botId)) continue;

@@ -1,19 +1,33 @@
-<!-- @dsCard group="Settings" height=620 -->
+<!-- @dsCard group="Settings" height=900 -->
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connections</title></head>
 <body class="body" style="background:var(--surface-overlay);color:var(--ink);margin:var(--space-5)">
 <section class="pb-section pb-links">
   <h2 class="pb-section-title">Connections</h2>
-  <p class="pb-section-text">Connect with another Pobots so your main bots can ask or tell each other things.</p>
+  <p class="pb-section-text">Connect with another Pobots so your bots can ask or tell each other things. Each connection belongs to one of your bots: its messages go to that bot's chat, and only that bot sends on it.</p>
   <div class="pb-link-actions"><button class="pb-btn">Connect to another Pobots</button></div>
   <p class="pb-link-feedback"></p>
   <ul class="pb-link-list">
-    <li class="pb-link-row"><div class="pb-link-summary"><h3 class="body-strong">Sam</h3><p class="pb-link-status">Connected</p><p class="pb-hint">Last message Today at 10:03</p></div>
-      <div class="pb-link-actions"><button class="pb-btn pb-btn-sm">Pause</button><button class="pb-btn pb-btn-sm">Rename</button><button class="pb-btn pb-btn-sm pb-btn-danger">Remove</button></div></li>
-    <li class="pb-link-row"><div class="pb-link-summary"><h3 class="body-strong">Kim</h3><p class="pb-link-status">Waiting for Kim to enter your code</p><p class="pb-hint">No messages yet</p></div>
-      <div class="pb-link-actions"><button class="pb-btn pb-btn-sm">Pairing code</button><button class="pb-btn pb-btn-sm">Rename</button><button class="pb-btn pb-btn-sm pb-btn-danger">Remove</button></div></li>
+    <li class="pb-link-row"><div class="pb-link-summary"><h3 class="body-strong">Sam</h3><p class="pb-link-owner"><span class="pb-avatar pb-avatar-sm" aria-hidden="true"><span class="pb-eyes"><i></i><i></i></span></span><span>Belongs to <b>Po</b></span></p><p class="pb-link-status">Connected</p><p class="pb-hint">Last message Today at 10:03</p><p class="pb-hint pb-link-lasts">Ends in 29 days</p></div>
+      <div class="pb-link-actions"><button class="pb-btn pb-btn-sm">Pause</button><button class="pb-btn pb-btn-sm">Edit</button><button class="pb-btn pb-btn-sm pb-btn-danger">Remove</button></div></li>
+    <li class="pb-link-row"><div class="pb-link-summary"><h3 class="body-strong">Kim</h3><p class="pb-link-owner"><span class="pb-avatar pb-avatar-sm" data-color="moss" aria-hidden="true"><span class="pb-eyes"><i></i><i></i></span></span><span>Belongs to <b>Skifte</b></span></p><p class="pb-link-status">Waiting for Kim to enter your code</p><p class="pb-hint">No messages yet</p><p class="pb-hint pb-link-lasts">Will end 24 hours after connecting</p></div>
+      <div class="pb-link-actions"><button class="pb-btn pb-btn-sm">Pairing code</button><button class="pb-btn pb-btn-sm">Edit</button><button class="pb-btn pb-btn-sm pb-btn-danger">Remove</button></div></li>
+    <li class="pb-link-row"><div class="pb-link-summary"><h3 class="body-strong">Alex</h3><p class="pb-link-owner"><span class="pb-avatar pb-avatar-sm" data-color="sky" aria-hidden="true"><span class="pb-eyes"><i></i><i></i></span></span><span>Belongs to <b>Kaja</b>, on vacation. Messages wait until it is back</span></p><p class="pb-link-status">Ended by the other side</p><p class="pb-hint">Last message Yesterday at 16:40</p><p class="pb-hint pb-link-lasts">To connect again, pair with new codes</p></div>
+      <div class="pb-link-actions"><button class="pb-btn pb-btn-sm pb-btn-danger">Remove</button></div></li>
   </ul>
 </section>
+<form class="pb-link-form" style="max-width:420px;margin-top:var(--space-5)">
+  <label class="pb-field"><span class="pb-label">Name for the other Pobots</span><input class="pb-input" placeholder="For example, Sam"></label>
+  <label class="pb-field"><span class="pb-label">Ends after</span><select class="pb-input pb-select"><option>24 hours</option><option>30 days</option><option selected>Never</option></select></label>
+  <p class="pb-hint">Counts from when both sides are connected. You can change it later.</p>
+  <label class="pb-field"><span class="pb-label">Belongs to</span><select class="pb-input pb-select"><option selected>Po</option><option>Skifte</option><option>Kaja</option></select></label>
+  <p class="pb-hint">Its messages go to this bot's chat, and only this bot sends on it.</p>
+</form>
+<article class="pb-msg pb-msg-channel pb-msg-connection" style="max-width:520px;margin-top:var(--space-5)">
+  <span class="pb-who pb-who-mark" aria-hidden="true"></span>
+  <div><div class="pb-msg-head"><b>Ted</b><span class="pb-msg-from">From another Pobots, on Skifte's connection</span><time>10:03</time></div>
+  <div class="pb-msg-body app-from-channel">Could you send me the packing list for Saturday?</div></div>
+</article>
 </body>
 </html>

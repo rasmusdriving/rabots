@@ -4,7 +4,8 @@
 // with no dated to-do row beside it; its sheet has Open the to-do first, Done marks the to-do done
 // and Remove the block keeps it; Settings, Ahead has the switch only with a calendar and the "How to
 // schedule me" box; and the page reloads once after a new engine version, not while the person
-// types or a dialog is open, with the chat draft back. Laptop and both phone sizes, light and dark.
+// types or a dialog is open, with the chat draft back. Engine 0.44.0: a block keeps its bot's wish (when
+// it should land) and the window shows none. Laptop and both phone sizes, light and dark.
 import { b, check, ev, houseRules, open, shot, sleep, type, until } from "../lib.mjs";
 
 const q = JSON.stringify;
@@ -62,6 +63,9 @@ export default async function section() {
       })()`);
       check(`todo-blocks: a block is amber, tagged To-do, as tall as its minutes, at ${where}`, !!look && look.tone === "you" && /^To-do, /.test(look.label) && look.big > look.small * 2, look);
       check(`todo-blocks: no dated to-do row and no grey meeting beside it at ${where}`, !!look && !look.todoRow && !look.meeting, look);
+      // Engine 0.44.0: the block keeps its bot's wish (after 13:00) and is still one amber block; the window shows no wish.
+      const wish = await ev(`(() => { const s = ${block(SMALL)}; return { wish: ${item(SMALL)}?.wish ?? null, rows: $$("[data-ahead-week] [data-ahead-row]").filter((r) => r.textContent.includes(${q(SMALL)})).length, words: /block_not|not before|wish/i.test((s?.textContent ?? "") + (s?.getAttribute("aria-label") ?? "")) }; })()`);
+      check(`todo-blocks: a block with a wish keeps it and shows as one block with no wish words at ${where}`, wish.wish?.notBefore === "13:00" && wish.rows === 1 && !wish.words, wish);
       if (!phone) {
         const f = await ev('(() => { const page = $(".app-ahead-scroll"), body = $("[data-ahead-grid-body]"); return { page: page.scrollHeight - page.clientHeight, inner: body.scrollHeight - body.clientHeight, sideways: page.scrollWidth - page.clientWidth, days: $$("[data-ahead-week-day]").length }; })()');
         check(`todo-blocks: five days fit with no scrolling at ${where}`, f.page <= 0 && f.inner <= 0 && f.sideways <= 0 && f.days === 5, f);
@@ -75,6 +79,7 @@ export default async function section() {
       await ev(`click(${block(SMALL)})`);
       const sheet = await until(`(() => { const s = $("[data-ahead-time-sheet]"); if (!s) return null; const btns = [...s.querySelectorAll("button")].map((x) => x.textContent); const r = $(".pb-dialog").getBoundingClientRect(); return { first: btns[0], drop: btns.includes("Remove the block"), plainDrop: btns.includes("Drop"), from: s.querySelector(".pb-ahead-sheet-from").textContent, fits: r.top >= 0 && r.bottom <= innerHeight + 0.5 && r.right <= innerWidth + 0.5 }; })()`);
       check(`todo-blocks: the sheet says To-do, has Open the to-do first and Remove the block, at ${where}`, !!sheet && sheet.first === "Open the to-do" && sheet.drop && !sheet.plainDrop && /^To-do · /.test(sheet.from) && sheet.fits, sheet);
+      check(`todo-blocks: the sheet shows no wish at ${where}`, !(await ev('/block_not|not before|wish/i.test($("[data-ahead-time-sheet]")?.textContent ?? "")')));
       await houseRules(`todo-blocks sheet ${where}`);
       await shot(`todo-blocks-sheet-${width}-${theme}`);
       if (width === 1330 && theme === "light") {

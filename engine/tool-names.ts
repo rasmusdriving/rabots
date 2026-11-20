@@ -59,6 +59,8 @@ export const TOOL_NAMES = {
 
 const LINK_TOOLS: ReadonlySet<string> = new Set([TOOL_NAMES.listConnections, TOOL_NAMES.setConnection, TOOL_NAMES.messagePobots]);
 export const isLinkTool = (name: string): boolean => LINK_TOOLS.has(name);
+/** A helper, a task manager or another thread asked for a connection tool. */
+export const LINK_HELPER_REFUSAL = "Only the bot a connection belongs to can use it, not its helpers.";
 
 export function ok(text: string): ToolResult {
   return { content: [{ type: "text", text }] };

@@ -1,11 +1,14 @@
 // The app check, section "todo-blocks" (docs/build/step-todo-blocks.md): the built engine, real bots
 // on the cheapest Claude model, and the calendar stand-in (scripts/calendar-standin.mjs), never Outlook.
 //
+//   0. The person turns it on and saves a text the way the window does (engine 0.42.1), then off again.
 //   1. The real main bot turns to-dos in the calendar on and rewrites how to schedule the person with
 //      change_settings, each with its quiet line.
 //   2. A real bot adds a to-do with minutes; its block is on Ahead (one row, no dated to-do row), and
 //      in the stand-in calendar as busy, with no Teams fields, no attendees and no reminder.
 //   3. The person marks the to-do done: the block is done and its event is deleted.
+//   4. Engine 0.44.0: a real bot adds a to-do "not before 13:00" (block_not_before); its block and its
+//      stand-in event start at 13:00 or later, and the wish is kept on the block.
 //
 // Nothing reaches outside Pobots: every message names the tool and forbids connectors and MCP servers.
 // Run it alone: node scripts/app-check.mjs --only=todo-blocks
@@ -50,6 +53,17 @@ export default async function section() {
     };
     const notice = async (b, words) => (await read(b)).some((i) => i.kind === "notice" && i.text.includes(words));
 
+    // 0. The person's way, as the window sends it (TodoBlocksSettings.tsx), read back from the engine
+    //    (engine 0.42.1: the schema dropped both keys, so the switch and Save did nothing).
+    const byPerson = await s.request("ahead.settings.set", { todoBlocks: true });
+    check("todo-blocks: the switch in Settings turns to-dos in the calendar on and it is kept", byPerson.ahead?.todoBlocks === true && (await snap()).ahead?.todoBlocks === true, JSON.stringify(byPerson.ahead ?? null).slice(0, 200));
+    const typed = "Small things after lunch. Mornings are for deep work.";
+    const saved = await s.request("ahead.settings.set", { scheduling: typed });
+    check("todo-blocks: Save on how to schedule me keeps the text", saved.ahead?.scheduling === typed && (await snap()).ahead?.scheduling === typed && (await snap()).ahead?.todoBlocks === true, (await snap()).ahead?.scheduling ?? "");
+    // Back to off and the default, so the main bot's change below is a real change.
+    await s.request("ahead.settings.set", { todoBlocks: false, scheduling: "" });
+    check("todo-blocks: the switch off and an empty text go back to off and the default", (await snap()).ahead?.todoBlocks === false && (await snap()).ahead?.scheduling === undefined);
+
     // 1. The main bot turns it on and rewrites the instruction.
     await ask(main, `Use the Pobots change_settings tool once with ahead_todo_blocks true. ${RULE} Then say what the tool said in one short sentence.`);
     check("todo-blocks: the main bot turns to-dos in the calendar on, with its quiet line", (await snap()).ahead?.todoBlocks === true && (await notice(main, "to-dos in the calendar from off to on")));
@@ -82,6 +96,19 @@ export default async function section() {
     const gone = await until(() => ![...standin.events.values()].some((e) => e.subject === `To-do: ${title}`), 20_000);
     const after = (await s.request("ahead.view", { days: 31 })).done.find((r) => r.item.forTodo === todo?.id)?.item;
     check("todo-blocks: done, the block is done and its event is deleted from the calendar", !!gone && after?.state === "done" && after.outlook?.state === "deleted", JSON.stringify(after?.outlook ?? null));
+
+    // 4. Not before 13:00: the bot says when, and Pobots keeps to it (any hour the check runs at).
+    const later = "Check the sample invoice";
+    const told = await ask(bot, `Use the Pobots add_todo tool once with title "${later}", minutes 10 and block_not_before "13:00". ${RULE} Then copy the tool's answer exactly.`);
+    const laterTodo = (await snap()).todos.find((t) => t.title === later);
+    const laterBlock = (await s.request("ahead.view", { days: 31 })).rows.find((r) => r.source === "item" && r.item.forTodo === laterTodo?.id)?.item;
+    const laterEv = [...standin.events.values()].find((e) => e.subject === `To-do: ${later}`);
+    check(
+      "todo-blocks: a to-do not before 13:00 gets its block at 13:00 or later, kept with the wish",
+      !!laterBlock && laterBlock.time >= "13:00" && laterBlock.wish?.notBefore === "13:00" && laterBlock.outlook?.state === "made",
+      JSON.stringify({ time: laterBlock?.time, wish: laterBlock?.wish, outlook: laterBlock?.outlook?.state, said: told?.filter((i) => i.kind === "bot").at(-1)?.text.slice(0, 200) }),
+    );
+    check("todo-blocks: its event in the calendar starts when its block does", !!laterEv && Date.parse(laterEv.start.dateTime + "Z") === Date.parse(laterBlock?.outlook?.start ?? ""), JSON.stringify(laterEv?.start ?? null));
   } finally {
     if (bot) await s.request("bot.retire", { botId: bot.id }).catch(() => {});
     await s.request("ahead.settings.set", { todoBlocks: false, scheduling: "", enabled: false }).catch(() => {});
