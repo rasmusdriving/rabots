@@ -75,6 +75,19 @@ export interface AheadItem {
   forTodo?: string;
   /** Protocol 32: the block's event in the person's Outlook calendar, as Pobots last wrote it. */
   outlook?: AheadOutlook;
+  /** Protocol 34, a to-do's block: when the bot wished it to land, kept for placing it again. */
+  wish?: AheadWish;
+}
+
+/**
+ * Protocol 34: when a bot wished a to-do's block to land (add_todo / update_todo), as it gave it.
+ * `at` an exact start, YYYY-MM-DDTHH:MM. `notBefore` a day, a time of day or both. `notAfter` a
+ * time of day the block ends by. The window does not show it.
+ */
+export interface AheadWish {
+  at?: string;
+  notBefore?: string;
+  notAfter?: string;
 }
 
 /**

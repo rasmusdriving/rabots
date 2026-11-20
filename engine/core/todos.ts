@@ -9,7 +9,7 @@ import { checkShowPath } from "../artifacts.js";
 import { pageArtifact, toArtifact } from "./artifacts.js";
 import type { ToolResult } from "../claude/session.js";
 import { ok, problem } from "../team.js";
-import { type Methods, type Todo, TODOS_PER_BOT } from "../../shared/protocol.js";
+import { type Methods, type Todo, TODO_MINUTES_DEFAULT, TODOS_PER_BOT } from "../../shared/protocol.js";
 import { now } from "./words.js";
 import { log } from "../log.js";
 import { whenWords } from "../schedule.js";
@@ -18,6 +18,26 @@ import type { ServedFile } from "../attachments.js";
 import { endHold, startNextInLine } from "./stop.js";
 import { answerToManager } from "./task-manager-host.js";
 import { changedBlock, closeBlockOf, newBlock } from "./todo-blocks.js";
+import { todoBlocksOn } from "./ahead-settings.js";
+import { planWish, wishTouched, type WishPlan } from "./todo-block-wish.js";
+
+/**
+ * When a to-do's block lands, checked before the to-do is made or changed (engine 0.44.0). Nothing
+ * while blocks are off: the fields are not offered then. Plain words when the wish cannot be kept.
+ */
+export function wishFor(eng: Engine, args: TodoArgs, row?: Todo): WishPlan | string | undefined {
+  if (!todoBlocksOn(eng)) return undefined;
+  const block = row ? eng.store.ahead.blockOf(row.id) : undefined;
+  // The old wish counts only while the block is the bot's: after the person moved it (in the
+  // window or in Outlook) it is gone with their move, so a new wish does not mix with it.
+  const before = block?.state === "open" && block.changedBy === "bot" ? block.wish : undefined;
+  // Checked when the call gives a wish, or new minutes that the old wish must still hold.
+  if (!wishTouched(args) && (!before || args.minutes === undefined)) return undefined;
+  const n = Math.round(Number(args.minutes ?? row?.minutes ?? TODO_MINUTES_DEFAULT));
+  // A minutes value the to-do refuses is said by newTodo / changedTodo in its own words.
+  const minutes = Number.isFinite(n) && n > 0 ? n : TODO_MINUTES_DEFAULT;
+  return planWish(eng, args, before, minutes);
+}
 
 /** What a to-do's file and page blocks are checked against: the bot's folder, and its artifacts (made when new, without a line in the chat). */
 export function todoContext(eng: Engine, rt: BotRuntime): TodoContext {
@@ -46,10 +66,12 @@ export async function addTodoFor(eng: Engine, rt: BotRuntime, args: TodoArgs): P
   } catch (err) {
     return problem(err instanceof Error ? err.message : String(err));
   }
+  const plan = wishFor(eng, args);
+  if (typeof plan === "string") return problem(`${plan} The to-do was not added.`);
   eng.store.saveTodo({ todo, status: "open" });
   eng.opts.emit("todo.changed", { todo });
   log.info(`Bot ${rt.folder.id}: added a to-do for the person`);
-  const block = await newBlock(eng, rt, todo);
+  const block = await newBlock(eng, rt, todo, undefined, plan?.wish);
   return ok(
     `Added "${todo.title}" to the person's to-do list (id ${todo.id}). It waits there without a notification; when they act on it you get their answer in your chat as a message from them.${todo.keepOpen ? " It stays on the list after an answer, as you asked: update or remove it when it is settled." : " An answer takes it off the list."}${block}`,
   );
@@ -66,9 +88,11 @@ export async function updateTodoFor(eng: Engine, rt: BotRuntime, args: TodoArgs 
   } catch (err) {
     return problem(err instanceof Error ? err.message : String(err));
   }
+  const plan = wishFor(eng, args, row.todo);
+  if (typeof plan === "string") return problem(`${plan} The to-do was not changed.`);
   eng.store.saveTodo({ todo, status: "open" });
   eng.opts.emit("todo.changed", { todo });
-  const block = await changedBlock(eng, rt, row.todo, todo, args);
+  const block = await changedBlock(eng, rt, row.todo, todo, args, plan);
   return ok(`Changed the to-do "${todo.title}" (${todo.id}).${block}`);
 }
 

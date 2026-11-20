@@ -45,6 +45,10 @@ export interface TodoArgs {
   by_when?: string;
   /** Protocol 32: how long it takes the person, 5 to 240 minutes (the length of its block). */
   minutes?: number;
+  /** Engine 0.44.0, while blocks are on: when its block lands (engine/core/todo-block-wish.ts). */
+  block_at?: string;
+  block_not_before?: string;
+  block_not_after?: string;
   blocks?: BlockArg[];
   buttons?: { id?: string; label: string; primary?: boolean }[];
   keep_open?: boolean;

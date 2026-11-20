@@ -125,7 +125,7 @@ import { activityDayFor } from "./core/activity-day.js";
 export { HELPER_LAST_MAX, helperLine, helperTitle, insideDir, waitingWords } from "./core/words.js";
 export { TIDY_PROMPT, TIDY_REFUSAL } from "./core/runtime.js";
 
-export const ENGINE_VERSION = "0.42.0";
+export const ENGINE_VERSION = "0.43.0";
 
 /** How long a bot waits for another bot's answer before the answer is sent later as a message. */
 const ASK_TIMEOUT_MS = 10 * 60 * 1000;

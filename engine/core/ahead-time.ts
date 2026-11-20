@@ -18,6 +18,7 @@ import { addDays, dayOf, dayWords, isDay, isTime, mondayOf, startOf } from "./ah
 import { actionLine, tellBot } from "./ahead-news.js";
 import { findSlot, meetingStretch, overlaps, stretchOf, wholeDay, SEARCH_DAYS, type Busy, type SlotFound, type SlotNone } from "./ahead-slots.js";
 import { aheadItemsChanged } from "./todo-block-sync.js";
+import { wishRules } from "./todo-block-wish.js";
 import { instantFor } from "../schedule.js";
 
 /** A bot asks for 5 to 120 minutes; the main bot's own focus blocks may run a working day. */
@@ -118,6 +119,10 @@ export interface PlaceAsk {
   latestEnd?: number;
   except?: string;
   counts: boolean;
+  /** Engine 0.44.0, a to-do's block (todo-block-wish.ts): a time-of-day window and the main bot's exact start. */
+  dayStart?: string;
+  dayEnd?: string;
+  fixed?: number;
 }
 
 export async function place(eng: Engine, a: PlaceAsk): Promise<{ slot: SlotFound | SlotNone; meetings: Taken["meetings"] }> {
@@ -137,6 +142,9 @@ export async function place(eng: Engine, a: PlaceAsk): Promise<{ slot: SlotFound
     ...(a.notBefore ? { notBefore: a.notBefore } : {}),
     ...(a.latestBy ? { latestBy: a.latestBy } : {}),
     ...(a.latestEnd !== undefined ? { latestEnd: a.latestEnd } : {}),
+    ...(a.dayStart ? { dayStart: a.dayStart } : {}),
+    ...(a.dayEnd ? { dayEnd: a.dayEnd } : {}),
+    ...(a.fixed !== undefined ? { fixed: a.fixed } : {}),
     counts: a.counts,
   });
   return { slot, meetings: t.meetings };
@@ -271,6 +279,8 @@ export async function moveYourTime(eng: Engine, rt: BotRuntime, item: AheadItem,
   const next: AheadItem = { ...now, day, time, minutes, changedAt: new Date(eng.clock()).toISOString(), changedBy: byMain ? "main" : "bot" };
   if (day !== now.day) next.movedFrom = now.day;
   if (a.day && a.day > today && !byMainBot) next.earliest = a.day;
+  // A to-do block moved here no longer keeps to its bot's wish (engine 0.44.0); a new one from the bot moves it again.
+  delete next.wish;
   eng.store.ahead.put(next);
   if (byMain) tellBot(eng, next, actionLine("the main bot", next, "move", now.day));
   aheadItemsChanged(eng);
@@ -380,7 +390,10 @@ async function settle(eng: Engine, from: string, to: string): Promise<void> {
     const own = stretchOf(item.day, item.time!, item.minutes ?? DEFAULT_MINUTES, eng.tz);
     // One that has begun stays: the person may be on it.
     if (own.start <= now || !meetings.some((m) => overlaps(m, own))) continue;
-    const r = await place(eng, { minutes: item.minutes ?? DEFAULT_MINUTES, ...(item.earliest ? { earliest: item.earliest } : {}), ...lateOf(eng, item), except: item.id, counts: countsToward(eng, item) });
+    const minutes = item.minutes ?? DEFAULT_MINUTES;
+    // A to-do's block keeps to when its bot asked (engine 0.44.0); only the bot's own are moved here.
+    const wish = item.forTodo ? wishRules(eng, item.wish, minutes) : {};
+    const r = await place(eng, { minutes, ...(item.earliest ? { earliest: item.earliest } : {}), ...lateOf(eng, item), ...wish, except: item.id, counts: countsToward(eng, item) });
     if (!r.slot.ok) continue;
     const cur = eng.store.ahead.get(item.id);
     if (!cur || cur.state !== "open" || cur.day !== item.day || cur.time !== item.time) continue;

@@ -43,7 +43,7 @@ export * from "./usage-overview.js";
 export * from "./ahead.js";
 import type { AheadAction, AheadItem, AheadLevel, AheadSettings, AheadView } from "./ahead.js";
 
-export const PROTOCOL_VERSION = 33;
+export const PROTOCOL_VERSION = 34;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -2312,8 +2312,11 @@ export interface Methods {
    * "bad_request" while Ahead is off.
    */
   "ahead.view": { params: { from?: string; days?: number }; result: AheadView };
-  /** Protocol 31: changes the Ahead settings (not lastOpenedAt; that is "ahead.seen"). */
-  "ahead.settings.set": { params: Partial<Omit<AheadSettings, "lastOpenedAt">>; result: { ahead: AheadSettings } };
+  /**
+   * Protocol 31: changes the Ahead settings (not lastOpenedAt; that is "ahead.seen"; not weekNote,
+   * which only the main bot writes with its tool).
+   */
+  "ahead.settings.set": { params: Partial<Omit<AheadSettings, "lastOpenedAt" | "weekNote">>; result: { ahead: AheadSettings } };
   /**
    * Protocol 31: the person acts on an item. "move" takes `day` and an optional `time` (null clears it).
    * Its bot is told at its next turn. "not_found" when the item is gone.

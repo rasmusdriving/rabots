@@ -1,7 +1,7 @@
 // Checks the params of every request before the engine acts on them.
 import { z } from "zod";
 import type { MethodName, Methods } from "../shared/protocol.js";
-import { BOT_COLORS, EYE_GAPS, EYE_SHAPES, USAGE_RANGES } from "../shared/protocol.js";
+import { AHEAD_SCHEDULING_MAX, BOT_COLORS, EYE_GAPS, EYE_SHAPES, USAGE_RANGES } from "../shared/protocol.js";
 
 const effort = z.enum(["low", "medium", "high", "xhigh", "max"]);
 const access = z.enum(["asks-first", "edits-freely", "decides-itself", "full-access"]);
@@ -65,7 +65,9 @@ const botSees = z.object({
   skills: z.object({ rest: z.enum(["full", "name"]), except: seesNames }).optional(),
 });
 
-export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
+// Kept with its own types (not only as z.ZodType) so engine/tests/schema-keys.spec.ts can check at
+// type-check time that no method's schema drops a key its protocol params declare (engine 0.42.1).
+const schemas = {
   hello: z.object({ protocol: z.number(), client: z.string().max(200) }),
   snapshot: z.object({}).optional(),
   "bot.create": z.object({
@@ -243,6 +245,11 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
     workEnd: z.string().max(5).optional(),
     workDays: z.array(z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])).max(7).optional(),
     minutesPerDay: z.number().int().min(15).max(480).optional(),
+    // Protocol 32: the to-do blocks switch and "How to schedule me". The engine trims the text and
+    // refuses one over AHEAD_SCHEDULING_MAX with plain words; this only bounds the size. Engine 0.42.1:
+    // these were missing, so zod dropped them and the window's switch and Save did nothing.
+    todoBlocks: z.boolean().optional(),
+    scheduling: z.string().max(AHEAD_SCHEDULING_MAX * 4).optional(),
   }),
   "ahead.act": z.object({
     itemId: z.string().min(1).max(64),
@@ -259,7 +266,10 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
     kind: z.enum(["will-do", "deadline", "waiting", "note"]).optional(),
   }),
   "ahead.seen": z.object({ through: z.iso.datetime().optional() }).optional(),
-};
+} satisfies { [M in MethodName]: z.ZodType<unknown> };
+
+export type ParamSchemas = typeof schemas;
+export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = schemas;
 
 export function isMethod(name: unknown): name is MethodName {
   return typeof name === "string" && Object.prototype.hasOwnProperty.call(paramSchemas, name);

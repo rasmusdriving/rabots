@@ -6,6 +6,8 @@
 // within its limit of minutes. Days are worked out as wall times turned into instants, so a
 // daylight saving day has the right length. With no slot on or before "latest by" the search goes
 // on and the slot it finds is late. It looks 31 days ahead at most (the meetings read's limit).
+// Engine 0.44.0 (docs/build/step-block-time.md): a to-do's block may also be held to a time of day
+// (not before, ending by), and the main bot's exact start is kept when it is free.
 import { instantFor } from "../schedule.js";
 import { addDays, dayOf, isDay, timeOf, weekdayOf } from "./ahead-days.js";
 
@@ -49,6 +51,15 @@ export interface SlotAsk {
   latestEnd?: number;
   /** False for the main bot's own focus blocks: they do not count toward the day's limit. */
   counts?: boolean;
+  /** Engine 0.44.0, a to-do's block: not before this time of day (HH:MM), on any day. Inside working hours. */
+  dayStart?: string;
+  /** Engine 0.44.0, a to-do's block: ending by this time of day (HH:MM), on any day. Inside working hours. */
+  dayEnd?: string;
+  /**
+   * Engine 0.44.0: the main bot's exact start for a to-do's block. Kept when it is free and has not
+   * passed, even outside working hours or on a day off; otherwise the search goes on from it.
+   */
+  fixed?: number;
 }
 
 export type SlotFound = { ok: true; day: string; time: string; start: number; end: number; late: boolean };
@@ -60,7 +71,22 @@ const hm = (s: string): [number, number] => {
   return [h, m];
 };
 
-const at = (day: string, time: string, tz: string): number => {
+const minutesOf = (s: string): number => {
+  const [h, m] = hm(s);
+  return h * 60 + m;
+};
+
+/**
+ * Each day's window, HH:MM to HH:MM: working hours narrowed by a time of day not before and one to
+ * end by (engine 0.44.0). Its length in minutes may be zero or less when they do not meet.
+ */
+export function dayWindow(rules: Pick<SlotRules, "workStart" | "workEnd">, dayStart?: string, dayEnd?: string): { start: string; end: string; minutes: number } {
+  const start = dayStart && minutesOf(dayStart) > minutesOf(rules.workStart) ? dayStart : rules.workStart;
+  const end = dayEnd && minutesOf(dayEnd) < minutesOf(rules.workEnd) ? dayEnd : rules.workEnd;
+  return { start, end, minutes: minutesOf(end) - minutesOf(start) };
+}
+
+export const at = (day: string, time: string, tz: string): number => {
   const [y, mo, d] = day.split("-").map(Number) as [number, number, number];
   const [h, mi] = hm(time);
   return instantFor(y, mo - 1, d, h, mi, tz);
@@ -83,27 +109,28 @@ const clashOf = (busy: readonly Busy[], start: number, end: number): Busy | unde
 export function findSlot(ask: SlotAsk): SlotFound | SlotNone {
   const { minutes, now, tz, rules } = ask;
   const counts = ask.counts !== false;
+  const length = minutes * MIN;
+  const lateOf = (day: string, start: number) => (!!ask.latestBy && day > ask.latestBy) || (ask.latestEnd !== undefined && start + length > ask.latestEnd);
+  if (ask.fixed !== undefined && ask.fixed >= now && !clashOf(ask.busy, ask.fixed, ask.fixed + length)) {
+    const day = dayOf(ask.fixed, tz);
+    return { ok: true, day, time: timeOf(ask.fixed, tz), start: ask.fixed, end: ask.fixed + length, late: lateOf(day, ask.fixed) };
+  }
   if (counts && minutes > rules.minutesPerDay) return { ok: false, why: "limit" };
-  const [sh, sm] = hm(rules.workStart);
-  const [eh, em] = hm(rules.workEnd);
-  if (eh * 60 + em - (sh * 60 + sm) < minutes) return { ok: false, why: "hours" };
+  const window = dayWindow(rules, ask.dayStart, ask.dayEnd);
+  if (window.minutes < minutes) return { ok: false, why: "hours" };
   const today = dayOf(now, tz);
   const first = ask.earliest && isDay(ask.earliest) && ask.earliest > today ? ask.earliest : today;
   const lead = now + LEAD_MIN * MIN;
-  const length = minutes * MIN;
   for (let n = 0; n < SEARCH_DAYS; n++) {
     const day = addDays(first, n);
     if (!rules.workDays.includes(WEEKDAY_KEYS[weekdayOf(day)]!)) continue;
     if (counts && (ask.used?.[day] ?? 0) + minutes > rules.minutesPerDay) continue;
-    const open = at(day, rules.workStart, tz);
-    const close = at(day, rules.workEnd, tz);
+    const open = at(day, window.start, tz);
+    const close = at(day, window.end, tz);
     let t = ceilGrid(Math.max(open, lead, ask.notBefore ?? 0));
     while (t + length <= close) {
       const clash = clashOf(ask.busy, t, t + length);
-      if (!clash) {
-        const late = (!!ask.latestBy && day > ask.latestBy) || (ask.latestEnd !== undefined && t + length > ask.latestEnd);
-        return { ok: true, day, time: timeOf(t, tz), start: t, end: t + length, late };
-      }
+      if (!clash) return { ok: true, day, time: timeOf(t, tz), start: t, end: t + length, late: lateOf(day, t) };
       t = ceilGrid(clash.end + AIR_MIN * MIN);
     }
   }

@@ -19,7 +19,7 @@ import { removeCard, saveAlwaysRules } from "./cards.js";
 import { rulesFromSuggestions } from "../rules.js";
 import { goLate, newAsk } from "./asks.js";
 import { listWords, newTodo, type TodoArgs } from "../todos.js";
-import { removeTodoFor, todoContext, updateTodoFor } from "./todos.js";
+import { removeTodoFor, todoContext, updateTodoFor, wishFor } from "./todos.js";
 import { checkShowPath } from "../artifacts.js";
 import { artifactLine, pageArtifact } from "./artifacts.js";
 import { whenWords } from "../schedule.js";
@@ -226,10 +226,12 @@ async function addTodoFor(eng: Engine, rt: BotRuntime, tm: TaskManager, args: To
   } catch (err) {
     return problem(err instanceof Error ? err.message : String(err));
   }
+  const plan = wishFor(eng, args);
+  if (typeof plan === "string") return problem(`${plan} The to-do was not added.`);
   eng.store.saveTodo({ todo, status: "open" });
   eng.opts.emit("todo.changed", { todo });
   log.info(`Bot ${rt.folder.id}: a task manager added a to-do for the person`);
-  const block = await newBlock(eng, rt, todo, tm.ownThread);
+  const block = await newBlock(eng, rt, todo, tm.ownThread, plan?.wish);
   return ok(`Added "${todo.title}" to the person's to-do list (id ${todo.id}). When they act on it you get their answer as a message from them.${todo.keepOpen ? " It stays on the list after an answer: update or remove it when it is settled." : " An answer takes it off the list."}${block}`);
 }
 
