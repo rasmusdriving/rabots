@@ -1134,6 +1134,18 @@ function moveFolder(from: string, to: string): void {
 }
 
 /**
+ * Engine 0.44.0: a file received on a connection whose owner changed before it was handed on is
+ * given to the new owner. Only for uploads Pobots made itself; returns false when it is not there.
+ */
+export function reassignUpload(dataDir: string, id: string, botId: string): boolean {
+  const meta = readUpload(dataDir, id);
+  if (!meta) return false;
+  if (meta.botId === botId) return true;
+  writeMeta(uploadDir(dataDir, id), { ...meta, botId });
+  return true;
+}
+
+/**
  * Moves an unsent upload into the bot's folder and returns it as it is stored on the message.
  * Throws when the upload is not there or belongs to another bot.
  */

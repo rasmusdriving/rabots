@@ -43,7 +43,7 @@ export * from "./usage-overview.js";
 export * from "./ahead.js";
 import type { AheadAction, AheadItem, AheadLevel, AheadSettings, AheadView } from "./ahead.js";
 
-export const PROTOCOL_VERSION = 34;
+export const PROTOCOL_VERSION = 35;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -113,13 +113,27 @@ export interface AttachmentUploadResult {
 }
 
 // ---------------------------------------------------------------- connections between Pobots
+/** Protocol 35: how long a connection lasts once both sides are connected. */
+export type ConnectionLasts = "24h" | "30d" | "never";
+
 export interface PobotsConnection {
   id: string;
   name: string;
-  state: "draft" | "waiting" | "connected" | "paused" | "unreached" | "expired";
+  /** Protocol 35: "ended" when its time is up on this side or the other side ended it. */
+  state: "draft" | "waiting" | "connected" | "paused" | "unreached" | "expired" | "ended";
+  /** When the pairing code stops working. Only the code; a connection made with it lasts as `lasts` says. */
   expiresAt: string;
   lastReached?: string;
   lastMessage?: string;
+  /** Protocol 35. */
+  lasts: ConnectionLasts;
+  /** Protocol 35: when this side's copy ends; absent for "never" and before both sides are connected. */
+  endsAt?: string;
+  /** Protocol 35: when it ended, and whether its time was up here or the other side ended it. */
+  endedAt?: string;
+  endedBy?: "time" | "other";
+  /** Protocol 35: the id of the bot this connection belongs to now: its messages go to that bot's chat and only it sends on it. The main bot when none is chosen or the chosen bot is gone. */
+  owner: string;
 }
 
 export interface ConnectionsState {
@@ -128,10 +142,14 @@ export interface ConnectionsState {
 }
 
 export type ConnectionChange =
-  | { action: "start"; name: string }
+  | { action: "start"; name: string; lasts?: ConnectionLasts; /** Protocol 35: a bot id; the main bot when absent. */ owner?: string }
   | { action: "code" | "pause" | "resume" | "remove"; id: string }
   | { action: "connect"; id: string; code: string }
-  | { action: "rename"; id: string; name: string };
+  | { action: "rename"; id: string; name: string }
+  /** Protocol 35. */
+  | { action: "lasts"; id: string; lasts: ConnectionLasts }
+  /** Protocol 35: which bot the connection belongs to (a bot id). */
+  | { action: "owner"; id: string; owner: string };
 
 export interface ConnectionChangeResult {
   state: ConnectionsState;
@@ -455,7 +473,7 @@ export interface UserItem extends ItemBase {
   kind: "user";
   /** May be empty when the message has attachments. */
   text: string;
-  /** Pictures and files the person attached, in the order attached. Absent when none. Only on a message from the person. */
+  /** Pictures and files the person attached, in the order attached. Absent when none. On a message from the person, and (protocol 35) on one from a connected Pobots, whose files they are. */
   attachments?: Attachment[];
   /**
    * Who said it. From another bot: `expectsReply` is true when the sender waits for this turn's

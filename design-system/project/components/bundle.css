@@ -1038,7 +1038,8 @@ button.pb-cmsg-row:hover .pb-cmsg-to, .pb-cmsg-row[aria-expanded="true"] .pb-cms
 .pb-picture:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 /* A file in a message: the chip, which downloads on a press. A file that is gone says so, quietly. */
 .pb-msg-file { max-width: 320px; padding-right: var(--space-3); transition: background-color var(--dur-quick) var(--ease-soft); }
-.pb-msg-file .pb-chip-name { max-width: 240px; }
+/* Never wider than its chip: on a phone the chip is narrower than 240px and a long name ends in an ellipsis. */
+.pb-msg-file .pb-chip-name { max-width: min(240px, 100%); }
 a.pb-msg-file { cursor: pointer; }
 a.pb-msg-file:hover { background: var(--fill-strong); }
 a.pb-msg-file:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

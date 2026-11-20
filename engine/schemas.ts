@@ -199,9 +199,11 @@ const schemas = {
   "backup.setPasswordRef": z.object({ passwordRef: z.string().max(512) }),
   "connection.list": z.object({}).optional(),
   "connection.set": z.discriminatedUnion("action", [
-    z.object({ action: z.literal("start"), name: z.string().max(60) }),
+    z.object({ action: z.literal("start"), name: z.string().max(60), lasts: z.enum(["24h", "30d", "never"]).optional(), owner: id.optional() }),
     z.object({ action: z.literal("connect"), id: z.string().max(36), code: z.string().max(2058) }),
     z.object({ action: z.literal("rename"), id: z.string().max(36), name: z.string().max(60) }),
+    z.object({ action: z.literal("lasts"), id: z.string().max(36), lasts: z.enum(["24h", "30d", "never"]) }),
+    z.object({ action: z.literal("owner"), id: z.string().max(36), owner: id }),
     z.object({ action: z.enum(["code", "pause", "resume", "remove"]), id: z.string().max(36) }),
   ]),
   "backup.run": z.object({}).optional(),

@@ -11,7 +11,7 @@ import type { ApprovalCard, CardDecision, CardMeeting, QuestionCard, SystemCard 
 import { randomUUID } from "node:crypto";
 import { clip, now } from "./words.js";
 import { EngineError } from "../errors.js";
-import { isLinkTool } from "../tool-names.js";
+import { isLinkTool, LINK_HELPER_REFUSAL } from "../tool-names.js";
 import { tidyGate } from "./turn-end.js";
 import { managerChanged } from "./task-managers.js";
 import { becomesMessage, takeGrant } from "./restored-cards.js";
@@ -33,7 +33,7 @@ export async function canUseTool(eng: Engine, rt: BotRuntime, toolName: Paramete
   if (tidy) return { behavior: "allow", updatedInput: input };
   const prefix = `mcp__${TOOL_SERVER}__`;
   if (options.agentID && toolName.startsWith(prefix) && isLinkTool(toolName.slice(prefix.length))) {
-    return { behavior: "deny", message: "Only the main bot can use connections." };
+    return { behavior: "deny", message: LINK_HELPER_REFUSAL };
   }
   // The bot's own tools have their own gates.
   if (toolName.startsWith(`mcp__${TOOL_SERVER}__`)) return { behavior: "allow", updatedInput: input };

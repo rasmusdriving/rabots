@@ -11,7 +11,7 @@ import type { AccessLevel, Effort } from "../../shared/protocol.js";
 import type { BotTool, HarnessEvent, SessionSettings, TurnUsage } from "../claude/session.js";
 import { TOOL_SERVER } from "../claude/session.js";
 import { log } from "../log.js";
-import { isLinkTool } from "../tool-names.js";
+import { isLinkTool, LINK_HELPER_REFUSAL } from "../tool-names.js";
 import { FAST_TIER } from "./models.js";
 import { markUnnamable, refusedServer } from "./sees.js";
 import { CodexRpc } from "./rpc.js";
@@ -796,7 +796,7 @@ export class CodexSession {
     const name = str(p.tool);
     const args = asLoose(p.arguments);
     const fail = (text: string) => ({ contentItems: [{ type: "inputText", text }], success: false });
-    if (isLinkTool(name) && str(p.threadId) !== this.threadId) return fail("Only the main bot can use connections.");
+    if (isLinkTool(name) && str(p.threadId) !== this.threadId) return fail(LINK_HELPER_REFUSAL);
     const tool = this.settings.tools.find((t) => t.name === name);
     if (!tool) return fail(`There is no tool called ${name}.`);
     if (this.turnTidy && this.settings.gate) {

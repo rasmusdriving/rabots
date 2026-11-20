@@ -331,7 +331,11 @@ export class MockEngine implements EngineClient {
   private addFirst = false;
 
   constructor(private readonly scene: MockScene, readonly flags: URLSearchParams = new URLSearchParams()) {
-    this.connections = new MockConnections(flags.get("publicBase") === "1", e => this.emit(e));
+    this.connections = new MockConnections(flags.get("publicBase") === "1", e => this.emit(e), (name, text, attachments, owner) => {
+      const to = this.bots.find((b) => b.id === owner) ?? this.bots.find((b) => b.role === "main");
+      if (!to) return;
+      this.upsert(this.add<UserItem>(to.mainThreadId, { kind: "user", from: { type: "connection", id: "mock", name, mode: "tell", messageId: crypto.randomUUID() }, queued: false, text, attachments }));
+    }, () => this.bots);
     this.attach = new MockFiles(flags);
     this.browser = new MockBrowser((e) => this.emit(e as EngineEvent), () => this.bots.map((b) => b.id), scene === "browser" || flags.get("browser") === "1");
     if (scene !== "first-run") this.seedDefault();
@@ -439,6 +443,7 @@ export class MockEngine implements EngineClient {
       },
       triggerIds: (botId) => this.triggers.filter((t) => t.botId === botId).map((t) => t.id),
       setActivity: (botId, activity) => this.putBot({ ...this.bot(botId), activity }),
+      vacation: (botId, on) => void this.vacation.set({ botId, vacation: on, stop: true }),
       channelPost: (channelId, body) => this.channelPost(channelId, body),
       channelIds: () => this.channels.map((c) => c.id),
       replyFails: (channelId, fails) => {

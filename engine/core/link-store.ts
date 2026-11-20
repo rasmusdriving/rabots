@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
-import { LINK_CLOCK_SKEW, LINK_DAY, type Identity, type Invite, type LinkMessage } from "./link-wire.js";
+import type { ConnectionLasts } from "../../shared/protocol.js";
+import { LINK_CLOCK_SKEW, LINK_DAY, type Identity, type Invite, type LinkMessage, type LinkWire } from "./link-wire.js";
 
 export interface LinkRow {
   name: string;
@@ -14,9 +15,23 @@ export interface LinkRow {
   removing?: boolean;
   ack?: string;
   refused?: string;
+  /** 0.44.0: how long it lasts (absent means never), and from when it counts when changed after connecting. */
+  lasts?: ConnectionLasts;
+  lastsFrom?: number;
+  /** 0.44.0: this copy has ended; it answers "removed" and stays in the list for a week. */
+  ended?: number;
+  endedBy?: "time" | "other";
+  /** The other side has been told of the end. */
+  endTold?: boolean;
+  /** The other side's wire, as last heard. Unknown means try wire 2. */
+  peerWire?: LinkWire;
+  /** 0.44.0: the id of the bot it belongs to. Absent means the main bot (every older row). */
+  owner?: string;
 }
 
-type Inbox = { itemId: string; linkId: string; message: LinkMessage };
+/** A received message, with the uploads that hold its files until it is handed on. */
+export type InboxMessage = LinkMessage & { uploads?: string[] };
+type Inbox = { itemId: string; linkId: string; message: InboxMessage };
 export class LinkStore {
   private readonly db: DatabaseSync;
   constructor(db: DatabaseSync) { this.db = db; }
@@ -52,6 +67,10 @@ export class LinkStore {
         id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (link_id, id)
       );
       CREATE INDEX IF NOT EXISTS pobots_link_exchange_age ON pobots_link_exchanges(at);
+      CREATE TABLE IF NOT EXISTS pobots_link_files (
+        link_id TEXT NOT NULL REFERENCES pobots_links(id) ON DELETE CASCADE,
+        message TEXT NOT NULL, at INTEGER NOT NULL, bytes INTEGER NOT NULL, PRIMARY KEY (link_id, message)
+      );
     `);
   }
 
@@ -134,15 +153,26 @@ export class LinkStore {
     return (this.db.prepare("SELECT count(*) AS n FROM pobots_link_inbox WHERE link_id = ? AND received > ?").get(id, since) as { n: number }).n;
   }
 
-  receive(id: string, message: LinkMessage, itemId: string, now: number): void {
+  /** Bytes of files taken on a connection since a time; one message is counted once. */
+  fileBytes(id: string, since: number, except = ""): number {
+    return (this.db.prepare("SELECT coalesce(sum(bytes), 0) AS n FROM pobots_link_files WHERE link_id = ? AND at > ? AND message <> ?").get(id, since, except) as { n: number }).n;
+  }
+
+  countFiles(id: string, message: string, bytes: number, now: number): void {
+    this.db.prepare("INSERT OR IGNORE INTO pobots_link_files VALUES (?, ?, ?, ?)").run(id, message, now, bytes);
+  }
+
+  receive(id: string, message: InboxMessage, itemId: string, now: number): void {
     this.db.prepare("INSERT INTO pobots_link_inbox(link_id, id, received, item_id, data) VALUES (?, ?, ?, ?, ?)")
       .run(id, message.id, now, itemId, JSON.stringify(message));
   }
 
-  pending(): Inbox[] {
-    return (this.db.prepare("SELECT link_id, item_id, data FROM pobots_link_inbox WHERE handed = 0 ORDER BY rowid LIMIT 50").all() as
+  /** `skip`: connections whose messages wait (paused, or their bot is on vacation), so they never hold up the others. */
+  pending(skip: string[] = []): Inbox[] {
+    return (this.db.prepare("SELECT link_id, item_id, data FROM pobots_link_inbox WHERE handed = 0 AND link_id NOT IN (SELECT value FROM json_each(?)) ORDER BY rowid LIMIT 50")
+      .all(JSON.stringify(skip)) as
       { link_id: string; item_id: string; data: string }[])
-      .map(r => ({ linkId: r.link_id, itemId: r.item_id, message: JSON.parse(r.data) as LinkMessage }));
+      .map(r => ({ linkId: r.link_id, itemId: r.item_id, message: JSON.parse(r.data) as InboxMessage }));
   }
 
   handed(linkId: string, id: string): void {
@@ -154,6 +184,7 @@ export class LinkStore {
     this.db.prepare("DELETE FROM pobots_link_claims WHERE expires <= ?").run(now);
     this.db.prepare("DELETE FROM pobots_link_inbox WHERE received <= ? AND handed = 1").run(now - inboxAge);
     this.db.prepare("DELETE FROM pobots_link_exchanges WHERE at <= ?").run(now - replayAge);
+    this.db.prepare("DELETE FROM pobots_link_files WHERE at <= ?").run(now - 3_600_000);
     // An ask and its answer can each wait in the outbox for a day.
     this.db.prepare("DELETE FROM pobots_link_questions WHERE at <= ?").run(now - 2 * LINK_DAY - LINK_CLOCK_SKEW);
   }

@@ -331,6 +331,8 @@ export interface ToolContext {
   ahead?: boolean;
   /** Protocol 32: while to-dos get a block of time, how to schedule the person (add_todo then takes minutes). */
   todoBlocks?: string;
+  /** Engine 0.44.0: a bot that is not the main bot owns a connection, so it gets message_pobots (only for its own). */
+  connections?: boolean;
 }
 
 /** The kinds as start_helper's description names them, in a few words each. */
@@ -689,6 +691,7 @@ export function buildTools(role: "main" | "bot", host: TeamHost, ctx: ToolContex
   if (main) tools.push(...mainTools(host, models, ctx.ahead === true), ...linkTools(host));
   // A bot that is not the main bot changes what it sees itself, on either harness (docs/sees.md).
   else tools.push(changeWhatISeeTool(host, ctx.harness));
+  if (!main && ctx.connections) tools.push(...linkTools(host).filter(t => t.name === TOOL_NAMES.messagePobots));
   return tools;
 }
 

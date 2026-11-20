@@ -24,18 +24,29 @@ async function until(fn: () => boolean, time = 4_000) {
   assert.ok(fn(), "state did not arrive in time");
 }
 
+/** Moves the fake clock on while a promise is open: an exchange may still be finishing when a step comes. */
+async function stepping<T>(step: (ms: number) => void, p: Promise<T>, ms = 1_000): Promise<T> {
+  let done = false;
+  void p.finally(() => { done = true; });
+  while (!done) {
+    step(ms);
+    await delay(30);
+  }
+  return p;
+}
+
 function pairHarness(path?: string) {
   let now = Date.now();
   const peers = new Map<string, Links>();
-  const sent: { target: string; id: string; proof: string; body: Buffer; status?: number }[] = [];
+  const sent: { target: string; id: string; proof: string; body: Buffer; status?: number; wire: 1 | 2 }[] = [];
   const blocked = new Set<string>();
-  const fetch: LinkFetch = async (target, id, proof, body) => {
-    const record: typeof sent[number] = { target, id, proof, body };
+  const fetch: LinkFetch = async (target, id, proof, body, _signal, wire = 1) => {
+    const record: typeof sent[number] = { target, id, proof, body, wire };
     sent.push(record);
     const peer = peers.get(target);
     if (!peer || blocked.has(target)) return { status: 404, body: Buffer.alloc(0) };
-    const auth = peer.preflight(id, proof);
-    const result = (auth && peer.receive(auth, body)) || { status: 404, body: Buffer.alloc(0) };
+    const auth = peer.preflight(id, proof, wire);
+    const result = (auth && await peer.receive(auth, body)) || { status: 404, body: Buffer.alloc(0) };
     record.status = result.status;
     return result;
   };
@@ -100,13 +111,13 @@ for (const both of [false, true]) test(`two engines pair and send in both direct
     h.step(3_000);
     await until(() => a.messages.length === 2);
     a.links.reply(ca.id, a.messages[1]!.id, "Kiruna");
-    h.step(3_000);
-    assert.equal((await question).answer, "Kiruna");
+    assert.equal((await stepping(h.step, question)).answer, "Kiruna");
     // An already authenticated exchange cannot be replayed and a borrowed proof reveals nothing.
     const prior = h.sent.find(r => r.target === a.base && r.id === ca.id && r.status === 200);
     assert.ok(prior);
     h.step(1_001);
-    assert.equal(a.links.receive(a.links.preflight(prior.id, prior.proof)!, prior.body), undefined);
+    assert.equal(prior.wire, 2);
+    assert.equal(await a.links.receive(a.links.preflight(prior.id, prior.proof, prior.wire)!, prior.body), undefined);
     assert.equal(a.links.preflight(randomUUID(), prior.proof), undefined);
     a.links.change({ action: "pause", id: ca.id });
     await assert.rejects(() => a.links.message("Kim", "tell", "Do not deliver"), /paused/);
@@ -199,7 +210,7 @@ test("a late answer still has the outgoing question after delivery and restart",
     assert.equal(store.answerQuestion(cb.id, itemId), undefined);
     const from = { type: "connection", id: ca.id, name: "Kim", mode: "answer", messageId: answer.id } as const;
     const framed = connectionText(from, answer.text, store.answerQuestion(ca.id, itemId));
-    assert.match(framed, /The answer from "Kim"'s main bot .+ to your earlier question/);
+    assert.match(framed, /The answer from the bot at the other end of the connection "Kim" \(in another person's Pobots\) to your earlier question/);
     assert.ok(framed.includes(JSON.stringify(question.slice(0, 200))));
     assert.doesNotMatch(connectionText(from, answer.text), /first 200 characters/);
   } finally {

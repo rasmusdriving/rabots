@@ -2,6 +2,7 @@
 import { aheadOn, aheadTool, todoBlocksText } from "./ahead-settings.js";
 import { AHEAD_TOOL, aheadToolFor, aheadToolWords } from "./ahead-tool.js";
 import { linkToolsFor } from "./link-tools.js";
+import { ownsConnection } from "./link-owner.js";
 import { followUpWords } from "./card-questions.js";
 import type { ChatHit, TitledChat } from "../store.js";
 import { attachmentLines } from "../attachments.js";
@@ -123,7 +124,7 @@ export function toolsFor(eng: Engine, rt: BotRuntime): BotTool[] {
   const harness = rt.folder.file.harness;
   // In a tidy turn, a tool that reaches a person or another bot, or changes anything, says no.
   // The calendar tools only while the bot's switch is on and the flow is set up (engine 0.25.0).
-  const all = [...buildTools(rt.folder.file.role, host, { harness, models: eng.modelList(), kinds: listKinds(rt.folder.dir), ahead: aheadOn(eng), todoBlocks: todoBlocksText(eng) }), ...(calendarTools(eng, rt) ? calendarToolsFor(eng, rt) : []), ...(aheadTool(eng, rt) ? [aheadToolFor(eng, rt)] : [])];
+  const all = [...buildTools(rt.folder.file.role, host, { harness, models: eng.modelList(), kinds: listKinds(rt.folder.dir), ahead: aheadOn(eng), todoBlocks: todoBlocksText(eng), connections: ownsConnection(eng, rt) }), ...(calendarTools(eng, rt) ? calendarToolsFor(eng, rt) : []), ...(aheadTool(eng, rt) ? [aheadToolFor(eng, rt)] : [])];
   const tools = all.map((t) =>
     ({ ...t, handler: (args: Record<string, unknown>, signal?: AbortSignal) => rt.busy && rt.turn?.tidy && !TIDY_ALLOWED_TOOLS.includes(t.name) ? Promise.resolve(problem(TIDY_REFUSAL)) : t.handler(args, signal) }),
   );

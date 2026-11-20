@@ -88,6 +88,9 @@ await import("./usage-history.spec.js");
 
 await import("./link-wire.spec.js");
 await import("./links.spec.js");
+await import("./link-files.spec.js");
+await import("./link-lasts.spec.js");
+await import("./link-owner.spec.js");
 
 await import("./vacation.spec.js");
 await import("./ahead.spec.js");

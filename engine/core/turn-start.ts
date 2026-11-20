@@ -150,7 +150,7 @@ export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: 
 
   if (from.type === "connection") {
     const question = from.mode === "answer" ? eng.store.links.answerQuestion(from.id, item.id) : undefined;
-    text = connectionText(from, item.text, question);
+    text = connectionText(from, item.text, question, item.attachments?.length ?? 0);
   }
 
   eng.setState(rt, "thinking", "Thinking");
