@@ -1,0 +1,475 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    },
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    }
+  },
+  "triggers": {
+    "manual": {
+      "type": "Request",
+      "kind": "Http",
+      "inputs": {
+        "method": "POST",
+        "triggerAuthenticationType": "All",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "actions": {
+    "Initialize_method": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "method",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      }
+    },
+    "Initialize_uri": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "uri",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      },
+      "runAfter": {
+        "Initialize_method": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Initialize_body": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "body",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      },
+      "runAfter": {
+        "Initialize_uri": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Pick_the_request": {
+      "runAfter": {
+        "Initialize_body": [
+          "Succeeded"
+        ]
+      },
+      "type": "Switch",
+      "expression": "@triggerBody()?['action']",
+      "cases": {
+        "Hello": {
+          "case": "hello",
+          "actions": {
+            "Set_method_hello": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "method",
+                "value": "GET"
+              }
+            },
+            "Set_uri_hello": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "uri",
+                "value": "https://graph.microsoft.com/v1.0/me/calendar?$select=id,name,owner"
+              },
+              "runAfter": {
+                "Set_method_hello": [
+                  "Succeeded"
+                ]
+              }
+            }
+          }
+        },
+        "List": {
+          "case": "list",
+          "actions": {
+            "Set_method_list": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "method",
+                "value": "GET"
+              }
+            },
+            "Set_uri_list": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "uri",
+                "value": "https://graph.microsoft.com/v1.0/me/calendar/calendarView?startDateTime=@{encodeUriComponent(triggerBody()?['start'])}&endDateTime=@{encodeUriComponent(triggerBody()?['end'])}&$top=100&$orderby=start/dateTime&$select=id,subject,start,end,isAllDay,isCancelled,isOrganizer,showAs,responseStatus,organizer,attendees,location,isOnlineMeeting,onlineMeetingProvider,onlineMeeting,bodyPreview,webLink"
+              },
+              "runAfter": {
+                "Set_method_list": [
+                  "Succeeded"
+                ]
+              }
+            }
+          }
+        },
+        "Get": {
+          "case": "get",
+          "actions": {
+            "Set_method_get": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "method",
+                "value": "GET"
+              }
+            },
+            "Set_uri_get": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "uri",
+                "value": "https://graph.microsoft.com/v1.0/me/events/@{encodeUriComponent(triggerBody()?['id'])}?$select=id,subject,start,end,isAllDay,isCancelled,isOrganizer,showAs,responseStatus,organizer,attendees,location,isOnlineMeeting,onlineMeetingProvider,onlineMeeting,bodyPreview,webLink"
+              },
+              "runAfter": {
+                "Set_method_get": [
+                  "Succeeded"
+                ]
+              }
+            }
+          }
+        },
+        "Create": {
+          "case": "create",
+          "actions": {
+            "Set_method_create": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "method",
+                "value": "POST"
+              }
+            },
+            "Set_uri_create": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "uri",
+                "value": "https://graph.microsoft.com/v1.0/me/events"
+              },
+              "runAfter": {
+                "Set_method_create": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Set_body_create": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "body",
+                "value": "@{string(triggerBody()?['event'])}"
+              },
+              "runAfter": {
+                "Set_uri_create": [
+                  "Succeeded"
+                ]
+              }
+            }
+          }
+        },
+        "Move": {
+          "case": "move",
+          "actions": {
+            "Set_method_move": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "method",
+                "value": "PATCH"
+              }
+            },
+            "Set_uri_move": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "uri",
+                "value": "https://graph.microsoft.com/v1.0/me/events/@{encodeUriComponent(triggerBody()?['id'])}"
+              },
+              "runAfter": {
+                "Set_method_move": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Set_body_move": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "body",
+                "value": "@{string(json(concat('{\"start\":',string(triggerBody()?['start']),',\"end\":',string(triggerBody()?['end']),'}')))}"
+              },
+              "runAfter": {
+                "Set_uri_move": [
+                  "Succeeded"
+                ]
+              }
+            }
+          }
+        },
+        "Cancel": {
+          "case": "cancel",
+          "actions": {
+            "Set_method_cancel": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "method",
+                "value": "POST"
+              }
+            },
+            "Set_uri_cancel": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "uri",
+                "value": "https://graph.microsoft.com/v1.0/me/events/@{encodeUriComponent(triggerBody()?['id'])}/cancel"
+              },
+              "runAfter": {
+                "Set_method_cancel": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Set_body_cancel": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "body",
+                "value": "@{string(json(concat('{\"comment\":',string(coalesce(triggerBody()?['comment'],'')),'}')))}"
+              },
+              "runAfter": {
+                "Set_uri_cancel": [
+                  "Succeeded"
+                ]
+              }
+            }
+          }
+        },
+        "Delete": {
+          "case": "delete",
+          "actions": {
+            "Set_method_delete": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "method",
+                "value": "DELETE"
+              }
+            },
+            "Set_uri_delete": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "uri",
+                "value": "https://graph.microsoft.com/v1.0/me/events/@{encodeUriComponent(triggerBody()?['id'])}"
+              },
+              "runAfter": {
+                "Set_method_delete": [
+                  "Succeeded"
+                ]
+              }
+            }
+          }
+        },
+        "Respond": {
+          "case": "respond",
+          "actions": {
+            "Set_method_respond": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "method",
+                "value": "POST"
+              }
+            },
+            "Set_uri_respond": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "uri",
+                "value": "https://graph.microsoft.com/v1.0/me/events/@{encodeUriComponent(triggerBody()?['id'])}/@{if(equals(triggerBody()?['response'],'accept'),'accept',if(equals(triggerBody()?['response'],'tentative'),'tentativelyAccept',if(equals(triggerBody()?['response'],'decline'),'decline','no-such-answer')))}"
+              },
+              "runAfter": {
+                "Set_method_respond": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Set_body_respond": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "body",
+                "value": "@{string(json(concat('{\"comment\":',string(coalesce(triggerBody()?['comment'],'')),',\"sendResponse\":true}')))}"
+              },
+              "runAfter": {
+                "Set_uri_respond": [
+                  "Succeeded"
+                ]
+              }
+            }
+          }
+        },
+        "Schedule": {
+          "case": "schedule",
+          "actions": {
+            "Set_method_schedule": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "method",
+                "value": "POST"
+              }
+            },
+            "Set_uri_schedule": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "uri",
+                "value": "https://graph.microsoft.com/v1.0/me/calendar/getSchedule"
+              },
+              "runAfter": {
+                "Set_method_schedule": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Set_body_schedule": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "body",
+                "value": "@{string(json(concat('{\"schedules\":',string(triggerBody()?['schedules']),',\"startTime\":',string(triggerBody()?['start']),',\"endTime\":',string(triggerBody()?['end']),',\"availabilityViewInterval\":',string(coalesce(triggerBody()?['interval'],30)),'}')))}"
+              },
+              "runAfter": {
+                "Set_uri_schedule": [
+                  "Succeeded"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "actions": {
+          "Respond_400_no_case": {
+            "type": "Response",
+            "kind": "Http",
+            "inputs": {
+              "statusCode": 400,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": {
+                "ok": false,
+                "message": "No case for this action."
+              }
+            }
+          },
+          "End_no_case": {
+            "runAfter": {
+              "Respond_400_no_case": [
+                "Succeeded"
+              ]
+            },
+            "type": "Terminate",
+            "inputs": {
+              "runStatus": "Failed",
+              "runError": {
+                "code": "NoCase",
+                "message": "No case for this action."
+              }
+            }
+          }
+        }
+      }
+    },
+    "Send_an_HTTP_request": {
+      "runAfter": {
+        "Pick_the_request": [
+          "Succeeded"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "parameters": {
+          "Uri": "@variables('uri')",
+          "Method": "@variables('method')",
+          "Body": "@variables('body')",
+          "ContentType": "application/json",
+          "CustomHeader1": "Prefer: outlook.timezone=\"UTC\""
+        },
+        "host": {
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+          "connectionName": "shared_office365",
+          "operationId": "HttpRequest"
+        },
+        "retryPolicy": {
+          "type": "none"
+        },
+        "authentication": "@parameters('$authentication')"
+      },
+      "runtimeConfiguration": {
+        "secureData": {
+          "properties": [
+            "inputs",
+            "outputs"
+          ]
+        }
+      }
+    },
+    "Respond_200": {
+      "runAfter": {
+        "Send_an_HTTP_request": [
+          "Succeeded"
+        ]
+      },
+      "type": "Response",
+      "kind": "Http",
+      "inputs": {
+        "statusCode": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "ok": true,
+          "result": "@if(empty(body('Send_an_HTTP_request')), null, body('Send_an_HTTP_request'))"
+        }
+      }
+    },
+    "Respond_502_Outlook_said_no": {
+      "runAfter": {
+        "Send_an_HTTP_request": [
+          "Failed",
+          "TimedOut"
+        ]
+      },
+      "type": "Response",
+      "kind": "Http",
+      "inputs": {
+        "statusCode": 502,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "graphStatus": "@coalesce(outputs('Send_an_HTTP_request')?['statusCode'], 504)",
+          "message": "@{coalesce(body('Send_an_HTTP_request')?['error']?['message'], body('Send_an_HTTP_request')?['message'], 'Outlook gave no reason.')}"
+        }
+      }
+    }
+  },
+  "outputs": {}
+}

@@ -17,6 +17,7 @@ import { managerChanged } from "./task-managers.js";
 import { becomesMessage, takeGrant } from "./restored-cards.js";
 import { followUpWords, takePlace } from "./card-questions.js";
 import { restWaitChanged } from "./restored-waiting.js";
+import { insideGuides } from "./guides.js";
 
 export async function canUseTool(eng: Engine, rt: BotRuntime, toolName: Parameters<CanUseTool>[0], input: Parameters<CanUseTool>[1], options: Parameters<CanUseTool>[2]): Promise<PermissionResult> {
   if (eng.stopping) return { behavior: "deny", message: "The turn was stopped.", interrupt: true };
@@ -37,6 +38,8 @@ export async function canUseTool(eng: Engine, rt: BotRuntime, toolName: Paramete
   // The bot's own tools have their own gates.
   if (toolName.startsWith(`mcp__${TOOL_SERVER}__`)) return { behavior: "allow", updatedInput: input };
   if (toolName === "AskUserQuestion") return askQuestions(eng, rt, input, options.signal, helper);
+  // The setup guides for the flows are part of Pobots and only read: a bot reads them without a card (engine/core/guides.ts).
+  if (toolName === "Read" && insideGuides((input as { file_path?: unknown }).file_path)) return { behavior: "allow", updatedInput: input };
 
   // Step 7c: a bot on "Full access", and every helper of it, is never asked. The harness still asks
   // about some calls in its bypass mode (its own safety checks, such as "dangerous removal not ruled

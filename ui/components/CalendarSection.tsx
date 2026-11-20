@@ -81,6 +81,9 @@ function Connection({ calendar }: { calendar: CalendarState }) {
       <p className="pb-section-text">
         Bots with the calendar tools use your Outlook calendar through a flow in your Power Automate. The main bot has them; switch them on for other bots in their Settings. A meeting with other people always waits for your approval first.
       </p>
+      <p className="pb-section-text" data-guide="calendar">
+        The main bot has a guide for setting up the flow and can go through it with you.
+      </p>
       <p className="pb-reply-state" data-set={words.mark === "check" || undefined} data-calendar-state={words.mark}>
         <Mark state={words.mark} />
         <span>{words.text}</span>

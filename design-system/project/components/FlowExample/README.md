@@ -1,5 +1,6 @@
 What a Power Automate flow should send to a channel's address, for whoever builds the flow. Folded until asked for, because it is needed once.
 
+- Above it, always shown, one quiet sentence in `pb-section-text`: "The main bot has a guide for setting up both flows and can go through it with you." (20 Nov 2026, engine 0.41.1: the guides ship with Pobots, `docs/guides/`.)
 - A quiet "Show what the flow should send" opens it in place; "Hide what the flow should send" folds it again.
 - One sentence says which fields are needed (`messageId`, `from.email`, and `text` or `html`) and what `context` is. Field names are set in `font-mono` on a soft `fill`.
 - The example body in a well (`pb-address` with `pb-flow-text`), in `font-mono`, keeping its line breaks, with a quiet "Copy" that says "Copied" for a moment in the same place.

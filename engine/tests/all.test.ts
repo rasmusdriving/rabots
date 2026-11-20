@@ -33,6 +33,7 @@ await import("./team.spec.js");
 await import("./triggers.spec.js");
 await import("./channels.spec.js");
 await import("./channel-posts.spec.js");
+await import("./flow-guides.spec.js");
 await import("./context.spec.js");
 await import("./helpers.spec.js");
 await import("./working-helpers.spec.js");

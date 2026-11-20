@@ -47,7 +47,10 @@ export default async function section() {
 
     // 1. A bot follows, steers and stops its helpers.
     const reach = await make("Reacher");
-    const slow = 'Run these four shell commands with your shell tool, one call each, one after the other, never together: "sleep 10; echo one", "sleep 10; echo two", "sleep 10; echo three", "sleep 10; echo four". Then reply with one short line, and say there any word you were told to say while you worked.';
+    // 20 seconds each (was 10): the cheapest bot sometimes took longer than the helper's 40 seconds to
+    // get from start_helper through both read_helper calls to steer_helper, so the steer found the
+    // helper done and three checks failed (20 Nov 2026). 80 seconds leaves it room; the waits below allow it.
+    const slow = 'Run these four shell commands with your shell tool, one call each, one after the other, never together: "sleep 20; echo one", "sleep 20; echo two", "sleep 20; echo three", "sleep 20; echo four". Then reply with one short line, and say there any word you were told to say while you worked.';
     await s.request("message.send", {
       botId: reach.id,
       text: `${RULES} Use your Pobots tool start_helper exactly once, with title "Slow count", model ${haiku.id}, effort ${low}, wait false, and this task, word for word: ${slow} Then call read_helper with the helper's id from start_helper's answer (view latest), then read_helper with that id and view overview, then steer_helper with that id and the text: Also say the word KIWI in your last line. Then reply with the helper's id and nothing else.`,

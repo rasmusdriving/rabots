@@ -11,6 +11,7 @@ import type { ChannelRoute, Methods } from "../../shared/protocol.js";
 import { EngineError } from "../errors.js";
 import { noteChange } from "./notes.js";
 import { mayPostIds, postWordsFor } from "./channel-posts.js";
+import { guideWords } from "./guides.js";
 
 /** A channel by id or by name (any case). */
 export function findChannel(eng: Engine, ref: string): ChannelRow | undefined {
@@ -43,7 +44,7 @@ export function listChannelsFor(eng: Engine, rt: BotRuntime): string {
       posts,
     ].join("\n");
   }
-  if (!rows.length) return "There are no channels yet. Make one with update_channel and create, or the person does in the app.";
+  if (!rows.length) return `There are no channels yet. Make one with update_channel and create, or the person does in the app. ${guideWords("teams")}`;
   return rows
     .map((ch) => {
       const routes = ch.routes.filter((r) => eng.bots.has(r.botId));
@@ -191,7 +192,7 @@ function createChannelFor(eng: Engine, rt: BotRuntime, args: UpdateChannelArgs):
     const writers = saved.allowedSenders.length ? saved.allowedSenders.join(", ") : "nobody yet";
     noteChange(eng, rt, `channel:${saved.id}`, `New channel ${saved.name}`, [`may write: ${writers}`, `background ${saved.contextCount} earlier messages`, saved.enabled ? "on" : "off"]);
     return ok(
-      `Made the channel ${saved.name} (id ${saved.id}), ${saved.enabled ? "on" : "off"}. Who may write: ${writers}. The person has a note about it. ${ADDRESS_PLACE(saved.name)} The Power Automate flow posts to it; the address for answers is set there by the person.`,
+      `Made the channel ${saved.name} (id ${saved.id}), ${saved.enabled ? "on" : "off"}. Who may write: ${writers}. The person has a note about it. ${ADDRESS_PLACE(saved.name)} The Power Automate flow posts to it; the address for answers is set there by the person. ${guideWords("teams")}`,
     );
   } catch (err) {
     return problem(err instanceof Error ? err.message : "The channel could not be made.");

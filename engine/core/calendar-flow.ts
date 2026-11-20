@@ -19,6 +19,8 @@ export type FlowAnswer =
       maybeDone?: boolean;
       /** Graph said the meeting is not there. */
       gone?: boolean;
+      /** The flow or its connection needs the person's hand: a bot is pointed to the calendar guide. */
+      setup?: boolean;
     };
 
 /** How long Pobots waits for the flow. Power Automate can take some seconds to start. */
@@ -57,8 +59,9 @@ export async function callFlow(eng: Engine, address: string, action: FlowAction,
       log.warn(`Calendar: the flow answered ${action} in a shape Pobots does not know`);
       return {
         ok: false,
-        why: "The calendar flow answered in a way Pobots does not know, so it is not clear what happened. The person checks the flow against docs/build/step-calendar-flow.md.",
+        why: "The calendar flow answered in a way Pobots does not know, so it is not clear what happened. The person compares the flow with the calendar setup guide.",
         line: "the flow answered in a way Pobots does not know",
+        setup: true,
         ...(write ? { maybeDone: true } : {}),
       };
     }
@@ -69,6 +72,7 @@ export async function callFlow(eng: Engine, address: string, action: FlowAction,
         ok: false,
         why: `The calendar flow refused it (status 400). It likely has no case for "${action}" yet, so the person needs to update the flow in Power Automate. Nothing was changed.`,
         line: "the flow has no case for it yet",
+        setup: true,
       };
     }
     if (res.status >= 500) {
@@ -83,6 +87,7 @@ export async function callFlow(eng: Engine, address: string, action: FlowAction,
       ok: false,
       why: `The calendar flow said no (status ${res.status}). The flow may be off, or the address in Pobots is not its current one. The person checks Pobots settings, Calendar.`,
       line: "the flow said no. Check the address in settings",
+      setup: true,
     };
   } catch (err) {
     const late = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
@@ -108,7 +113,7 @@ function graphProblem(status: number, message: string, write: boolean): FlowAnsw
   const said = message.trim() ? ` Outlook said: ${message.trim().slice(0, 300)}` : "";
   if (status === 404) return { ok: false, why: `That meeting is not in the calendar (any more). Look again with calendar_list.${said}`, line: "the meeting is not there", gone: true };
   if (status === 401 || status === 403)
-    return { ok: false, why: `Outlook did not allow it (status ${status}). The flow's connection may need to be signed in again in Power Automate.${said}`, line: "Outlook did not allow it" };
+    return { ok: false, why: `Outlook did not allow it (status ${status}). The flow's connection may need to be signed in again in Power Automate.${said}`, line: "Outlook did not allow it", setup: true };
   if (status === 429) return { ok: false, why: `Outlook asked to slow down (status 429). Wait a minute before you try again.${said}`, line: "Outlook asked to slow down" };
   // A write that Outlook failed on, or did not answer in time, may still have happened: look before trying again.
   if (status >= 500 && write)

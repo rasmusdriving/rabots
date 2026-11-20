@@ -185,7 +185,9 @@ export default async function section() {
   check("ahead-grid: switching between Agenda and Week moves neither the head nor the row above, and the grid comes back as it was", steady);
 
   // Something arrives while he looks: it waits in the fixed place at the right of the row; nothing moves.
-  await ev('window.pobotsAhead.add("inbox", "Book the sample review", 1, "will-do", "12:15")');
+  // On the next working day, not "tomorrow": on a Friday tomorrow is a Saturday, which the grid does not show.
+  const nextWorkday = await ev('(() => { const t = new Date(); let n = 1; while ([0, 6].includes(new Date(t.getFullYear(), t.getMonth(), t.getDate() + n).getDay())) n++; return n; })()');
+  await ev(`window.pobotsAhead.add("inbox", "Book the sample review", ${nextWorkday}, "will-do", "12:15")`);
   const held = await until('$("[data-ahead-summary] .pb-ahead-sum-news [data-ahead-held]")?.textContent.includes("1 new")');
   check("ahead-grid: what arrives waits behind Show at the right end of the row", !!held && (await ev('(() => { const h = $("[data-ahead-held]").getBoundingClientRect(), s = $("[data-ahead-summary]").getBoundingClientRect(); return h.top >= s.top && h.bottom <= s.bottom && h.right <= s.right + 1 && getComputedStyle($("[data-ahead-held]")).position === "static"; })()')));
   check("ahead-grid: nothing moved while it waits", (await chart()) === before);

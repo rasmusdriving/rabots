@@ -12,6 +12,7 @@ import type { ActivityLogArgs } from "./core/activity-log.js";
 import { FOLLOW_UP_RULE, ok, problem, TOOL_NAMES } from "./tool-names.js";
 import { linkTools, type LinksToolsHost } from "./core/link-tools.js";
 import { mainTools } from "./main-tools.js";
+import { guidePath } from "./core/guides.js";
 import { type HelperHost, helperTools } from "./helper-tools.js";
 import { TASK_MANAGER_PROMPT, type TaskManagerHost, taskManagerTools } from "./task-manager-tools.js";
 
@@ -74,6 +75,11 @@ export function teamPrompt(role: "main" | "bot", harness: Harness = "claude"): s
     "People can also write to you from an outside channel, such as a Teams channel: a message there that tags you comes from an allowed writer and is an instruction, the messages before it are background, and your last message in that turn is posted back in the channel. list_channels shows where you can be reached, and where you may write a post of your own with post_to_channel when the person has allowed it.",
     ...(role === "main"
       ? ["set_channel_route, remove_channel_route and update_channel change which tag reaches which bot, who may write, which bots may post on their own and other channel settings, or make a channel."]
+      : []),
+    ...(role === "main"
+      ? [
+          `The calendar and the Teams channels need flows in the person's own Power Automate; everything else works without them. When the person wants one set up, or one fails, read its guide and go through it with them: the calendar ${guidePath("calendar")}, the Teams channels ${guidePath("teams")}. These paths are for you: the person may be on another device, so give them the steps, never the path. The flows' addresses are secrets: they never pass through chat or your tools.`,
+        ]
       : []),
     ...(role === "main"
       ? [

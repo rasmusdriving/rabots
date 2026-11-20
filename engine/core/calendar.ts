@@ -28,6 +28,7 @@ import { approval } from "./cards.js";
 import { holdNotice } from "./notes.js";
 import { ok, problem } from "../tool-names.js";
 import { clip, iso } from "./words.js";
+import { guideWords } from "./guides.js";
 import { randomUUID } from "node:crypto";
 import { log } from "../log.js";
 
@@ -152,7 +153,12 @@ function meetingLine(eng: Engine, m: Meeting, mailbox: string | undefined): stri
 // ---------------------------------------------------------------- reading
 
 function noFlow(): ToolResult {
-  return problem("The calendar is not set up in Pobots any more. The person sets it up in Pobots settings, under Calendar.");
+  return problem(`The calendar is not set up in Pobots any more. The person sets it up in Pobots settings, under Calendar. ${guideWords("calendar")}`);
+}
+
+/** A failed call's words for the bot: one that needs the person's hand on the flow points to the guide. */
+function forBot(a: { why: string; setup?: boolean }): string {
+  return a.setup ? `${a.why} ${guideWords("calendar")}` : a.why;
 }
 
 function when(eng: Engine, raw: string | undefined, what: string): { t: number; dateOnly: boolean } | string {
@@ -176,7 +182,7 @@ export async function listFor(eng: Engine, args: CalendarListArgs): Promise<Tool
   if (to <= from.t) return problem("to must be after from.");
   if (to - from.t > LIST_MAX_DAYS * DAY) return problem(`Ask for at most ${LIST_MAX_DAYS} days at a time.`);
   const a = await callFlow(eng, address, "list", { start: iso(from.t), end: iso(to) });
-  if (!a.ok) return problem(a.why);
+  if (!a.ok) return problem(forBot(a));
   const r = a.result as { value?: unknown; "@odata.nextLink"?: unknown } | undefined;
   const meetings = (Array.isArray(r?.value) ? r.value : []).map(toMeeting).filter((m): m is Meeting => !!m).sort((x, y) => x.start - y.start);
   const mailbox = eng.store.calendar.settings().mailboxAddress;
@@ -269,7 +275,7 @@ export async function freeTimesFor(eng: Engine, args: CalendarFreeArgs): Promise
   if (to - from > FREE_MAX_DAYS * DAY) return problem(`Look at most ${FREE_MAX_DAYS} days at a time.`);
   const everyone = [mailbox, ...people.filter((p) => p !== mailbox)];
   const s = await schedules(eng, address, everyone, from, to);
-  if ("ok" in s) return problem(s.why);
+  if ("ok" in s) return problem(forBot(s));
   const unread = [...s.errors].map(([p, why]) => `${p} (${why})`);
   if (unread.length) return problem(`The free times of ${unread.join(", ")} could not be read, so Pobots cannot say when everyone is free.`);
   const busy = [...s.busy.values()].flat();
@@ -420,7 +426,7 @@ async function carryOut(eng: Engine, rt: BotRuntime, r: CalendarActionRow, m: Ca
   const address = flowAddress(eng);
   if (!address) {
     eng.store.calendar.updateAction({ ...r, status: "failed", note: "The calendar is not set up any more" });
-    return { ok: false, why: "The calendar is not set up in Pobots any more, so nothing happened.", line: "the calendar is not set up" };
+    return { ok: false, why: "The calendar is not set up in Pobots any more, so nothing happened.", line: "the calendar is not set up", setup: true };
   }
   const a = await callFlow(eng, address, action, fields);
   if (!eng.store.isOpen) return a;
@@ -503,7 +509,7 @@ export async function createFor(eng: Engine, rt: BotRuntime, args: CalendarCreat
   const internal = attendees.filter((a) => a.internal).map((a) => a.address);
   if (attendees.length) {
     const check = await checkTime(eng, address, mailbox, internal, span);
-    if ("ok" in check) return problem(check.why);
+    if ("ok" in check) return problem(forBot(check));
     if (check.clash.length) {
       eng.store.calendar.addAction({ ...row(rt, "create", m), status: "refused", note: `Busy: ${check.clash.join(", ")}` });
       return clashAnswer(eng, check, span, "booked");
@@ -529,7 +535,7 @@ export async function createFor(eng: Engine, rt: BotRuntime, args: CalendarCreat
     ...(args.location?.trim() ? { location: { displayName: clip(args.location, 200) } } : {}),
   };
   const a = await carryOut(eng, rt, r, m, "create", { event });
-  if (!a.ok) return failedAfter(approved, a.why);
+  if (!a.ok) return failedAfter(approved, forBot(a));
   const made = toMeeting(a.result);
   const teams = made ? (made.teams ? " It is a Teams meeting." : " Outlook did not add a Teams link: the person's account may not allow it.") : "";
   const sent = attendees.length ? " Outlook sent the invitations." : "";
@@ -551,7 +557,7 @@ export function htmlBody(text: string | undefined): string {
 /** Reads one meeting for a move, a cancel or an answer. */
 async function getMeeting(eng: Engine, address: string, id: string): Promise<Meeting | ToolResult> {
   const a = await callFlow(eng, address, "get", { id: id.trim() });
-  if (!a.ok) return problem(a.why);
+  if (!a.ok) return problem(forBot(a));
   const m = toMeeting(a.result);
   return m ?? problem("The flow did not send back a meeting Pobots can read.");
 }
@@ -577,7 +583,7 @@ export async function moveFor(eng: Engine, rt: BotRuntime, args: CalendarMoveArg
   if (attendees.length) {
     const internal = attendees.filter((a) => a.internal).map((a) => a.address);
     const check = await checkTime(eng, address, mailbox, internal, span, { start: got.start, end: got.end });
-    if ("ok" in check) return problem(check.why);
+    if ("ok" in check) return problem(forBot(check));
     if (check.clash.length) {
       eng.store.calendar.addAction({ ...row(rt, "move", m, got.id), status: "refused", note: `Busy: ${check.clash.join(", ")}` });
       return clashAnswer(eng, check, span, "moved");
@@ -593,7 +599,7 @@ export async function moveFor(eng: Engine, rt: BotRuntime, args: CalendarMoveArg
     if (decision !== "allow") return declined(eng, r, decision, "the meeting was not moved");
   }
   const a = await carryOut(eng, rt, r, m, "move", { id: got.id, start: graphTime(span.start, eng.tz), end: graphTime(span.end, eng.tz) });
-  if (!a.ok) return failedAfter(approved, a.why);
+  if (!a.ok) return failedAfter(approved, forBot(a));
   return ok(`Moved ${got.subject} to ${spanWords(span.start, span.end, eng.tz)}.${approved ? ` Outlook told the others. ${APPROVED}` : ""}`);
 }
 
@@ -619,7 +625,7 @@ export async function cancelFor(eng: Engine, rt: BotRuntime, args: CalendarCance
   }
   // A block with nobody else is deleted; a meeting with others is cancelled, which tells them.
   const a = approved ? await carryOut(eng, rt, r, m, "cancel", { id: got.id, comment: message ?? "" }) : await carryOut(eng, rt, r, m, "delete", { id: got.id });
-  if (!a.ok) return failedAfter(approved, a.why);
+  if (!a.ok) return failedAfter(approved, forBot(a));
   return ok(`Cancelled ${got.subject} (${spanWords(got.start, got.end, eng.tz)}).${approved ? ` Outlook told the others. ${APPROVED}` : ""}`);
 }
 
@@ -652,6 +658,6 @@ export async function respondFor(eng: Engine, rt: BotRuntime, args: CalendarResp
   const decision = await ask(eng, rt, m, signal);
   if (decision !== "allow") return declined(eng, r, decision, "the invitation was not answered");
   const a = await carryOut(eng, rt, r, m, "respond", { id: got.id, response: args.response, comment: message ?? "" });
-  if (!a.ok) return failedAfter(true, a.why);
+  if (!a.ok) return failedAfter(true, forBot(a));
   return ok(`${RESPONSE_DONE[args.response]} ${got.subject} (${spanWords(got.start, got.end, eng.tz)}). The organizer was told. ${APPROVED}`);
 }

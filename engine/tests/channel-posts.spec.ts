@@ -191,7 +191,7 @@ describe("channel posts: post_to_channel", () => {
     const w = await world({ replies: [{ status: 400 }, { status: 502 }, { status: 200, delayMs: 1_000 }, { status: 200, body: "not json" }] });
     const r400 = await w.ks.tool("post_to_channel", { channel: "Ops - Internal", text: "One" });
     assert.equal(r400.isError, true);
-    assert.match(text(r400), /refused the post \(status 400\)\. It likely has no branch for new posts yet.*Nothing was posted\. You can try 5 more times in this hour\./);
+    assert.match(text(r400), /refused the post \(status 400\)\. It likely has no branch for new posts yet.*Nothing was posted\. The guide for setting up the Teams channel flows, to go through with the person, is \/.*\/teams-channel-flows\.md\. You can try 5 more times in this hour\./);
     const r500 = await w.ks.tool("post_to_channel", { channel: "Ops - Internal", text: "Two" });
     assert.match(text(r500), /could not post it in Teams \(status 502\)\. Ask the person to look at the flow's run history/);
     assert.equal(w.flow.got.length, 2, "a failed post was tried again");
