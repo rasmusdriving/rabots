@@ -1,0 +1,250 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    },
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    }
+  },
+  "triggers": {
+    "manual": {
+      "metadata": {},
+      "type": "Request",
+      "kind": "Http",
+      "inputs": {
+        "method": "POST",
+        "triggerAuthenticationType": "All"
+      }
+    }
+  },
+  "actions": {
+    "New_post_from_a_bot": {
+      "actions": {
+        "Check_new_post": {
+          "actions": {
+            "Post_message_in_a_chat_or_channel": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "Channel",
+                  "body/recipient/groupId": "<TEAM ID>",
+                  "body/recipient/channelId": "<CHANNEL ID>",
+                  "body/messageBody": "@concat('<b>',triggerBody()?['bot'],'</b>: ',triggerBody()?['html'])"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                  "connectionName": "shared_teams",
+                  "operationId": "PostMessageToConversation"
+                },
+                "retryPolicy": {
+                  "type": "none"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Respond_200_with_the_post_id": {
+              "runAfter": {
+                "Post_message_in_a_chat_or_channel": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Response",
+              "kind": "Http",
+              "inputs": {
+                "statusCode": 200,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "ok": true,
+                  "messageId": "@{body('Post_message_in_a_chat_or_channel')?['id']}"
+                }
+              }
+            },
+            "End_after_the_post": {
+              "runAfter": {
+                "Respond_200_with_the_post_id": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Succeeded"
+              }
+            },
+            "Respond_500_post_failed": {
+              "runAfter": {
+                "Post_message_in_a_chat_or_channel": [
+                  "Failed",
+                  "TimedOut"
+                ]
+              },
+              "type": "Response",
+              "kind": "Http",
+              "inputs": {
+                "statusCode": 500
+              }
+            },
+            "End_post_failed": {
+              "runAfter": {
+                "Respond_500_post_failed": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "PostFailed",
+                  "message": "The new post could not be posted in Teams."
+                }
+              }
+            }
+          },
+          "runAfter": {},
+          "else": {
+            "actions": {
+              "Respond_400_bad_post": {
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                  "statusCode": 400
+                }
+              },
+              "End_bad_post": {
+                "runAfter": {
+                  "Respond_400_bad_post": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Failed",
+                  "runError": {
+                    "code": "BadPost",
+                    "message": "The post request had no bot or html, or html was longer than 20000 characters."
+                  }
+                }
+              }
+            }
+          },
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@and(not(empty(trim(coalesce(triggerBody()?['bot'],'')))),not(empty(trim(coalesce(triggerBody()?['html'],'')))),lessOrEquals(length(coalesce(triggerBody()?['html'],'')),20000))",
+                  true
+                ]
+              }
+            ]
+          },
+          "type": "If"
+        }
+      },
+      "runAfter": {},
+      "else": {
+        "actions": {}
+      },
+      "expression": {
+        "and": [
+          {
+            "equals": [
+              "@coalesce(triggerBody()?['kind'],'')",
+              "post"
+            ]
+          }
+        ]
+      },
+      "type": "If"
+    },
+    "Validate_request": {
+      "actions": {
+        "Reply_with_a_message_in_a_channel": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "poster": "Flow bot",
+              "location": "Channel",
+              "body/parentMessageId": "@triggerBody()?['threadId']",
+              "body/recipient/groupId": "<TEAM ID>",
+              "body/recipient/channelId": "<CHANNEL ID>",
+              "body/messageBody": "@concat('<b>',triggerBody()?['bot'],'</b>: ',triggerBody()?['html'])"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+              "connectionName": "shared_teams",
+              "operationId": "ReplyWithMessageToConversation"
+            },
+            "retryPolicy": {
+              "type": "none"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Respond_200": {
+          "runAfter": {
+            "Reply_with_a_message_in_a_channel": [
+              "Succeeded"
+            ]
+          },
+          "type": "Response",
+          "kind": "Http",
+          "inputs": {
+            "statusCode": 200,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": "@json('{\"ok\":true}')"
+          }
+        },
+        "Respond_500": {
+          "runAfter": {
+            "Reply_with_a_message_in_a_channel": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "type": "Response",
+          "kind": "Http",
+          "inputs": {
+            "statusCode": 500
+          }
+        }
+      },
+      "runAfter": {
+        "New_post_from_a_bot": [
+          "Succeeded"
+        ]
+      },
+      "else": {
+        "actions": {
+          "Respond_400": {
+            "type": "Response",
+            "kind": "Http",
+            "inputs": {
+              "statusCode": 400
+            }
+          }
+        }
+      },
+      "expression": {
+        "and": [
+          {
+            "equals": [
+              "@and(not(empty(trim(coalesce(triggerBody()?['threadId'],'')))),not(empty(trim(coalesce(triggerBody()?['bot'],'')))),not(empty(trim(coalesce(triggerBody()?['html'],'')))),lessOrEquals(length(coalesce(triggerBody()?['html'],'')),20000))",
+              true
+            ]
+          }
+        ]
+      },
+      "type": "If"
+    }
+  },
+  "outputs": {}
+}

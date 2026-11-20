@@ -17,6 +17,7 @@ import { EngineError } from "../errors.js";
 import type { ServedFile } from "../attachments.js";
 import { endHold, startNextInLine } from "./stop.js";
 import { answerToManager } from "./task-manager-host.js";
+import { changedBlock, closeBlockOf, newBlock } from "./todo-blocks.js";
 
 /** What a to-do's file and page blocks are checked against: the bot's folder, and its artifacts (made when new, without a line in the chat). */
 export function todoContext(eng: Engine, rt: BotRuntime): TodoContext {
@@ -34,7 +35,7 @@ export function todoContext(eng: Engine, rt: BotRuntime): TodoContext {
 }
 
 /** add_todo: puts a to-do on the person's list. */
-export function addTodoFor(eng: Engine, rt: BotRuntime, args: TodoArgs): ToolResult {
+export async function addTodoFor(eng: Engine, rt: BotRuntime, args: TodoArgs): Promise<ToolResult> {
   if (!eng.store.isOpen) return problem("Pobots is stopping, so the to-do was not added.");
   if (eng.store.openTodos(rt.folder.id).length >= TODOS_PER_BOT) {
     return problem(`You already have ${TODOS_PER_BOT} open to-dos on the person's list. Remove or update one with remove_todo or update_todo first.`);
@@ -48,13 +49,14 @@ export function addTodoFor(eng: Engine, rt: BotRuntime, args: TodoArgs): ToolRes
   eng.store.saveTodo({ todo, status: "open" });
   eng.opts.emit("todo.changed", { todo });
   log.info(`Bot ${rt.folder.id}: added a to-do for the person`);
+  const block = await newBlock(eng, rt, todo);
   return ok(
-    `Added "${todo.title}" to the person's to-do list (id ${todo.id}). It waits there without a notification; when they act on it you get their answer in your chat as a message from them.${todo.keepOpen ? " It stays on the list after an answer, as you asked: update or remove it when it is settled." : " An answer takes it off the list."}`,
+    `Added "${todo.title}" to the person's to-do list (id ${todo.id}). It waits there without a notification; when they act on it you get their answer in your chat as a message from them.${todo.keepOpen ? " It stays on the list after an answer, as you asked: update or remove it when it is settled." : " An answer takes it off the list."}${block}`,
   );
 }
 
 /** update_todo: changes one of the bot's open to-dos. */
-export function updateTodoFor(eng: Engine, rt: BotRuntime, args: TodoArgs & { id?: string }): ToolResult {
+export async function updateTodoFor(eng: Engine, rt: BotRuntime, args: TodoArgs & { id?: string }): Promise<ToolResult> {
   const row = typeof args.id === "string" ? eng.store.getTodo(args.id.trim()) : undefined;
   if (!row || row.todo.botId !== rt.folder.id) return problem("You have no to-do with that id. list_todos shows your open ones.");
   if (row.status !== "open") return problem(notOpenWords(row));
@@ -66,7 +68,8 @@ export function updateTodoFor(eng: Engine, rt: BotRuntime, args: TodoArgs & { id
   }
   eng.store.saveTodo({ todo, status: "open" });
   eng.opts.emit("todo.changed", { todo });
-  return ok(`Changed the to-do "${todo.title}" (${todo.id}).`);
+  const block = await changedBlock(eng, rt, row.todo, todo, args);
+  return ok(`Changed the to-do "${todo.title}" (${todo.id}).${block}`);
 }
 
 /** remove_todo: takes one of the bot's to-dos off the person's list. */
@@ -76,6 +79,7 @@ export function removeTodoFor(eng: Engine, rt: BotRuntime, args: { id?: string }
   if (row.status !== "open") return ok(`${notOpenWords(row)} Nothing to remove.`);
   eng.store.saveTodo({ ...row, status: "removed", closedAt: now() });
   eng.opts.emit("todo.removed", { todoId: row.todo.id, reason: "removed" });
+  closeBlockOf(eng, row.todo.id, "dropped", "bot");
   return ok(`Took "${row.todo.title}" off the person's list.`);
 }
 
@@ -120,6 +124,8 @@ export function answerTodo(eng: Engine, params: Methods["todo.answer"]["params"]
     eng.store.saveTodo({ todo, status: "answered", closedAt: at });
     eng.opts.emit("todo.removed", { todoId: todo.id, reason: "answered" });
   }
+  // The person acted on it: its block of time is done, also when the bot keeps the to-do open.
+  closeBlockOf(eng, todo.id, "done", "you");
   const text = answerText(todo, button?.id, values);
   // A task manager's to-do: its answer goes to the task manager while it is there (engine 0.26.0).
   if (answerToManager(eng, rt, todo, text)) {
@@ -144,6 +150,7 @@ export function closeTodo(eng: Engine, params: Methods["todo.close"]["params"]):
   if (owner) requirePresent(owner);
   eng.store.saveTodo({ ...row, status: params.how, closedAt: now() });
   eng.opts.emit("todo.removed", { todoId: row.todo.id, reason: params.how });
+  closeBlockOf(eng, row.todo.id, params.how === "done" ? "done" : "dropped", "you");
   const rt = eng.bots.get(row.todo.botId);
   if (rt) eng.store.addNews(rt.folder.id, rt.threadId, closedNews(row.todo, params.how));
 }

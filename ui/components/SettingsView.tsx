@@ -1,6 +1,7 @@
 // The Settings tab: name, purpose, face, model and effort, access level, who the bot may message,
 // what is always allowed, and retiring the bot. Changes save as they are made; each field says
 // "Saved" quietly for a moment. There is no page-wide save button.
+import { AheadBotSetting } from "./ahead/AheadBotSetting";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ACCESS_LEVELS, EYE_GAPS, EYE_SHAPES, type AccessLevel, type Bot, type BotLook, type Effort, type FollowUp, type SavedRule } from "../../shared/protocol";
 import { EngineError, messageOf } from "../engine/types";
@@ -47,6 +48,7 @@ export function SettingsView({ bot }: { bot: Bot }) {
         <PeersSetting bot={bot} />
         <SteerSetting bot={bot} />
         <CalendarSetting bot={bot} />
+        <AheadBotSetting bot={bot} />
         <RulesSetting bot={bot} />
         <SeesSetting bot={bot} />
         <VacationSetting key={bot.id} bot={bot} />

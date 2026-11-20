@@ -40,8 +40,10 @@
 
 import type { UsageOverviewRead, UsageRange } from "./usage-overview.js";
 export * from "./usage-overview.js";
+export * from "./ahead.js";
+import type { AheadAction, AheadItem, AheadLevel, AheadSettings, AheadView } from "./ahead.js";
 
-export const PROTOCOL_VERSION = 30;
+export const PROTOCOL_VERSION = 33;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -179,8 +181,10 @@ export interface BackupRun {
  * "needs": a card waits for the person's answer (a question or an approval). "note": a bot, or
  * Pobots itself, put a note in front of the person. "finished": a bot came to rest after work the
  * person asked for, or stopped on an error in such work.
+ * "yourTime" and "dayReady" (Ahead part B, off by default): a slot of the person's time starts, and
+ * the working day starts with something on Ahead today.
  */
-export type NotifyKind = "needs" | "note" | "finished";
+export type NotifyKind = "needs" | "note" | "finished" | "yourTime" | "dayReady";
 
 /** A device (a browser, or a home screen app) that gets notifications. Never its address or keys. */
 export interface NotifyDevice {
@@ -680,6 +684,11 @@ export interface NoticeItem extends ItemBase {
   detail?: string;
   /** For "fresh": the tidy turn this notice ends, so the app can show its steps on request. */
   tidyTurnId?: string;
+  /**
+   * Protocol 33: the line says why the bot's next turn starts by itself (Ahead switched on in Settings
+   * while the calendar is not ready). The window shows no "reported back" line for that turn.
+   */
+  startsTurn?: boolean;
 }
 
 export type Item = UserItem | BotItem | ActivityItem | NoticeItem | HelperItem | ArtifactItem | BrowserItem;
@@ -1084,7 +1093,7 @@ export interface Methods {
      * `followUp` (protocol 15, step 7b): the bot's own choice, or null for the Pobots default.
      * `sees` (protocol 16): what the bot sees of the person's own Claude Code setup, or null for everything.
      */
-    params: { botId: string; patch: Partial<Pick<Bot, "name" | "purpose" | "model" | "effort" | "fast" | "access" | "look" | "mayMessage" | "maySteer" | "calendar">> & { followUp?: FollowUp | null; sees?: BotSees | null } };
+    params: { botId: string; patch: Partial<Pick<Bot, "name" | "purpose" | "model" | "effort" | "fast" | "access" | "look" | "mayMessage" | "maySteer" | "calendar" | "ahead">> & { followUp?: FollowUp | null; sees?: BotSees | null } };
     result: { bot: Bot };
   };
 
@@ -2021,9 +2030,14 @@ export interface Snapshot {
   calendar: CalendarState;
 }
 
+/** Which calendar the address leads to (protocol 33): Outlook through Power Automate, or Google Calendar through Apps Script. */
+export type CalendarService = "outlook" | "google";
+
 export interface CalendarState {
   /** True when the flow's address is set. */
   connected: boolean;
+  /** Protocol 33: which calendar, from the address. "outlook" when none is set. */
+  service: CalendarService;
   /** The mailbox the flow acts for, from the last good check. */
   mailbox?: { name?: string; address: string };
   /** When the connection was last checked, ISO 8601. */
@@ -2278,4 +2292,49 @@ export interface Methods {
 export interface Events {
   /** Protocol 23: a card changed in place: its questions, or its words when the bot asked again. Always the whole card. */
   "card.changed": { card: Card };
+}
+
+// Protocol 31: Ahead (docs/build/step-ahead.md; the types are in shared/ahead.ts).
+
+export interface Bot {
+  /** Protocol 31: what the bot may do on Ahead. The main bot is always "time". */
+  ahead: AheadLevel;
+}
+
+export interface Snapshot {
+  /** Protocol 31: the Ahead settings. */
+  ahead: AheadSettings;
+}
+
+export interface Methods {
+  /**
+   * Protocol 31: what is coming, day by day. `from` defaults to today, `days` to AHEAD_DAYS (1 to 62).
+   * "bad_request" while Ahead is off.
+   */
+  "ahead.view": { params: { from?: string; days?: number }; result: AheadView };
+  /** Protocol 31: changes the Ahead settings (not lastOpenedAt; that is "ahead.seen"). */
+  "ahead.settings.set": { params: Partial<Omit<AheadSettings, "lastOpenedAt">>; result: { ahead: AheadSettings } };
+  /**
+   * Protocol 31: the person acts on an item. "move" takes `day` and an optional `time` (null clears it).
+   * Its bot is told at its next turn. "not_found" when the item is gone.
+   */
+  "ahead.act": { params: { itemId: string; action: AheadAction; day?: string; time?: string | null; place?: "today" | "tomorrow" | "next" | "next-week" }; result: { item: AheadItem } };
+  /** Protocol 31 (part C's window): the person's own item, with no bot. */
+  "ahead.add": { params: { title: string; day: string; time?: string; label?: string; kind?: "will-do" | "deadline" | "waiting" | "note" }; result: { item: AheadItem } };
+  /** Protocol 31 (part C's window): the person left Ahead; acknowledges the last view shown, or now if omitted. */
+  "ahead.seen": { params: { through?: string }; result: { ahead: AheadSettings } };
+}
+
+export interface Events {
+  /** Protocol 31: the Ahead settings changed. */
+  "ahead.changed": { ahead: AheadSettings };
+  /** Protocol 31: items changed; a window showing Ahead reads the view again. */
+  "ahead.items": Record<string, never>;
+}
+
+// Protocol 32: to-do blocks (docs/build/step-todo-blocks.md; the Ahead types are in shared/ahead.ts).
+
+export interface Todo {
+  /** Protocol 32: how long it takes the person, TODO_MINUTES_MIN to TODO_MINUTES_MAX, as the bot said. The length of its block. */
+  minutes?: number;
 }

@@ -109,11 +109,13 @@ export function allowSteps(p: Platform): string[] {
 
 export const KINDS_NOTE = "For all your devices.";
 
-/** The three switches, in order, with their hints. */
-export const KINDS: { kind: NotifyKind; label: string; hint: string }[] = [
+/** The switches, in order, with their hints. `ahead`: shown only while Ahead is on (part B). */
+export const KINDS: { kind: NotifyKind; label: string; hint: string; ahead?: true }[] = [
   { kind: "needs", label: "Needs your answer", hint: "A bot asks you something or asks to do something." },
   { kind: "note", label: "Sent you a note", hint: "A bot, or Pobots itself, puts a note in front of you." },
   { kind: "finished", label: "Finished", hint: "A bot finished something you asked it to do, or stopped because of a problem." },
+  { kind: "yourTime", label: "Your time on Ahead", hint: "A slot of your time on Ahead starts.", ahead: true },
+  { kind: "dayReady", label: "Your day is ready", hint: "Your working day starts and there is something on Ahead today.", ahead: true },
 ];
 
 // ------------------------------------------------------------ times and the device rows

@@ -12,6 +12,7 @@ import { log } from "../log.js";
 import type { BotRuntime, Turn } from "./runtime.js";
 import { CHANNEL_PER_MINUTE } from "../channels.js";
 import { heldWords } from "./stop.js";
+import { aheadTimeTick } from "./ahead-time-tick.js";
 
 /** The schedule clock looks again at least this often, so a sleeping Mac or a changed clock is noticed soon. */
 export const TICK_MS = 30 * 1000;
@@ -352,6 +353,12 @@ export function checkSchedules(eng: Engine): void {
     eng.checkContext();
   } catch (err) {
     log.error("Could not look at the bots' sessions", err);
+  }
+  // Ahead's "Your time on Ahead" and "Your day is ready" (engine/core/ahead-time-tick.ts).
+  try {
+    aheadTimeTick(eng, at);
+  } catch (err) {
+    log.error("Could not look at Ahead's notifications", err);
   }
   // Files of artifacts changed outside a turn (by hand, or by a process the bot left running).
   try {

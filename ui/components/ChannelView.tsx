@@ -661,6 +661,9 @@ function FlowBody({ id }: { id: string }) {
       <h2 className="pb-section-title" id={`${id}-flow`}>
         What the flow sends
       </h2>
+      <p className="pb-section-text" data-guide="teams">
+        The main bot has a guide for setting up both flows and can go through it with you.
+      </p>
       <div>
         <button className="pb-btn pb-btn-sm pb-btn-quiet pb-btn-flush" type="button" aria-expanded={open} aria-controls={open ? panel : undefined} onClick={() => setOpen(!open)}>
           {open ? "Hide what the flow should send" : "Show what the flow should send"}

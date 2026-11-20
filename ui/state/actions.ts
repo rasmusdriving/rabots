@@ -19,9 +19,9 @@ export function connect(engine: EngineClient): void {
   client = engine;
   engine.start({
     ready: (snapshot: Snapshot) => {
-      // A public install that updated itself: a page in a browser loads the new build once (engine 0.34.0).
+      // The engine came back with a new version: a page in a browser loads the new build once (engine 0.34.0; every install from 0.41.0).
       const was = store.get();
-      if (reloadForNewVersion({ version: was.status?.engineVersion, pobots: !!was.providers?.pobots }, snapshot)) return;
+      if (reloadForNewVersion({ version: was.status?.engineVersion }, snapshot)) return;
       forgetUpdateReload();
       store.snapshot(snapshot);
       // After a reconnect, read again the newest page of every chat the window has open, so
@@ -736,4 +736,12 @@ export async function testCalendar(): Promise<void> {
   const seen = store.calendarEvents;
   const { calendar } = await engine().request("calendar.test", {});
   if (store.calendarEvents === seen) store.setCalendar(calendar);
+}
+
+/**
+ * Protocol 31: a plain engine call for a feature that keeps its calls in a module of its own
+ * (ui/components/ahead/ahead-state.ts), so this file does not grow with each one.
+ */
+export function engineRequest<M extends keyof Methods>(method: M, params: Methods[M]["params"]): Promise<Methods[M]["result"]> {
+  return engine().request(method, params);
 }

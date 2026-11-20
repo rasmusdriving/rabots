@@ -1,0 +1,165 @@
+/* Ahead (protocol 31): the screen for what is coming. Calm: no colour per kind, no badge, amber only
+   where something waits on the person, a fade the only motion. Tokens only. This file: the row in
+   the bots list, the page, the one row above the days with Overview, the Agenda's rows and the
+   sheets. The Week grid is PobotsAheadGrid/ahead-grid.css. */
+
+/* The row in the bots list, first, above the bots. */
+.pb-ahead-slot { padding-block-end: var(--space-2); }
+.pb-ahead-roster-row { grid-template-columns: auto minmax(0, 1fr); width: 100%; text-align: left; border: 0; background: none; font: inherit; }
+.pb-ahead-disc { width: 28px; height: 28px; border-radius: var(--radius-full); background: var(--fill-strong); color: var(--ink-muted); display: grid; place-items: center; flex: none; }
+
+/* The page. */
+.pb-ahead-page { width: 100%; padding: 0 0 var(--space-6); min-width: 0; }
+/* The row above the days spans the panel in both views, so it stays put when the view is switched. The agenda reads at 720px. */
+.pb-ahead-content > .pb-ahead-days, .pb-ahead-content > .pb-ahead-day, .pb-ahead-content > .pb-ahead-empty { max-width: 720px; margin-inline: auto; }
+/* Protocol 33: the calendar's line, while Ahead is on and the calendar is not set up. Quiet words and two
+   quiet actions, between the row above the days and the days. Its box is set when the page opens and
+   kept until the person leaves, so nothing under it moves. */
+.pb-ahead-setup { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-3); row-gap: var(--space-1); max-width: 720px; margin: 0 auto var(--space-2); padding: var(--space-2) var(--space-1); }
+.pb-ahead-setup > .pb-hint { flex: 1 1 320px; min-width: 0; }
+.pb-ahead-setup-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.pb-ahead-setup-actions[hidden] { display: none; }
+.pb-ahead-head .app-head-text { min-width: 0; flex: 1; }
+.pb-ahead-controls { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-left: auto; }
+
+/* The held line ("1 new · Show"): it stands in the row above the days, where the since words stand. */
+.pb-ahead-held { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1); min-width: 0; color: var(--ink-muted); white-space: nowrap; }
+/* Show is never cut: when the place is too narrow, the words before it are. */
+.pb-ahead-held-words { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pb-ahead-held > :not(.pb-ahead-held-words) { flex: none; }
+.pb-ahead-held button { font: inherit; font-weight: 600; color: var(--accent-text); background: none; border: 0; padding: 0 var(--space-1); cursor: pointer; border-radius: var(--radius-sm); }
+.pb-ahead-held button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-ahead-chip { font: inherit; font-size: 12px; line-height: 16px; font-weight: 500; padding: 6px 10px; border-radius: var(--radius-sm); border: 0; background: var(--fill); color: var(--ink-muted); cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-chip:hover { background: var(--fill-strong); }
+.pb-ahead-chip[aria-pressed="true"] { background: var(--fill-strong); color: var(--ink); }
+.pb-ahead-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* The days. */
+.pb-ahead-day { margin-bottom: var(--space-4); min-width: 0; }
+.pb-ahead-day-head { display: flex; align-items: baseline; gap: var(--space-2); margin: 0 0 var(--space-1) var(--space-2); }
+.pb-ahead-day-head h3 { font-size: 15px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+.pb-ahead-day-head span { font-size: 13px; line-height: 20px; color: var(--ink-faint); }
+.pb-ahead-rows { display: flex; flex-direction: column; }
+.pb-ahead-empty-day { font-size: 13px; line-height: 20px; color: var(--ink-faint); padding: 6px var(--space-2); }
+
+/* One row, one line: the time, a small mark, the title, and the quiet facts at the right. */
+.pb-ahead-row { display: grid; grid-template-columns: 78px 20px minmax(0, 1fr); column-gap: var(--space-2); align-items: center; width: 100%; min-height: 32px; padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-md); background: none; color: inherit; font: inherit; text-align: left; transition: background-color var(--dur-quick) var(--ease-soft), opacity var(--dur-quick) var(--ease-soft); }
+button.pb-ahead-row { cursor: pointer; }
+button.pb-ahead-row:hover { background: var(--fill); }
+button.pb-ahead-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-ahead-when { font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; }
+.pb-ahead-end[data-word] { margin-inline-start: var(--space-1); }
+.pb-ahead-mark { position: relative; display: flex; justify-content: center; align-items: center; }
+/* New or moved: a dot in the gap beside the mark. It takes no room, so every title starts on the same line. */
+.pb-ahead-mark .pb-ahead-change-dot { position: absolute; left: calc(100% + 2px); top: 50%; margin: calc(var(--space-1) / -2) 0 0; }
+.pb-ahead-mark .pb-avatar { --size: 18px; }
+.pb-ahead-body { min-width: 0; display: flex; align-items: baseline; gap: var(--space-3); }
+.pb-ahead-title { flex: 1 1 auto; min-width: 0; font-weight: 500; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.pb-ahead-meta { flex: 0 1 auto; min-width: 0; max-width: 55%; font-size: 13px; line-height: 20px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* A meeting is the person's own and quiet; what the bots put there keeps the full ink. */
+.pb-ahead-row[data-tone="meeting"] .pb-ahead-title { font-size: 13px; line-height: 20px; font-weight: 400; color: var(--ink-muted); }
+.pb-ahead-row[data-tone="closed"],
+.pb-ahead-row[data-tone="moved"] { opacity: 0.6; }
+.pb-ahead-row[data-tone="closed"] .pb-ahead-title { text-decoration: line-through; text-decoration-color: var(--ink-faint); }
+.pb-ahead-meeting { width: 8px; height: 8px; border-radius: 30%; background: var(--fill-strong); }
+.pb-ahead-you { width: 16px; height: 16px; border-radius: var(--radius-full); background: var(--fill-strong); }
+.pb-ahead-tag { font-size: 12px; line-height: 16px; font-weight: 500; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--fill-strong); color: var(--ink); margin-right: 6px; white-space: nowrap; }
+.pb-ahead-tag[data-for="you"] { background: var(--amber-soft); color: var(--amber); }
+
+/* Later, folded. */
+.pb-ahead-fold { display: block; width: 100%; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink-faint); text-align: left; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: var(--fill); cursor: pointer; margin-bottom: var(--space-2); transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-fold:hover { background: var(--fill-strong); }
+.pb-ahead-fold:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-ahead-group { margin-bottom: var(--space-3); }
+.pb-ahead-group-title { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); margin: var(--space-2) 0 var(--space-1) var(--space-1); }
+
+/* The empty state. */
+.pb-ahead-empty { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-5) var(--space-1); }
+.pb-ahead-empty p { margin: 0; }
+.pb-ahead-empty-title { font-size: 17px; line-height: 24px; font-weight: 600; }
+
+/* The item sheet. */
+.pb-ahead-sheet { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.pb-ahead-sheet-from { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; line-height: 20px; color: var(--ink-faint); min-width: 0; overflow-wrap: anywhere; }
+.pb-ahead-sheet-why { margin: 0; color: var(--ink-muted); overflow-wrap: anywhere; }
+.pb-ahead-sheet-acts, .pb-ahead-sheet-move { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.pb-ahead-sheet-label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-faint); }
+.pb-ahead-day-input { min-width: 0; flex: 1; max-width: 220px; }
+
+@media (max-width: 699px) {
+  .pb-ahead-row { grid-template-columns: 76px 20px minmax(0, 1fr); column-gap: var(--space-2); min-height: 44px; padding: var(--space-1); }
+  .pb-ahead-row[data-tone="meeting"] { min-height: 32px; }
+  .pb-ahead-body { flex-direction: column; align-items: stretch; gap: 0; }
+  .pb-ahead-meta { max-width: 100%; }
+  .pb-ahead-day-head { margin-left: var(--space-1); }
+  .pb-ahead-chip { min-height: 36px; }
+  .pb-ahead-day-input { font-size: 16px; }
+}
+
+/* Working the screen. The one row above the days: a chip per bot, the week note in one line, what is new. */
+.pb-ahead-sum { container: ahead-sum / inline-size; display: flex; align-items: center; gap: var(--space-2); height: 32px; margin: 0 0 var(--space-1); min-width: 0; }
+.pb-ahead-sum-open { flex: none; display: inline-flex; align-items: center; gap: 2px; height: 28px; padding: 0 var(--space-1) 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-sum-open:hover { background: var(--fill); color: var(--ink); }
+.pb-ahead-sum-chips { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.pb-ahead-sum-chips::-webkit-scrollbar { display: none; }
+.pb-ahead-sum-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 var(--space-2) 0 var(--space-1); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-muted); cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-sum-chip:hover { background: var(--fill); }
+.pb-ahead-sum-chip[aria-pressed="true"] { background: var(--fill-strong); color: var(--ink); }
+.pb-ahead-sum-chip[data-empty], .pb-ahead-sum-wait[data-empty] { visibility: hidden; }
+.pb-ahead-sum-chip .pb-avatar { --size: 18px; }
+.pb-ahead-sum-name { display: none; max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.pb-ahead-sum-you { display: inline; }
+.pb-ahead-sum-n { font-variant-numeric: tabular-nums; text-align: left; }
+.pb-ahead-sum-wait { min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-full); background: var(--amber-soft); color: var(--amber); line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
+.pb-ahead-sum-label { max-width: 12em; padding-left: var(--space-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-ahead-sum-note { container: ahead-note / inline-size; flex: 1 1 0; min-width: 84px; height: 28px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink-muted); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+button.pb-ahead-sum-note { cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+button.pb-ahead-sum-note:hover { background: var(--fill); color: var(--ink); }
+.pb-ahead-sum :is(.pb-ahead-sum-open, .pb-ahead-sum-chip, .pb-ahead-sum-note):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+/* What is new, and Show: one fixed width at the right end, so the row never changes when one takes the other's place. */
+.pb-ahead-sum-news { flex: none; width: 168px; padding-right: var(--space-1); color: var(--ink-faint); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-ahead-sum-news[data-news] { color: var(--ink-muted); }
+.pb-ahead-change-dot { display: inline-block; flex: none; inline-size: var(--space-1); block-size: var(--space-1); margin-inline-end: var(--space-2); border-radius: var(--radius-full); background: var(--accent-text); vertical-align: middle; }
+.pb-ahead-sum-note-text { display: none; overflow: hidden; text-overflow: ellipsis; }
+@container ahead-note (min-width: 180px) {
+  .pb-ahead-sum-note-text { display: block; }
+  .pb-ahead-sum-note-word { display: none; }
+}
+@container ahead-sum (min-width: 900px) {
+  .pb-ahead-sum-name { display: inline; }
+  .pb-ahead-sum-chip { padding-right: var(--space-2); }
+}
+
+/* Overview: the same in full. A line per bot with its counts in words; the labels as chips. */
+.pb-ahead-since { display: flex; align-items: center; margin: 0; color: var(--ink-muted); }
+.pb-ahead-carry h3 { color: var(--ink-muted); margin: 0; }
+.pb-ahead-carry-row { display: flex; align-items: center; gap: var(--space-2); width: 100%; text-align: start; color: inherit; font: inherit; border: 0; border-radius: var(--radius-md); background: none; padding: var(--space-1) var(--space-2); cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-carry-row:hover, .pb-ahead-carry-row[aria-pressed="true"] { background: var(--fill); }
+.pb-ahead-carry-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-ahead-carry-row > :first-child { flex: none; }
+.pb-ahead-carry-body { display: grid; flex: 1; min-inline-size: 0; gap: 0 var(--space-3); }
+.pb-ahead-carry-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.pb-ahead-carry-counts { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); color: var(--ink-muted); }
+.pb-ahead-carry-counts > span { white-space: nowrap; }
+.pb-ahead-carry-counts > span + span::before { content: "·"; margin-inline-end: var(--space-2); color: var(--ink-faint); }
+.pb-ahead-carry-wait { color: var(--amber); }
+.pb-ahead-carry-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-3); margin: 0 var(--space-2) var(--space-1); }
+.pb-ahead-carry-labels { display: flex; flex-wrap: wrap; gap: var(--space-1); min-inline-size: 0; }
+.pb-ahead-carry-labels .pb-ahead-chip { max-inline-size: 16em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-ahead-overview .pb-ahead-week-note { margin: 0; }
+.pb-ahead-field { display: grid; min-inline-size: 0; gap: var(--space-1); }
+.pb-ahead-field > .label { color: var(--ink-muted); }
+.pb-ahead-chip:disabled { opacity: 0.6; cursor: default; }
+.pb-ahead-sheet .pb-dialog-actions { flex-wrap: wrap; }
+.pb-ahead-sheet :is(.pb-hint, .pb-cq-error) { margin: 0; }
+.pb-dialog:has(.pb-ahead-sheet).pb-arrive { animation: pb-fade var(--dur-quick) var(--ease-soft) both; }
+.pb-dialog:has(.pb-ahead-sheet) .pb-dialog-title { overflow-wrap: anywhere; }
+.pb-ahead-controls { justify-content: flex-end; }
+@media (max-width: 699px) {
+  .pb-ahead-sum { flex-wrap: wrap; height: auto; row-gap: 0; }
+  .pb-ahead-sum-open, .pb-ahead-sum-chip { height: 36px; }
+  .pb-ahead-sum-chips { flex: 1 1 60%; }
+  .pb-ahead-sum-note { height: 32px; }
+  .pb-ahead-sum-note:empty { display: none; }
+  .pb-ahead-sum-news { width: 148px; height: 32px; line-height: 32px; margin-left: auto; }
+}

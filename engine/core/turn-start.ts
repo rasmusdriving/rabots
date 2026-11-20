@@ -1,4 +1,5 @@
 // A turn's start: the message that starts it, the bot's session (made, resumed or fresh) and the hand-offs between sessions.
+import { passedNews } from "./ahead-news.js";
 import { EngineError } from "../errors.js";
 import { away, requirePresent } from "./vacation.js";
 import { leaveLive, takeAside } from "./aside.js";
@@ -114,6 +115,8 @@ export async function startTurn(eng: Engine, rt: BotRuntime, item: UserItem, o: 
       );
     }
     before.push(...eng.store.takeNews(item.threadId));
+    // Protocol 31: once, the Ahead items whose day passed.
+    if (item.threadId === rt.threadId) before.push(...passedNews(eng, rt));
   }
   if (from.type === "bot") {
     const kind = eng.lateAnswers.has(item.id) ? "answer" : from.expectsReply ? "ask" : "tell";

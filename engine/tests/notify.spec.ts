@@ -152,7 +152,7 @@ function world(o: { kinds?: Partial<Record<NotifyKind, boolean>>; prefix?: strin
   const push = new StandInPush();
   for (const id of o.devices ?? ["laptop", "phone"]) push.add(id);
   const host = new StandInHost();
-  const n = new Notifier({ push, host, kinds: { needs: true, note: true, finished: true, ...o.kinds }, titlePrefix: o.prefix ?? "", timers: clock });
+  const n = new Notifier({ push, host, kinds: { needs: true, note: true, finished: true, yourTime: false, dayReady: false, ...o.kinds }, titlePrefix: o.prefix ?? "", timers: clock });
   /** A card goes up, as the engine's emit does it. */
   const up = (card: Card) => {
     host.cards.push(card);
@@ -337,7 +337,7 @@ describe("notifications: the switches", () => {
   test("a kind switched off sends nothing, also when switched off during the wait; saved through the host; the state says it", async () => {
     const { clock, push, host, n, up } = world({ devices: ["laptop"] });
     n.setKinds({ note: false });
-    assert.deepEqual(host.saved.at(-1), { needs: true, note: false, finished: true });
+    assert.deepEqual(host.saved.at(-1), { needs: true, note: false, finished: true, yourTime: false, dayReady: false });
     assert.equal(host.states.at(-1)!.kinds.note, false);
     up(note());
     await clock.advance(MIN);
@@ -345,7 +345,7 @@ describe("notifications: the switches", () => {
     up(question());
     await clock.advance(2 * S);
     const r = n.setKinds({ needs: false });
-    assert.deepEqual(r.notify.kinds, { needs: false, note: false, finished: true });
+    assert.deepEqual(r.notify.kinds, { needs: false, note: false, finished: true, yourTime: false, dayReady: false });
     await clock.advance(MIN);
     assert.equal(push.delivered.length, 0, "switched off during the wait");
     host.failSave = true;
@@ -672,7 +672,7 @@ describe("notifications: subscribing (notify.subscribe, notify.forget)", () => {
   test("asked adds a device; still-here updates a known one or puts a new address in a gone row's place, and refuses an unknown one and a working row's place; a 21st is refused", () => {
     const host = new StandInHost();
     const store = new PushStore(join(tempDir(), "push"));
-    const n = new Notifier({ push: store, host, kinds: { needs: true, note: true, finished: false }, timers: new FakeClock() });
+    const n = new Notifier({ push: store, host, kinds: { needs: true, note: true, finished: false, yourTime: false, dayReady: false }, timers: new FakeClock() });
     const a = fakeSubscription("https://fcm.googleapis.com/fcm/send/made-up-a").sub;
     assert.throws(() => n.subscribe({ subscription: a, label: "Chrome on Windows", asked: false }), (e: unknown) => e instanceof EngineError && e.code === "not_found");
     const { deviceId: idA, notify } = n.subscribe({ subscription: a, label: "Chrome on Windows", asked: true });
@@ -707,7 +707,7 @@ describe("notifications: a dead device never reads as on (the reviewer's test a)
       sentTo.push(url);
       return new Response(null, { status });
     }) as unknown as typeof fetch;
-    const n = new Notifier({ push: new PushStore(join(tempDir(), "push"), { fetch: fakeFetch }), host, kinds: { needs: true, note: true, finished: false }, timers: clock });
+    const n = new Notifier({ push: new PushStore(join(tempDir(), "push"), { fetch: fakeFetch }), host, kinds: { needs: true, note: true, finished: false, yourTime: false, dayReady: false }, timers: clock });
     const old = fakeSubscription("https://web.push.apple.com/made-up-dead").sub;
     const { deviceId: id } = n.subscribe({ subscription: old, label: "Home screen app on iPhone", asked: true });
     host.cards.push(question());
@@ -754,7 +754,7 @@ describe("notifications: an address the push service called gone never comes bac
       return new Response(null, { status });
     }) as unknown as typeof fetch;
     const dir = join(tempDir(), "push");
-    const n = new Notifier({ push: new PushStore(dir, { fetch: fakeFetch }), host, kinds: { needs: true, note: true, finished: false }, timers: clock });
+    const n = new Notifier({ push: new PushStore(dir, { fetch: fakeFetch }), host, kinds: { needs: true, note: true, finished: false, yourTime: false, dayReady: false }, timers: clock });
     const label = "Chrome on Android";
     const dead = fakeSubscription("https://fcm.googleapis.com/fcm/send/made-up-dead").sub;
     const { deviceId: idDead } = n.subscribe({ subscription: dead, label, asked: true });
@@ -785,7 +785,7 @@ describe("notifications: an address the push service called gone never comes bac
     // The dead address returns: by a press, by a stale tab saying still here and naming the working row, after a restart.
     assert.throws(() => n.subscribe({ subscription: dead, label, asked: true }), conflict, "a press, after its row was replaced");
     assert.throws(() => n.subscribe({ subscription: dead, label, asked: false, replaces: idFresh }), conflict, "a stale tab naming the working row");
-    const restarted = new Notifier({ push: new PushStore(dir, { fetch: fakeFetch }), host, kinds: { needs: true, note: true, finished: false }, timers: clock });
+    const restarted = new Notifier({ push: new PushStore(dir, { fetch: fakeFetch }), host, kinds: { needs: true, note: true, finished: false, yourTime: false, dayReady: false }, timers: clock });
     assert.throws(() => restarted.subscribe({ subscription: dead, label, asked: true }), conflict, "after a restart");
     // A stale tab with another old address (never called gone) naming the working row: refused, nothing changes.
     const older = fakeSubscription("https://fcm.googleapis.com/fcm/send/made-up-older").sub;
@@ -835,7 +835,7 @@ describe("notifications: nothing a push service answers leaves the engine as fre
     process.env.POBOTS_LOG = "info";
     const errors: string[] = [];
     try {
-      const n = new Notifier({ push: new PushStore(join(tempDir(), "push"), { fetch: fakeFetch }), host, kinds: { needs: true, note: true, finished: false }, timers: clock, retryMs: 30 * S });
+      const n = new Notifier({ push: new PushStore(join(tempDir(), "push"), { fetch: fakeFetch }), host, kinds: { needs: true, note: true, finished: false, yourTime: false, dayReady: false }, timers: clock, retryMs: 30 * S });
       const ids = Object.values(subs).map((x, i) => n.subscribe({ subscription: x.sub, label: `Device ${i}`, asked: true }).deviceId);
       host.cards.push(question());
       n.cardAdded(host.cards[0]!);
@@ -899,7 +899,7 @@ describe("notifications: nothing about a device's address or keys leaves the eng
       const dataDir = tempDir();
       w = setup({ dataDir, botsDir: tempDir() }, () => true, undefined, {
         notify: { push: new PushStore(join(dataDir, "push"), { fetch: fakeFetch }), timers: clock },
-        notifyConfig: { kinds: { needs: true, note: true, finished: true }, titlePrefix: "" },
+        notifyConfig: { kinds: { needs: true, note: true, finished: true, yourTime: false, dayReady: false }, titlePrefix: "" },
       });
       const { engine, sessions, events } = w;
       const bot = engine.createBot("Po");
@@ -992,7 +992,7 @@ function engineWorld(o: { finished?: boolean; graceMs?: Partial<Record<NotifyKin
   push.add("laptop");
   const w = setup(dirs, () => true, { wakeGraceMs: 5, helperStopMs: 60, helperNudgeMs: 10, liveCheckMs: 20 }, {
     notify: { push, timers: clock, ...(o.graceMs ? { graceMs: o.graceMs } : {}) },
-    notifyConfig: { kinds: { needs: true, note: true, finished: o.finished ?? true }, titlePrefix: "" },
+    notifyConfig: { kinds: { needs: true, note: true, finished: o.finished ?? true, yourTime: false, dayReady: false }, titlePrefix: "" },
   });
   return { ...w, clock, push };
 }
@@ -1140,11 +1140,11 @@ describe("notifications: the engine's own events", () => {
     writeFileSync(join(dataDir, "config.json"), JSON.stringify({ claude: {}, backup: { folder: "/x" }, notify: { titlePrefix: "Test copy: " } }), { mode: 0o600 });
     const w = engineWorld({}, { dataDir, botsDir: tempDir() });
     const r = w.engine.notifySetKinds({ finished: true, needs: false });
-    assert.deepEqual(r.notify.kinds, { needs: false, note: true, finished: true });
+    assert.deepEqual(r.notify.kinds, { needs: false, note: true, finished: true, yourTime: false, dayReady: false });
     const saved = JSON.parse(readFileSync(join(dataDir, "config.json"), "utf8")) as Record<string, unknown>;
-    assert.deepEqual(saved, { claude: {}, backup: { folder: "/x" }, notify: { titlePrefix: "Test copy: ", needs: false, note: true, finished: true } });
+    assert.deepEqual(saved, { claude: {}, backup: { folder: "/x" }, notify: { titlePrefix: "Test copy: ", needs: false, note: true, finished: true, yourTime: false, dayReady: false } });
     const ev = w.events.filter((e) => e.event === "notify.changed").at(-1)!.data as Events["notify.changed"];
-    assert.deepEqual(ev.notify.kinds, { needs: false, note: true, finished: true });
+    assert.deepEqual(ev.notify.kinds, { needs: false, note: true, finished: true, yourTime: false, dayReady: false });
     w.engine.shutdown();
     w.store.close();
   });
@@ -1171,8 +1171,8 @@ describe("notifications: config.json", () => {
     assert.deepEqual(file.notify, { needs: false, titlePrefix: "Test copy: " });
     assert.match(logged, /notify\.finished/);
     assert.match(logged, /notify\.subject/);
-    assert.deepEqual(notifyConfig(file.notify), { kinds: { needs: false, note: true, finished: false }, titlePrefix: "Test copy: " });
-    assert.deepEqual(notifyConfig(undefined), { kinds: { needs: true, note: true, finished: false }, titlePrefix: "" });
+    assert.deepEqual(notifyConfig(file.notify), { kinds: { needs: false, note: true, finished: false, yourTime: false, dayReady: false }, titlePrefix: "Test copy: " });
+    assert.deepEqual(notifyConfig(undefined), { kinds: { needs: true, note: true, finished: false, yourTime: false, dayReady: false }, titlePrefix: "" });
     writeFileSync(join(dir, "config.json"), JSON.stringify({ notify: { subject: "https://mac.example.ts.net:4443/" } }));
     assert.equal(resolveConfig({ dataDir: dir, botsDir: tempDir() }).notify?.subject, "https://mac.example.ts.net:4443/");
   });

@@ -15,6 +15,7 @@ import { findChannel, noChannel } from "./channel-tools.js";
 import { holdNotice } from "./notes.js";
 import type { BotRuntime } from "./runtime.js";
 import { iso } from "./words.js";
+import { guideWords } from "./guides.js";
 import { randomUUID } from "node:crypto";
 import { log } from "../log.js";
 
@@ -60,7 +61,7 @@ function nextInWords(eng: Engine, tries: ChannelPostRow[]): string {
 }
 
 /** What went wrong in sending, for the bot (`why`) and for the chat line (`line`). */
-type Sent = { outsideId?: string } | { why: string; line: string; mayBeThere?: boolean };
+type Sent = { outsideId?: string } | { why: string; line: string; mayBeThere?: boolean; setup?: boolean };
 
 async function send(eng: Engine, url: string, body: PostBody): Promise<Sent> {
   try {
@@ -85,6 +86,7 @@ async function send(eng: Engine, url: string, body: PostBody): Promise<Sent> {
       return {
         why: "The flow that posts answers refused the post (status 400). It likely has no branch for new posts yet, so the person needs to update that flow in Power Automate. Nothing was posted.",
         line: "the flow needs its branch for new posts",
+        setup: true,
       };
     }
     if (res.status >= 500) {
@@ -96,6 +98,7 @@ async function send(eng: Engine, url: string, body: PostBody): Promise<Sent> {
     return {
       why: `The flow said no (status ${res.status}). The flow that posts answers may be off, or the address for answers is not its current one. The person checks the channel's page in Pobots.`,
       line: "the flow said no. Check the address for answers",
+      setup: true,
     };
   } catch (err) {
     const late = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
@@ -144,7 +147,7 @@ export async function postToChannelFor(eng: Engine, rt: BotRuntime, args: { chan
     eng.store.posts.update({ ...row, status: "failed", note: sent.why });
     log.warn(`Channel ${ch.id}: bot ${me} could not post (${sent.mayBeThere ? "no answer in time" : "refused or unreachable"})`);
     holdNotice(eng, rt, { text: `Could not post in ${name}: ${sent.line}`, tone: "error", detail: text });
-    return problem(`${sent.why} You can try ${left} more time${left === 1 ? "" : "s"} in this hour.`);
+    return problem(`${sent.why}${sent.setup ? ` ${guideWords("teams")}` : ""} You can try ${left} more time${left === 1 ? "" : "s"} in this hour.`);
   }
   eng.store.posts.update({ ...row, status: "posted", ...(sent.outsideId ? { outsideId: sent.outsideId } : {}), note: undefined });
   log.info(`Channel ${ch.id}: bot ${me} posted`);

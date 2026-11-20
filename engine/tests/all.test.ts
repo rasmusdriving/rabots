@@ -33,6 +33,7 @@ await import("./team.spec.js");
 await import("./triggers.spec.js");
 await import("./channels.spec.js");
 await import("./channel-posts.spec.js");
+await import("./flow-guides.spec.js");
 await import("./context.spec.js");
 await import("./helpers.spec.js");
 await import("./working-helpers.spec.js");
@@ -89,3 +90,10 @@ await import("./link-wire.spec.js");
 await import("./links.spec.js");
 
 await import("./vacation.spec.js");
+await import("./ahead.spec.js");
+await import("./ahead-screen.spec.js");
+await import("./ahead-time.spec.js");
+await import("./ahead-grid.spec.js");
+await import("./todo-blocks.spec.js");
+await import("./ahead-setup.spec.js");
+await import("./google-calendar.spec.js");

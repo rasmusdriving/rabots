@@ -3,9 +3,10 @@
 //
 // ?calendar= picks the start: (absent) not set up, set (set up, nothing waiting), 1 (set up, and Kaja
 // has a meeting waiting on a card with a line of one it made and one that failed), fail (set up, but
-// the check fails). Addresses are made up, on example.com.
-// Levers on window.pobotsCalendar: state(), addMeetingCard(kind) adds a card and returns its id.
-import type { ActivityItem, BotItem, CalendarState, CardMeeting, Methods, NoticeItem, UserItem } from "../../shared/protocol";
+// the check fails), google (set up, a Google script). Addresses are made up, on example.com.
+// Levers on window.pobotsCalendar: state(), addMeetingCard(kind) adds a card and returns its id,
+// connect() sets the calendar up, setupTurn() writes Pobots' line and Kaja's setup turn (protocol 33).
+import type { ActivityItem, BotItem, CalendarService, CalendarState, CardMeeting, Methods, NoticeItem, UserItem } from "../../shared/protocol";
 import type { MockEngine } from "./mock";
 import { minutesAgo } from "./mock-data";
 import { EngineError } from "./types";
@@ -13,6 +14,10 @@ import { EngineError } from "./types";
 export interface CalendarLevers {
   state(): CalendarState;
   addMeetingCard(kind?: "create" | "move" | "respond"): string;
+  /** The calendar set up as if the person saved its address (protocol 33: the line on Ahead). */
+  connect(): void;
+  /** Ahead switched on without a calendar: Pobots' line in Kaja's chat, then Kaja's setup turn, as the engine writes them. */
+  setupTurn(): void;
 }
 
 declare global {
@@ -88,18 +93,32 @@ export class MockCalendar {
     flag: string | undefined,
   ) {
     this.failCheck = flag === "fail";
-    const on = flag === "1" || flag === "set" || flag === "fail";
-    this.s = on ? this.connected() : { connected: false, internalDomains: [], domainsSet: false };
+    const on = flag === "1" || flag === "set" || flag === "fail" || flag === "google";
+    this.s = on ? this.connected(flag === "google" ? "google" : "outlook") : { connected: false, service: "outlook", internalDomains: [], domainsSet: false };
   }
 
-  private connected(): CalendarState {
+  private connected(service: CalendarService = "outlook"): CalendarState {
     if (this.failCheck)
-      return { connected: true, checkedAt: minutesAgo(3), problem: "The calendar flow said no (status 401). The flow may be off, or the address in Pobots is not its current one.", internalDomains: [], domainsSet: false };
-    return { connected: true, mailbox: { ...CAL_MAILBOX }, checkedAt: minutesAgo(3), internalDomains: ["example.com"], domainsSet: false };
+      return { connected: true, service, checkedAt: minutesAgo(3), problem: "The calendar flow said no (status 401). The flow may be off, or the address in Pobots is not its current one.", internalDomains: [], domainsSet: false };
+    return { connected: true, service, mailbox: { ...CAL_MAILBOX }, checkedAt: minutesAgo(3), internalDomains: ["example.com"], domainsSet: false };
   }
 
   levers(): CalendarLevers {
-    return { state: () => structuredClone(this.s), addMeetingCard: (kind = "create") => this.addMeetingCard(kind) };
+    return {
+      state: () => structuredClone(this.s),
+      addMeetingCard: (kind = "create") => this.addMeetingCard(kind),
+      connect: () => {
+        this.s = this.connected();
+        this.changed();
+      },
+      setupTurn: () => {
+        const kaja = this.mock.bot("kaja");
+        const line = this.mock.add<NoticeItem>(kaja.mainThreadId, { kind: "notice", tone: "info", text: "You switched on Ahead. Your calendar is not set up yet, so the setup starts here.", startsTurn: true });
+        this.mock.upsert(line);
+        const said = this.mock.add<BotItem>(kaja.mainThreadId, { kind: "bot", botId: "kaja", streaming: false, turnId: `setup-${line.id}`, text: "Ahead needs your calendar. Do you have Power Automate with premium connectors?" });
+        this.mock.upsert(said);
+      },
+    };
   }
 
   private changed(): void {
@@ -111,11 +130,12 @@ export class MockCalendar {
     "calendar.set": (p: Methods["calendar.set"]["params"]): Methods["calendar.set"]["result"] => {
       if (p.address !== undefined) {
         const a = p.address.trim();
-        if (!a) this.s = { connected: false, internalDomains: this.s.domainsSet ? this.s.internalDomains : [], domainsSet: this.s.domainsSet };
+        if (!a) this.s = { connected: false, service: "outlook", internalDomains: this.s.domainsSet ? this.s.internalDomains : [], domainsSet: this.s.domainsSet };
         else {
           if (!/^https:\/\//.test(a) && !/^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(a)) throw new EngineError({ code: "bad_request", message: "The flow's address must start with https://." });
           const domains = this.s.domainsSet ? this.s.internalDomains : null;
-          this.s = this.connected();
+          // Like the engine: a Google script's address is on script.google.com (protocol 33).
+          this.s = this.connected(/^https:\/\/script\.google\.com\//.test(a) ? "google" : "outlook");
           if (domains) this.s = { ...this.s, internalDomains: domains, domainsSet: true };
         }
       }

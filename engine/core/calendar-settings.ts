@@ -8,6 +8,8 @@ import type { CalendarState, Methods } from "../../shared/protocol.js";
 import { EngineError } from "../errors.js";
 import { log } from "../log.js";
 import { callFlow } from "./calendar-flow.js";
+import { guideWords } from "./guides.js";
+import { serviceOf, serviceWords } from "./calendar-service.js";
 import { now } from "./words.js";
 
 /** The bot's switch: as set, else on for the main bot and off for the others. */
@@ -43,6 +45,7 @@ export function calendarState(eng: Engine): CalendarState {
   const s = eng.store.calendar.settings();
   return {
     connected: !!s.address,
+    service: serviceOf(s.address),
     ...(s.mailboxAddress ? { mailbox: { address: s.mailboxAddress, ...(s.mailboxName ? { name: s.mailboxName } : {}) } } : {}),
     ...(s.checkedAt ? { checkedAt: s.checkedAt } : {}),
     ...(s.problem && s.address ? { problem: s.problem } : {}),
@@ -192,10 +195,11 @@ export async function setCalendar(eng: Engine, params: Methods["calendar.set"]["
 export function calendarPrompt(eng: Engine, rt: BotRuntime): string {
   if (!calendarOn(rt)) return "";
   if (!flowAddress(eng))
-    return "Calendar: you may work on the person's Outlook calendar, but the connection is not set up yet, so you have no calendar tools. When the person asks for something in their calendar, tell them they set it up in Pobots settings, under Calendar.";
+    return `Calendar: you may work on the person's Outlook calendar, but the connection is not set up yet, so you have no calendar tools. When the person asks for something in their calendar, tell them they set it up in Pobots settings, under Calendar, with a flow in their own Power Automate (Microsoft 365), or a script in their own Google account (Google Calendar). ${guideWords("calendar")} ${guideWords("google")}`;
+  const w = serviceWords(serviceOf(flowAddress(eng)));
   return [
-    "Calendar: you can work on the person's own Outlook calendar with calendar_list (what is in it), calendar_free_times (when internal people are free), calendar_create, calendar_move, calendar_cancel and calendar_respond (answer an invitation).",
-    "Every meeting is a Teams meeting; the tools add the link.",
+    `Calendar: you can work on the person's own ${w.cal} calendar with calendar_list (what is in it), calendar_free_times (when internal people are free), calendar_create, calendar_move, calendar_cancel and calendar_respond (answer an invitation).`,
+    w.guide === "google" ? "Every meeting with others gets a Google Meet link; the tools ask for it." : "Every meeting is a Teams meeting; the tools add the link.",
     "People inside the company are checked to be free before a meeting is made or moved (the tools do it, and refuse a time when someone is busy, with free times to pick from). People outside the company are not checked: use the time agreed with them.",
     "Every meeting with other people, and every answer to an invitation, goes on the person's card first and only happens when they approve. A block in their own calendar with nobody else needs no card.",
     `Times are in ${eng.tz} unless they carry an offset. Never say a meeting is booked, moved or cancelled before the tool says it was.`,
@@ -205,14 +209,15 @@ export function calendarPrompt(eng: Engine, rt: BotRuntime): string {
 /** One line for the main bot's get_settings. */
 export function calendarSettingsWords(eng: Engine): string {
   const s = calendarState(eng);
-  if (!s.connected) return "Calendar: not set up. The person sets the flow's address in the app (Pobots settings, Calendar); you cannot.";
+  if (!s.connected) return `Calendar: not set up. The person sets the flow's address in the app (Pobots settings, Calendar); you cannot. Microsoft 365: ${guideWords("calendar")} Google Calendar: ${guideWords("google")}`;
   const box = s.mailbox ? `acts for ${s.mailbox.name ? `${s.mailbox.name} (${s.mailbox.address})` : s.mailbox.address}` : "has not said which mailbox it acts for yet";
   const domains = s.internalDomains.length ? `Internal domains: ${s.internalDomains.join(", ")}${s.domainsSet ? "" : " (from the mailbox)"} (change_settings calendar_internal_domains).` : "No internal domains yet (change_settings calendar_internal_domains sets them).";
-  return `Calendar: set up, the flow ${box}.${s.problem ? ` Last check: ${s.problem}` : ""} ${domains} Only the person sets or removes the address. A bot uses the calendar tools when its Calendar switch is on (update_bot calendar).`;
+  const w = serviceWords(s.service);
+  return `Calendar: set up${w.guide === "google" ? " (Google Calendar, through a script)" : ""}, the ${w.flow} ${box}.${s.problem ? ` Last check: ${s.problem} ${guideWords(w.guide)}` : ""} ${domains} Only the person sets or removes the address. A bot uses the calendar tools when its Calendar switch is on (update_bot calendar).`;
 }
 
 /** One line for get_bot. */
 export function calendarBotWords(eng: Engine, rt: BotRuntime): string {
   const on = calendarOn(rt);
-  return `Calendar tools: ${on ? "on" : "off"}${on && !flowAddress(eng) ? " (the connection is not set up yet, so it has no calendar tools)" : ""}.`;
+  return `Calendar tools: ${on ? "on" : "off"}${on && !flowAddress(eng) ? ` (the connection is not set up yet, so it has no calendar tools). ${guideWords("calendar")}` : "."}`;
 }

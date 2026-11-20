@@ -2,6 +2,7 @@
 // the same engine methods as the window's Settings, Files and History tabs (docs/main-bot.md). A file
 // change is saved in that bot's history with the main bot's name and can be undone there; the person
 // gets one quiet line per bot per turn.
+import { aheadBotWords } from "./ahead-settings.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
 import type { ToolResult } from "../claude/session.js";
@@ -39,6 +40,7 @@ function settingsWords(eng: Engine, t: BotRuntime): string {
     `May message: ${may}.`,
     `May steer other bots (message_bot delivery steer): ${f.role === "main" ? "yes, as the main bot" : f.maySteer ? "yes" : "no"}.`,
     calendarBotWords(eng, t),
+    ...(f.role === "main" ? [] : [aheadBotWords(eng, t)]),
     `Job (the 'Your job' part of AGENTS.md): ${job ? clip(job, 1500) : "not written"}`,
   ].join("\n");
 }

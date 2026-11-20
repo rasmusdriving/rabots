@@ -138,6 +138,8 @@ export interface MockLevers {
   uploadsWaiting(): string[];
   /** The connection to the engine drops (events are lost, requests fail), or comes back with a new snapshot. */
   dropConnection(): void;
+  /** Protocol 32: the engine comes back with another version, as after an update (the page reloads once when it may). */
+  newEngineVersion(version: string): void;
   restoreConnection(): void;
   /**
    * The next `message.send` is stored by the engine, but its answer never reaches the window: with

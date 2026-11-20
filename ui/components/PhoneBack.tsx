@@ -5,7 +5,7 @@ import { forwardRef } from "react";
 import type { PhoneView } from "../state/phone-view";
 import { useInner } from "../lib/phone-back";
 import { phoneBack, useBackTarget } from "../state/screens";
-import { useAppState, type AppState } from "../state/store";
+import { AHEAD_PAGE, useAppState, type AppState } from "../state/store";
 import { BackIcon } from "./bits";
 
 /** The name of a place in a view, for the way back to it. The top layer names it. */
@@ -14,6 +14,7 @@ export function placeName(v: PhoneView, s: Pick<AppState, "bots" | "channels">):
   if (v.panel) return v.panel.kind === "browser" ? "Browser" : "Artifact";
   if (v.tab) return "Page";
   if (v.screen === "needs") return "Needs you";
+  if (v.screen === "bot" && v.channel === AHEAD_PAGE) return "Ahead";
   if (v.screen === "bot") return (v.channel ? s.channels.find((c) => c.id === v.channel)?.name : s.bots.find((b) => b.id === v.bot)?.name) || "Bots";
   return "Bots";
 }

@@ -69,6 +69,7 @@ export function tidyAttachments(eng: Engine, force = false): number {
     for (const rt of eng.bots.values()) gone += cleanOldAttachments(rt.folder.dir, nowMs);
     // To-dos that left the list long ago are forgotten in the same calm pass.
     eng.store.forgetOldTodos(nowMs);
+    eng.store.ahead.forgetClosedBefore(new Date(nowMs - 90 * 24 * 60 * 60 * 1000).toISOString());
     if (gone) log.info(`Removed ${gone} attachment${gone === 1 ? "" : "s"} sent more than ${ATTACHMENT_KEEP_DAYS} days ago`);
     return gone;
   } catch (err) {

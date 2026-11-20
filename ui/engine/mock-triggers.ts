@@ -93,9 +93,10 @@ export function seedTriggers(mock: MockEngine): void {
   const check = mk({ botId: "onboardings", kind: "schedule", name: "Morning check", prompt: "Check the open onboardings.", where: "main", schedule: { type: "daily", time: "08:00", days: [...days] } });
   run(check, today(8, 0), "done", { note: "Three onboardings are open. Nordvik imports on Thursday.", threadId: "onboardings-main", turnId: "to1" });
   const friday = new Date();
-  friday.setDate(friday.getDate() + ((5 - friday.getDay() + 7) % 7));
+  // The next Friday after today, never today: on a Friday a run at 13:00 today would come and go as
+  // the window's clock moves, and the window check compares the morning's grid with the afternoon's.
+  friday.setDate(friday.getDate() + ((5 - friday.getDay() + 7) % 7 || 7));
   friday.setHours(13, 0, 0, 0);
-  if (friday <= new Date()) friday.setDate(friday.getDate() + 7);
   mk({ botId: "onboardings", kind: "schedule", name: "Friday report", prompt: "Write the weekly onboarding report for the person. One page.", where: "fresh", schedule: { type: "once", at: friday.toISOString() } });
 
   for (const t of mock.triggers) t.nextAt = mock.nextAtOf(t);

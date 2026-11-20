@@ -1,0 +1,157 @@
+/* Ahead, the Week grid (docs/build/step-ahead-redesign.md): a column per day, height is time. The
+   working hours fill the room that is left, so the whole working day shows without scrolling.
+   Everything in it is placed in percent of the working day; nothing is measured in script. Meetings
+   are quiet and flat; the bots' things are stronger and carry the bot's face; what waits on the
+   person rests on the soft amber. No borders: the hour lines are a background. Tokens only. */
+
+/* The page in Week: as tall as the panel, never a page scroll at laptop size. */
+.app-ahead-scroll[data-ahead-view="week"] { padding-bottom: var(--space-3); }
+.app-ahead-scroll[data-ahead-view="week"] .pb-ahead-page { flex: 1 1 0; min-height: 440px; display: flex; flex-direction: column; padding-bottom: 0; }
+.app-ahead-scroll[data-ahead-view="week"] .pb-ahead-content { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.pb-ahead-weekview { flex: 1 1 0; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+
+/* Nothing in the grid is text to select: a press that travels over meetings would paint them. */
+.pb-ahead-grid { --gutter: 44px; --hour-min: 48px; --line: 20px; user-select: none; -webkit-user-select: none; container: ahead-grid / inline-size; flex: 1 1 0; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+.pb-ahead-grid-row, .pb-ahead-grid-hours { display: grid; grid-template-columns: var(--gutter) repeat(var(--days), minmax(0, 1fr)); column-gap: var(--space-1); flex: none; }
+.pb-ahead-grid-gutter { font-family: var(--font-mono); font-size: 11px; line-height: 14px; color: var(--ink-faint); text-align: right; padding-right: var(--space-2); min-width: 0; }
+.pb-ahead-grid-cell { min-width: 0; }
+
+/* The days' names. A name opens its day as a list. */
+.pb-ahead-grid-day { display: flex; align-items: center; gap: 6px; min-width: 0; height: 28px; margin-bottom: 2px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; color: var(--ink-muted); text-align: left; white-space: nowrap; overflow: hidden; cursor: pointer; transition: color var(--dur-quick) var(--ease-soft), background-color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-grid-day:hover { color: var(--ink); background: var(--fill); }
+.pb-ahead-grid-day:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pb-ahead-grid-day-name { font-size: 13px; line-height: 20px; font-weight: 600; }
+.pb-ahead-grid-day-date { font-size: 12px; line-height: 20px; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; }
+.pb-ahead-grid-day-name [data-long] { display: none; }
+.pb-ahead-grid-day[data-today] { color: var(--ink); }
+.pb-ahead-grid-day[data-today] .pb-ahead-grid-day-name { color: var(--accent-text); }
+.pb-ahead-grid-day[data-today] .pb-ahead-grid-day-date { color: var(--ink-muted); }
+@container ahead-grid (min-width: 880px) {
+  .pb-ahead-grid-day-name [data-long] { display: inline; }
+  .pb-ahead-grid-day-name [data-short] { display: none; }
+}
+
+/* The strip on top: four fixed lines a day for what has no time (three on a phone). A bot's thing takes two of
+   them when the day has room, so its title can be read. The line outside the working hours: one. */
+.pb-ahead-grid-strip .pb-ahead-grid-gutter { padding-top: var(--space-1); }
+.pb-ahead-grid-strip .pb-ahead-grid-cell { display: flex; flex-direction: column; gap: 2px; height: calc(var(--line) * var(--strip-lines, 4) + (var(--strip-lines, 4) - 1) * 2px + var(--space-2)); padding: var(--space-1) 2px; overflow: hidden; transition: background-color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-grid-strip .pb-ahead-grid-cell[data-drop-target] { background-color: var(--fill-strong); border-radius: var(--radius-sm); }
+.pb-ahead-grid-band .pb-ahead-grid-cell { height: calc(var(--line) + var(--space-1)); padding: 2px; overflow: hidden; }
+.pb-ahead-grid-band .pb-ahead-grid-gutter { line-height: calc(var(--line) + var(--space-1)); }
+.pb-ahead-grid-more { display: block; flex: none; width: 100%; height: var(--line); padding: 0 var(--space-1); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-size: 12px; line-height: var(--line); font-weight: 500; color: var(--ink-muted); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-grid-more:hover { background: var(--fill); color: var(--ink); }
+.pb-ahead-grid-more:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+/* The working hours. They take the room that is left; under 48px an hour they scroll inside themselves. */
+.pb-ahead-grid-body { flex: 1 1 0; min-height: calc(var(--hour-min) * 3); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; }
+.pb-ahead-grid-body::-webkit-scrollbar { display: none; }
+.pb-ahead-grid-hours { flex: 1 0 auto; min-height: calc(var(--hours) * var(--hour-min)); grid-template-rows: minmax(0, 1fr);
+  background-image: linear-gradient(var(--divider), var(--divider)), linear-gradient(to bottom, var(--divider) 1px, transparent 1px);
+  background-size: calc(100% - var(--gutter)) 1px, calc(100% - var(--gutter)) calc(100% / var(--hours));
+  background-position: 100% 100%, 100% 0; background-repeat: no-repeat, repeat-y; }
+.pb-ahead-grid-times { position: relative; padding: 0; }
+.pb-ahead-grid-times span { position: absolute; right: var(--space-2); padding-top: 3px; }
+.pb-ahead-grid-col { position: relative; min-width: 0; }
+
+/* A block. Its wrapper has the place; the box inside is what is seen, a hair smaller, so blocks never touch. */
+.pb-ahead-blk { position: absolute; min-width: 0; padding: 0 2px 1px 0; container: ahead-blk / size; transition: opacity var(--dur-quick) var(--ease-soft); }
+.pb-ahead-blk[data-line] { position: static; flex: none; height: var(--line); padding: 0; container: none; }
+.pb-ahead-blk[data-lines="2"] { height: calc(var(--line) * 2 + 2px); }
+.pb-ahead-blk[data-lines="2"] .pb-ahead-blk-box { align-items: flex-start; padding-top: var(--space-1); }
+.pb-ahead-blk[data-lines="2"] .pb-ahead-blk-mark { padding-top: 1px; }
+.pb-ahead-blk[data-lines="2"] .pb-ahead-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: break-word; }
+.pb-ahead-blk-box { display: flex; align-items: center; gap: var(--space-1); width: 100%; height: 100%; min-width: 0; padding: 0 var(--space-1); border: 0; border-radius: var(--radius-sm); background: var(--fill); color: var(--ink-muted); font: inherit; font-size: 12px; line-height: 16px; text-align: left; overflow: hidden; transition: box-shadow var(--dur-quick) var(--ease-soft); }
+button.pb-ahead-blk-box { cursor: pointer; }
+button.pb-ahead-blk-box:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+button.pb-ahead-blk-box[data-draggable] { touch-action: manipulation; }
+.pb-ahead-blk-mark { position: relative; flex: none; display: flex; }
+/* New or moved: on the corner of the face, so it takes no room from the title. */
+.pb-ahead-blk-mark .pb-ahead-change-dot { position: absolute; top: -1px; right: -2px; inline-size: 6px; block-size: 6px; margin: 0; box-shadow: 0 0 0 1.5px var(--surface); }
+.pb-ahead-blk-mark .pb-avatar { --size: 14px; }
+.pb-ahead-blk-mark .pb-ahead-you { width: 12px; height: 12px; }
+.pb-ahead-blk-text { flex: 1; min-width: 0; display: block; }
+.pb-ahead-blk-line { display: flex; align-items: center; min-width: 0; }
+.pb-ahead-blk .pb-ahead-title { flex: 1; min-width: 0; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-ahead-blk .pb-ahead-change-dot { margin-inline-end: var(--space-1); }
+.pb-ahead-blk-at { flex: none; margin-right: var(--space-1); font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
+.pb-ahead-blk-more, .pb-ahead-blk-note { display: none; font-size: 11px; line-height: 16px; font-weight: 400; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-ahead-blk-more { font-family: var(--font-mono); }
+.pb-ahead-blk-free { margin-left: 6px; font-family: var(--font-sans); }
+.pb-ahead-blk-now { margin-right: var(--space-1); font-family: var(--font-sans); font-size: 12px; font-weight: 600; color: var(--accent-text); }
+
+/* Whose it is. A meeting is grey and quiet; one marked free is drawn hollow, so busy time reads as
+   filled. A bot's thing rests on the soft accent, what waits on the person on the soft amber. */
+.pb-ahead-blk[data-tone="free"] .pb-ahead-blk-box { background: none; box-shadow: inset 0 0 0 1px var(--fill-strong); color: var(--ink-faint); }
+.pb-ahead-blk[data-tone="bot"] .pb-ahead-blk-box,
+.pb-ahead-blk[data-tone="you"] .pb-ahead-blk-box { background: var(--accent-soft); color: var(--ink); font-weight: 500; }
+.pb-ahead-blk[data-tone="you"] .pb-ahead-blk-box { background: var(--amber-soft); }
+.pb-ahead-blk:is([data-tone="bot"], [data-tone="you"]) :is(.pb-ahead-blk-more, .pb-ahead-blk-note) { color: var(--ink-muted); }
+button.pb-ahead-blk-box:hover { box-shadow: inset 0 0 0 100vmax var(--fill); }
+.pb-ahead-blk[data-state] { opacity: 0.5; }
+.pb-ahead-blk[data-state="closed"] .pb-ahead-title { text-decoration: line-through; text-decoration-color: var(--ink-faint); }
+.pb-ahead-blk[data-drag-source] { opacity: 0.35; }
+.pb-ahead-grid-folded { justify-content: center; font-weight: 500; }
+
+/* How much a block shows follows its own height and width. A title wraps at words only and is never
+   broken inside one; a word too long for its line ends in an ellipsis. The time and the line of facts
+   show only where they fit whole: the grid already tells the time. */
+@container ahead-blk (max-height: 15.9px) {
+  .pb-ahead-blk-box { font-size: 11px; line-height: 12px; }
+  .pb-ahead-blk-mark .pb-avatar { --size: 10px; }
+  .pb-ahead-blk-mark .pb-ahead-you { width: 8px; height: 8px; }
+}
+@container ahead-blk (max-width: 55.9px) {
+  .pb-ahead-blk-mark { display: none; }
+}
+@container ahead-blk (min-height: 26px) {
+  .pb-ahead-blk-box { align-items: flex-start; padding-top: 2px; }
+  .pb-ahead-blk-mark { padding-top: 1px; }
+}
+@container ahead-blk (min-height: 37px) and (min-width: 100px) {
+  .pb-ahead-blk-more { display: block; }
+}
+/* Too narrow for the time: the title has the block to itself and wraps from two lines of room. */
+@container ahead-blk (min-height: 38px) and (min-width: 56px) and (max-width: 99.9px) {
+  .pb-ahead-blk .pb-ahead-title { white-space: normal; overflow-wrap: normal; hyphens: manual; -webkit-hyphens: manual; max-height: 100cqh; max-height: round(down, calc(100cqh - 6px), 16px); }
+  .pb-ahead-blk-line { align-items: flex-start; }
+}
+/* Wide enough for the time, which takes a line: the title wraps from three lines of room. */
+@container ahead-blk (min-height: 54px) and (min-width: 100px) {
+  .pb-ahead-blk .pb-ahead-title { white-space: normal; overflow-wrap: normal; hyphens: manual; -webkit-hyphens: manual; max-height: 100cqh; max-height: round(down, calc(100cqh - 22px), 16px); }
+  .pb-ahead-blk-line { align-items: flex-start; }
+}
+@container ahead-blk (min-height: 72px) and (min-width: 100px) {
+  .pb-ahead-blk-note { display: block; }
+  .pb-ahead-blk[data-tone="bot"] .pb-ahead-title, .pb-ahead-blk[data-tone="you"] .pb-ahead-title { max-height: round(down, calc(100cqh - 38px), 16px); }
+}
+
+/* Now, and where a drag would land. Both are drawn over the grid and take no room. */
+.pb-ahead-grid-now { position: absolute; left: 0; right: 2px; height: 2px; margin-top: -1px; border-radius: var(--radius-full); background: var(--accent-text); pointer-events: none; z-index: 2; }
+.pb-ahead-grid-now::before { content: ""; position: absolute; left: -3px; top: -3px; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--accent-text); }
+.pb-ahead-grid-ghost { position: absolute; left: 0; right: 2px; padding: 0 var(--space-1); border-radius: var(--radius-sm); background: var(--surface-overlay); box-shadow: inset 0 0 0 2px var(--accent-text), var(--shadow-raise); color: var(--accent-text); font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; pointer-events: none; z-index: 3; }
+.pb-ahead-grid[data-ahead-dragging], .pb-ahead-grid[data-ahead-dragging] * { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+
+/* The foot line: one fixed height whether it says something or not. */
+.pb-ahead-grid-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); height: 24px; margin-top: var(--space-1); padding-left: var(--gutter); color: var(--ink-faint); white-space: nowrap; }
+.pb-ahead-grid-foot > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pb-ahead-grid-foot-btn { padding: 0 var(--space-2); margin-left: calc(var(--space-2) * -1); height: 24px; border: 0; border-radius: var(--radius-sm); background: none; font: inherit; color: var(--ink-muted); cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-grid-foot-btn:hover { background: var(--fill); color: var(--ink); }
+.pb-ahead-grid-foot-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+/* A day as a list: the list scrolls inside the sheet, so its name and Close stay where they are. */
+.pb-ahead-daysheet .pb-ahead-rows { max-height: min(60dvh, 560px); overflow-y: auto; overscroll-behavior: contain; }
+
+/* A phone: one day, chosen in a strip of the working days. */
+.pb-ahead-dayswitch { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; padding: 3px; margin-bottom: var(--space-2); background: var(--surface-sunken); box-shadow: var(--shadow-well); border-radius: var(--radius-md); }
+.pb-ahead-dayswitch button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; height: 44px; padding: 0; border: 0; border-radius: var(--radius-sm); background: none; font: inherit; color: var(--ink-muted); cursor: pointer; transition: background-color var(--dur-quick) var(--ease-soft), color var(--dur-quick) var(--ease-soft); }
+.pb-ahead-dayswitch button[aria-pressed="true"] { background: var(--fill-strong); color: var(--ink); }
+.pb-ahead-dayswitch button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pb-ahead-dayswitch-name { font-size: 12px; line-height: 16px; font-weight: 500; }
+.pb-ahead-dayswitch-date { font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--ink-faint); }
+.pb-ahead-dayswitch button[aria-pressed="true"] .pb-ahead-dayswitch-date { color: var(--ink-muted); }
+/* The day itself: as tall as it needs at 72px an hour, so a quarter of an hour still holds a line; the page scrolls. */
+.pb-ahead-grid[data-single] { --line: 28px; --hour-min: 72px; flex: none; }
+.pb-ahead-grid[data-single] .pb-ahead-grid-head { display: none; }
+.pb-ahead-grid[data-single] .pb-ahead-grid-body { flex: none; min-height: 0; overflow: visible; }
+.pb-ahead-grid[data-single] .pb-ahead-blk-box { font-size: 13px; padding: 0 var(--space-2); }
+.pb-ahead-grid[data-single] .pb-ahead-grid-more { font-size: 13px; padding: 0 var(--space-2); }

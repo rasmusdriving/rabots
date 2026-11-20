@@ -52,7 +52,7 @@ interface WorkerScope {
 }
 
 const sw = self as unknown as WorkerScope;
-const KINDS = ["needs", "note", "finished", "test"];
+const KINDS = ["needs", "note", "finished", "yourTime", "dayReady", "test"];
 
 // A new version takes over at once: with nothing stored there is nothing to keep in step.
 sw.addEventListener("install", () => void sw.skipWaiting());

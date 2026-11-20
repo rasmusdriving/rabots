@@ -114,6 +114,7 @@ import { startTurn } from "./core/turn-start.js";
 import { calm, checkContext, startFresh } from "./core/turn-end.js";
 import { cancelSettle, stopHelper, stopHelpers } from "./core/helpers.js";
 import { closeAllSessions, closeLive, refreshSessions } from "./core/aside.js";
+import { aheadLevel, aheadSettings } from "./core/ahead-settings.js";
 import { aboutYou, setAboutYou } from "./core/first-start.js";
 import { workingHelpers } from "./core/working-helpers.js";
 import { closeTaskManagers, taskManagerInfos } from "./core/task-managers.js";
@@ -124,7 +125,7 @@ import { activityDayFor } from "./core/activity-day.js";
 export { HELPER_LAST_MAX, helperLine, helperTitle, insideDir, waitingWords } from "./core/words.js";
 export { TIDY_PROMPT, TIDY_REFUSAL } from "./core/runtime.js";
 
-export const ENGINE_VERSION = "0.38.1";
+export const ENGINE_VERSION = "0.42.0";
 
 /** How long a bot waits for another bot's answer before the answer is sent later as a message. */
 const ASK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -625,6 +626,7 @@ export class Engine {
       todos: this.store.openTodos().filter((todo) => !away(this.bots.get(todo.botId))),
       aboutYou: aboutYou(this),
       calendar: calendarState(this),
+      ahead: aheadSettings(this),
     };
   }
 
@@ -779,6 +781,7 @@ export class Engine {
       mayMessage: f.mayMessage.filter((id) => this.bots.has(id)),
       maySteer: f.role === "main" || f.maySteer === true,
       calendar: f.calendar ?? f.role === "main",
+      ahead: aheadLevel(rt),
       context: this.contextOf(rt),
       helpers: helperCount(rt),
       ...(rt.helpers.size ? { workingHelpers: workingHelpers(this, rt) } : {}),

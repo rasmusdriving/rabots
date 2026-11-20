@@ -1,4 +1,6 @@
 // The bots' tools: the tool list each bot gets, the chat tools, the words for a tool call, and asking or telling the person.
+import { aheadOn, aheadTool, todoBlocksText } from "./ahead-settings.js";
+import { AHEAD_TOOL, aheadToolFor, aheadToolWords } from "./ahead-tool.js";
 import { linkToolsFor } from "./link-tools.js";
 import { followUpWords } from "./card-questions.js";
 import type { ChatHit, TitledChat } from "../store.js";
@@ -121,7 +123,7 @@ export function toolsFor(eng: Engine, rt: BotRuntime): BotTool[] {
   const harness = rt.folder.file.harness;
   // In a tidy turn, a tool that reaches a person or another bot, or changes anything, says no.
   // The calendar tools only while the bot's switch is on and the flow is set up (engine 0.25.0).
-  const all = [...buildTools(rt.folder.file.role, host, { harness, models: eng.modelList(), kinds: listKinds(rt.folder.dir) }), ...(calendarTools(eng, rt) ? calendarToolsFor(eng, rt) : [])];
+  const all = [...buildTools(rt.folder.file.role, host, { harness, models: eng.modelList(), kinds: listKinds(rt.folder.dir), ahead: aheadOn(eng), todoBlocks: todoBlocksText(eng) }), ...(calendarTools(eng, rt) ? calendarToolsFor(eng, rt) : []), ...(aheadTool(eng, rt) ? [aheadToolFor(eng, rt)] : [])];
   const tools = all.map((t) =>
     ({ ...t, handler: (args: Record<string, unknown>, signal?: AbortSignal) => rt.busy && rt.turn?.tidy && !TIDY_ALLOWED_TOOLS.includes(t.name) ? Promise.resolve(problem(TIDY_REFUSAL)) : t.handler(args, signal) }),
   );
@@ -242,7 +244,7 @@ export function chatTime(eng: Engine, at: string): string {
 export function toolWords(eng: Engine, name: string, input: Record<string, unknown>): ToolWords {
   const m = new RegExp(`^mcp__${TOOL_SERVER}__(.+)$`).exec(name);
   if (!m) return describeTool(name, input);
-  const words = pobotsToolWords(eng, m[1]!, input) ?? calendarToolWords(m[1]!, input);
+  const words = pobotsToolWords(eng, m[1]!, input) ?? calendarToolWords(m[1]!, input) ?? (m[1] === AHEAD_TOOL ? aheadToolWords(input) : undefined);
   return { ...(words ?? describeTool(name, input)), failed: words?.failed ?? `Could not use ${m[1]!.replace(/[_-]+/g, " ").trim()}`, whyOnFail: true };
 }
 

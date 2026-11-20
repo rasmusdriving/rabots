@@ -93,6 +93,8 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
       mayMessage: botIds.optional(),
       maySteer: z.boolean().optional(),
       calendar: z.boolean().optional(),
+      // Protocol 31: the bot's Ahead permission.
+      ahead: z.enum(["off", "items", "time"]).optional(),
       followUp: z.enum(["steer", "queue"]).nullable().optional(),
       // Protocol 16: shapes and sizes only; the engine cleans the lists (engine/claude/sees.ts).
       sees: botSees.nullable().optional(),
@@ -202,7 +204,7 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
   ]),
   "backup.run": z.object({}).optional(),
   // Notifications: shapes and sizes; the engine checks the push service and the keys and refuses in plain words.
-  "notify.setKinds": z.object({ kinds: z.object({ needs: z.boolean().optional(), note: z.boolean().optional(), finished: z.boolean().optional() }).strict() }),
+  "notify.setKinds": z.object({ kinds: z.object({ needs: z.boolean().optional(), note: z.boolean().optional(), finished: z.boolean().optional(), yourTime: z.boolean().optional(), dayReady: z.boolean().optional() }).strict() }),
   "notify.subscribe": z.object({
     subscription: z.object({ endpoint: z.string().min(1).max(2048), keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }) }),
     label: z.string().max(200),
@@ -233,6 +235,30 @@ export const paramSchemas: { [M in MethodName]: z.ZodType<unknown> } = {
   // Protocol 23: follow-up questions on cards. The engine trims the text and refuses an empty one.
   "todo.ask": z.object({ todoId: z.string().min(1).max(64), text: z.string().min(1).max(2000) }),
   "card.ask": z.object({ cardId: z.string().min(1).max(64), text: z.string().min(1).max(2000) }),
+  // Protocol 31: Ahead. Days and times are checked by the engine (core/ahead-*.ts).
+  "ahead.view": z.object({ from: z.string().max(10).optional(), days: z.number().int().min(1).max(62).optional() }).optional(),
+  "ahead.settings.set": z.object({
+    enabled: z.boolean().optional(),
+    workStart: z.string().max(5).optional(),
+    workEnd: z.string().max(5).optional(),
+    workDays: z.array(z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])).max(7).optional(),
+    minutesPerDay: z.number().int().min(15).max(480).optional(),
+  }),
+  "ahead.act": z.object({
+    itemId: z.string().min(1).max(64),
+    action: z.enum(["done", "drop", "move", "reopen"]),
+    day: z.string().max(10).optional(),
+    time: z.string().max(5).nullable().optional(),
+    place: z.enum(["today", "tomorrow", "next", "next-week"]).optional(),
+  }),
+  "ahead.add": z.object({
+    title: z.string().min(1).max(500),
+    day: z.string().max(10),
+    time: z.string().max(5).optional(),
+    label: z.string().max(200).optional(),
+    kind: z.enum(["will-do", "deadline", "waiting", "note"]).optional(),
+  }),
+  "ahead.seen": z.object({ through: z.iso.datetime().optional() }).optional(),
 };
 
 export function isMethod(name: unknown): name is MethodName {

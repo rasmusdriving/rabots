@@ -2,6 +2,7 @@
 // Everything happens at once and the person gets one quiet line per bot per turn saying what changed, from
 // what to what. One thing stays on a card: giving a bot more access, because the access level decides
 // whether that bot asks before it acts outside Pobots (decided 15 Nov 2026).
+import { aheadLevel } from "./ahead-settings.js";
 import { away, vacationNeedsStop } from "./vacation.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
@@ -178,6 +179,12 @@ export async function updateBotFor(eng: Engine, rt: BotRuntime, args: UpdateBotA
     if (args.calendar !== undefined && args.calendar !== calendarNow) {
       patch.calendar = args.calendar;
       lines.push(`calendar from ${calendarNow ? "on" : "off"} to ${args.calendar ? "on" : "off"}`);
+    }
+    // Protocol 31: the Ahead permission. The main bot always has everything.
+    const aheadNow = aheadLevel(target);
+    if (args.ahead !== undefined && args.ahead !== aheadNow && f.role !== "main") {
+      patch.ahead = args.ahead;
+      lines.push(`Ahead from ${aheadNow} to ${args.ahead}`);
     }
     if (args.may_steer !== undefined && args.may_steer !== (f.maySteer === true)) {
       patch.maySteer = args.may_steer;

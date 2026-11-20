@@ -63,6 +63,10 @@ Pobots looks for a new version at start and every four hours, with a plain `git 
 
 Most settings are changed in the app (the settings window) or by asking the main bot. [Connections](docs/connections.md) lets two main bots exchange messages. A few that belong to the machine live in `config.json` in the data folder. All of them are optional. See [docs/configuration.md](docs/configuration.md).
 
+### Calendar and Teams, through Power Automate
+
+Two parts need a flow in your own Power Automate (a Microsoft 365 work account with premium connectors): the bots' Outlook calendar, and talking to bots from a Teams channel. Everything else works without them. The guides say what you need and how, step by step, and your main bot can go through them with you: [the calendar flow](docs/guides/calendar-flow.md) and [the Teams channel flows](docs/guides/teams-channel-flows.md).
+
 ## Safety
 
 Pobots gives AI agents real access to your computer. Read this before you use it.

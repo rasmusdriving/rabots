@@ -1,0 +1,344 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    },
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    }
+  },
+  "triggers": {
+    "When_a_new_message_is_added_to_a_chat_or_channel": {
+      "type": "OpenApiConnectionWebhook",
+      "inputs": {
+        "parameters": {
+          "threadType": "channel",
+          "requestBody/channels": [
+            "<CHANNEL ID>"
+          ],
+          "requestBody/groupId": "<TEAM ID>"
+        },
+        "host": {
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+          "connectionName": "shared_teams",
+          "operationId": "WebhookNewMessageTrigger"
+        },
+        "authentication": "@parameters('$authentication')"
+      }
+    }
+  },
+  "actions": {
+    "Initialize_context_array": {
+      "runAfter": {},
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "Context",
+            "type": "array",
+            "value": []
+          }
+        ]
+      }
+    },
+    "For_each": {
+      "foreach": "@triggerOutputs()?['body/value']",
+      "actions": {
+        "Get_message_details": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "messageId": "@item()?['messageId']",
+              "threadType": "channel",
+              "body/recipient/groupId": "<TEAM ID>",
+              "body/recipient/channelId": "<CHANNEL ID>",
+              "body/recipient/parentMessageId": "@item()?['replyToMessageId']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+              "connectionName": "shared_teams",
+              "operationId": "GetMessageDetails"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Tag_mentions": {
+          "runAfter": {
+            "Get_message_details": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@coalesce(body('Get_message_details')?['mentions'],json('[]'))",
+            "where": "@not(empty(item()?['mentioned']?['tag']))"
+          }
+        },
+        "Person_and_tag": {
+          "actions": {
+            "Get_user_profile_(V2)": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "id": "@outputs('Get_message_details')?['body/from/user/id']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+                  "connectionName": "shared_office365users",
+                  "operationId": "UserProfile_V2"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Tag_names": {
+              "runAfter": {
+                "Get_user_profile_(V2)": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Tag_mentions')",
+                "select": "@item()?['mentioned']?['tag']?['displayName']"
+              }
+            },
+            "Context_by_message_type": {
+              "actions": {
+                "Get_channel_messages": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "groupId": "<TEAM ID>",
+                      "channelId": "<CHANNEL ID>"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                      "connectionName": "shared_teams",
+                      "operationId": "GetMessagesFromChannel"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Earlier_channel_messages": {
+                  "runAfter": {
+                    "Get_channel_messages": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@body('Get_channel_messages')?['value']",
+                    "where": "@and(and(not(empty(item()?['from']?['user']?['id'])),equals(item()?['from']?['user']?['userIdentityType'],'aadUser'),empty(item()?['from']?['application'])),not(equals(item()?['id'],body('Get_message_details')?['id'])),less(ticks(coalesce(item()?['createdDateTime'],'9999-12-31T00:00:00Z')),ticks(body('Get_message_details')?['createdDateTime'])))"
+                  }
+                },
+                "Channel_context": {
+                  "runAfter": {
+                    "Earlier_channel_messages": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@reverse(take(reverse(sort(body('Earlier_channel_messages'),'createdDateTime')),10))",
+                    "select": {
+                      "from": "@item()?['from']?['user']?['displayName']",
+                      "text": "@coalesce(item()?['body']?['content'],'')",
+                      "at": "@item()?['createdDateTime']"
+                    }
+                  }
+                },
+                "Set_channel_context": {
+                  "runAfter": {
+                    "Channel_context": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "Context",
+                    "value": "@body('Channel_context')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Tag_names": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Get_thread_parent": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "messageId": "@items('For_each')?['replyToMessageId']",
+                        "threadType": "channel",
+                        "body/recipient/groupId": "<TEAM ID>",
+                        "body/recipient/channelId": "<CHANNEL ID>"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                        "connectionName": "shared_teams",
+                        "operationId": "GetMessageDetails"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  },
+                  "List_thread_replies": {
+                    "runAfter": {
+                      "Get_thread_parent": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "groupId": "<TEAM ID>",
+                        "channelId": "<CHANNEL ID>",
+                        "messageId": "@items('For_each')?['replyToMessageId']",
+                        "$top": 50
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                        "connectionName": "shared_teams",
+                        "operationId": "ListRepliesToMessage"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  },
+                  "Earlier_thread_messages": {
+                    "runAfter": {
+                      "List_thread_replies": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                      "from": "@union(createArray(body('Get_thread_parent')),coalesce(body('List_thread_replies')?['value'],json('[]')))",
+                      "where": "@and(and(not(empty(item()?['from']?['user']?['id'])),equals(item()?['from']?['user']?['userIdentityType'],'aadUser'),empty(item()?['from']?['application'])),not(equals(item()?['id'],body('Get_message_details')?['id'])),less(ticks(coalesce(item()?['createdDateTime'],'9999-12-31T00:00:00Z')),ticks(body('Get_message_details')?['createdDateTime'])))"
+                    }
+                  },
+                  "Thread_context": {
+                    "runAfter": {
+                      "Earlier_thread_messages": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Select",
+                    "inputs": {
+                      "from": "@reverse(take(reverse(sort(body('Earlier_thread_messages'),'createdDateTime')),10))",
+                      "select": {
+                        "from": "@item()?['from']?['user']?['displayName']",
+                        "text": "@coalesce(item()?['body']?['content'],'')",
+                        "at": "@item()?['createdDateTime']"
+                      }
+                    }
+                  },
+                  "Set_thread_context": {
+                    "runAfter": {
+                      "Thread_context": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "Context",
+                      "value": "@body('Thread_context')"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "equals": [
+                  "@empty(items('For_each')?['replyToMessageId'])",
+                  true
+                ]
+              },
+              "type": "If"
+            },
+            "Send_to_Pobots": {
+              "runAfter": {
+                "Context_by_message_type": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Http",
+              "inputs": {
+                "uri": "<ADDRESS>",
+                "method": "POST",
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "messageId": "@body('Get_message_details')?['id']",
+                  "threadId": "@if(empty(items('For_each')?['replyToMessageId']),items('For_each')?['messageId'],items('For_each')?['replyToMessageId'])",
+                  "from": {
+                    "name": "@body('Get_message_details')?['from']?['user']?['displayName']",
+                    "email": "@toLower(if(empty(body('Get_user_profile_(V2)')?['mail']),body('Get_user_profile_(V2)')?['userPrincipalName'],body('Get_user_profile_(V2)')?['mail']))"
+                  },
+                  "html": "@body('Get_message_details')?['body']?['content']",
+                  "mentions": "@body('Tag_names')",
+                  "context": "@variables('Context')",
+                  "at": "@body('Get_message_details')?['createdDateTime']",
+                  "link": "@coalesce(body('Get_message_details')?['webUrl'],items('For_each')?['linkToMessage'],'')"
+                },
+                "retryPolicy": {
+                  "type": "none"
+                }
+              },
+              "runtimeConfiguration": {
+                "secureData": {
+                  "properties": [
+                    "inputs",
+                    "outputs"
+                  ]
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Tag_mentions": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {}
+          },
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@and(not(empty(body('Get_message_details')?['from']?['user']?['id'])),equals(body('Get_message_details')?['from']?['user']?['userIdentityType'],'aadUser'),empty(body('Get_message_details')?['from']?['application']))",
+                  true
+                ]
+              },
+              {
+                "greater": [
+                  "@length(body('Tag_mentions'))",
+                  0
+                ]
+              }
+            ]
+          },
+          "type": "If"
+        }
+      },
+      "runAfter": {
+        "Initialize_context_array": [
+          "Succeeded"
+        ]
+      },
+      "type": "Foreach",
+      "runtimeConfiguration": {
+        "concurrency": {
+          "repetitions": 1
+        }
+      }
+    }
+  },
+  "outputs": {}
+}

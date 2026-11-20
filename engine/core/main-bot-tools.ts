@@ -1,7 +1,11 @@
 // The main bot's tools for Pobots' own settings: reading and changing them. Making, changing and retiring bots is in bot-changes.ts.
+import { aheadOn, setAheadSettings } from "./ahead-settings.js";
+import { aheadSetupToolWords } from "./ahead-setup.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
-import type { ProviderId, ProvidersState, SettingsPatch } from "../../shared/protocol.js";
+import type { NotifyKind, ProviderId, ProvidersState, SettingsPatch } from "../../shared/protocol.js";
+import { setTodoBlocks } from "./todo-blocks.js";
+import { setAheadTime } from "./ahead-time.js";
 import { noteChange } from "./notes.js";
 import { type ChangeSettingsArgs, ok, problem } from "../team.js";
 import type { ToolResult } from "../claude/session.js";
@@ -49,7 +53,7 @@ export function getSettingsFor(eng: Engine): string {
     `Providers:\n${prov.join("\n")}`,
     pobotsLine(eng.engineVersion, p.pobots),
     `Chat titles are made by ${v.titleModel} (title_model). Claude models: ${claudeModels.join(", ") || "none"}. GPT models, through Codex: ${gptModels.join(", ") || "none"}.`,
-    `Notifications: needs ${kinds.needs}, note ${kinds.note}, finished ${kinds.finished}.`,
+    `Notifications: needs ${kinds.needs}, note ${kinds.note}, finished ${kinds.finished}${aheadOn(eng) ? `, yourTime ${kinds.yourTime}, dayReady ${kinds.dayReady}` : ""}.`,
     aboutYouLine(eng),
     `Usage hubs: ${v.hubs.length ? v.hubs.map((h) => h.url).join(", ") : "none"} (added and removed by the person in the app only).`,
   ].join("\n");
@@ -72,6 +76,7 @@ function aboutYouLine(eng: Engine): string {
 /** change_settings (main bot): no card; a quiet line in its chat tells the person what changed (decided 14 Nov 2026). */
 export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSettingsArgs): ToolResult {
   const changes: string[] = [];
+  let setupWords = "";
   try {
     // Checked first, so a bad part changes nothing.
     const target = args.bot_follow_up ? eng.findBot(args.bot_follow_up.bot) : undefined;
@@ -95,6 +100,16 @@ export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSetti
       const line = setInternalDomains(eng, args.calendar_internal_domains);
       if (line) changes.push(line);
     }
+    // Protocol 31: Ahead on or off.
+    if (args.ahead !== undefined && args.ahead !== aheadOn(eng)) {
+      setAheadSettings(eng, { enabled: args.ahead });
+      changes.push(`Ahead from ${args.ahead ? "off to on" : "on to off"}`);
+      // Engine 0.42.0: on without a calendar, the setup words go back in this answer (no second turn).
+      if (args.ahead) setupWords = aheadSetupToolWords(eng);
+    }
+    if (args.ahead_time) changes.push(...setAheadTime(eng, args.ahead_time).map((c) => `Ahead, ${c}`));
+    // Protocol 32: to-dos in the calendar, and how the bots schedule the person.
+    if (args.ahead_todo_blocks !== undefined || args.ahead_scheduling !== undefined) changes.push(...setTodoBlocks(eng, args.ahead_todo_blocks, args.ahead_scheduling));
     if (patch.providers && changes.some((c) => / switched (on|off)$/.test(c))) eng.opts.emit("status.updated", { status: eng.status(), models: eng.modelList() });
     if (args.follow_up_default && args.follow_up_default !== eng.chat.followUp) {
       const was = eng.chat.followUp;
@@ -119,7 +134,7 @@ export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSetti
     }
     if (args.notifications) {
       const before = eng.notifier.state().kinds;
-      const kinds = Object.fromEntries(Object.entries(args.notifications).filter(([, on]) => on !== undefined)) as Partial<Record<"needs" | "note" | "finished", boolean>>;
+      const kinds = Object.fromEntries(Object.entries(args.notifications).filter(([, on]) => on !== undefined)) as Partial<Record<NotifyKind, boolean>>;
       eng.notifier.setKinds(kinds);
       for (const [k, on] of Object.entries(kinds)) if (before[k as keyof typeof before] !== on) changes.push(`notifications for ${k} ${on ? "on" : "off"} (was ${on ? "off" : "on"})`);
     }
@@ -130,7 +145,7 @@ export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSetti
   }
   if (!changes.length) return ok("Nothing changed: the settings already had those values.");
   noteChanges(eng, rt, changes);
-  return ok(`Changed, and the person has a note about it:\n- ${changes.join("\n- ")}`);
+  return ok(`Changed, and the person has a note about it:\n- ${changes.join("\n- ")}${setupWords}`);
 }
 
 /** Bot ids from ids or names. An unknown one is refused in plain words. */

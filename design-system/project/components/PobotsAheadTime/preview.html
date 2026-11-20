@@ -1,0 +1,29 @@
+<!-- @dsCard group="Pages" height=520 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ahead: your time</title></head>
+<body class="body" style="background:var(--ground);color:var(--ink);margin:var(--space-4)">
+<div class="pb-ahead-page">
+  <section class="pb-ahead-week-note" aria-label="Week note"><p class="pb-ahead-week-note-text">A calm week. Two reviews on Tuesday; keep Thursday morning free.</p><p class="pb-ahead-week-note-from">From the main bot</p></section>
+  <section class="pb-ahead-day">
+    <div class="pb-ahead-day-head"><h3>Today</h3><span>19 Nov</span></div>
+    <div class="pb-ahead-rows">
+      <div class="pb-ahead-row" data-tone="meeting" role="group"><span class="pb-ahead-when">09:30<span class="pb-ahead-end">-10:30</span></span><span class="pb-ahead-mark"><span class="pb-ahead-meeting"></span></span><span class="pb-ahead-body"><span class="pb-ahead-title">Planning</span></span></div>
+      <div class="pb-ahead-yt" data-now=""><button type="button" class="pb-ahead-row"><span class="pb-ahead-when">10:35<span class="pb-ahead-end" data-word="">Now</span></span><span class="pb-ahead-mark"><span class="pb-avatar pb-avatar-sm" data-state="idle"><span class="pb-eyes"><i></i><i></i></span></span></span><span class="pb-ahead-body"><span class="pb-ahead-title">Look at the draft plan</span><span class="pb-ahead-meta"><span class="pb-ahead-tag" data-for="you">Your time</span>30 min · Mira</span></span></button></div>
+      <div class="pb-ahead-yt"><button type="button" class="pb-ahead-row"><span class="pb-ahead-when">11:00<span class="pb-ahead-end">-11:05</span></span><span class="pb-ahead-mark"><span class="pb-avatar pb-avatar-sm" data-state="idle"><span class="pb-eyes"><i></i><i></i></span></span></span><span class="pb-ahead-body"><span class="pb-ahead-title">Send the sample summary</span><span class="pb-ahead-meta"><span class="pb-ahead-tag" data-for="you">To-do</span>5 min · Mira</span></span></button></div>
+      <div class="pb-ahead-yt"><button type="button" class="pb-ahead-row"><span class="pb-ahead-when">13:00<span class="pb-ahead-end">-13:20</span></span><span class="pb-ahead-mark"><span class="pb-avatar pb-avatar-sm" data-state="idle"><span class="pb-eyes"><i></i><i></i></span></span></span><span class="pb-ahead-body"><span class="pb-ahead-title">Check the numbers</span><span class="pb-ahead-meta"><span class="pb-ahead-tag" data-for="you">Your time</span>20 min · Mira · Late</span></span></button></div>
+    </div>
+  </section>
+  <section class="pb-section">
+    <div class="pb-section-head"><h2 class="pb-section-title">Your time</h2></div>
+    <div class="pb-ahead-hours"><label class="pb-label">Working hours</label><div class="pb-ahead-hours-row"><input class="pb-input pb-time-input" value="08:00" aria-label="Start"><span>to</span><input class="pb-input pb-time-input" value="17:00" aria-label="End"></div></div>
+    <div class="pb-ahead-hours"><span class="pb-label">Working days</span><div class="pb-days" role="group"><button class="pb-day" aria-pressed="true">Mon</button><button class="pb-day" aria-pressed="true">Tue</button><button class="pb-day" aria-pressed="true">Wed</button><button class="pb-day" aria-pressed="true">Thu</button><button class="pb-day" aria-pressed="true">Fri</button><button class="pb-day" aria-pressed="false">Sat</button><button class="pb-day" aria-pressed="false">Sun</button></div></div>
+  </section>
+  <section class="pb-section">
+    <div class="pb-section-head"><h2 class="pb-section-title">To-dos in your calendar</h2></div>
+    <div class="pb-steer"><span class="pb-peer-text"><span class="pb-peer-name">Put to-dos in my calendar</span><span class="pb-hint">Each new to-do from a bot gets a block of time, on Ahead and in your Outlook calendar, shown as busy.</span></span><input class="pb-switch" type="checkbox" role="switch" checked aria-label="Put to-dos in my calendar"></div>
+    <form class="pb-field pb-field-wide"><label class="pb-label" for="ds-sched">How to schedule me</label><span class="pb-hint">Every bot is told this when it gives you a to-do or asks for your time. Your main bot keeps it up to date when you tell it what worked.</span><textarea id="ds-sched" class="pb-input pb-textarea pb-about-input" rows="4">Small things get 5 minutes, bigger ones longer. Give the time it takes the person, not the time it took you. Place what has a date before it. Keep the person's working hours free of things that can wait for another day.</textarea><div class="pb-about-foot"><span class="pb-hint pb-about-note">218 of 600 characters</span><span class="pb-ahead-scheduling-acts"><button class="pb-btn pb-btn-sm pb-btn-quiet" type="button" disabled>Use the default</button><button class="pb-btn pb-btn-sm" type="submit" disabled>Save</button></span></div></form>
+  </section>
+</div>
+</body>
+</html>

@@ -333,7 +333,7 @@ export default async function section() {
     check(T("where the browser cannot (the mock in a plain browser): it says so, and offers nothing to press"), w?.here === "cannot" && w.line === LINE.cannot && !w.act, w);
     check(T("the three switches: needs and notes on, finished off"), w?.kinds?.join(",") === "needs:true,note:true,finished:false", w?.kinds);
     const kindWords = await ev(`$$(".pb-notify-kind").map((k) => k.querySelector(".pb-notify-kind-name").textContent + " | " + k.querySelector(".pb-hint").textContent).concat($(".pb-notify-kinds-note").textContent)`);
-    check(T("the switches' words and hints, for all devices"), JSON.stringify(kindWords) === JSON.stringify([...words.KINDS.map((k) => `${k.label} | ${k.hint}`), "For all your devices."]), kindWords);
+    check(T("the switches' words and hints, for all devices"), JSON.stringify(kindWords) === JSON.stringify([...words.KINDS.filter((k) => !k.ahead).map((k) => `${k.label} | ${k.hint}`), "For all your devices."]), kindWords);
     const day1 = (iso) => { const d = new Date(iso); return `${d.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]}`; };
     const seeded = await ev(`window.pobotsMock.notifyState().devices`);
     check(

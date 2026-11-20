@@ -92,6 +92,8 @@ export interface HeldNotice {
   tone: "info" | "error";
   mark?: "posted" | "calendar";
   detail?: string;
+  /** The line says why the bot's next turn starts by itself (engine 0.42.0, core/ahead-setup.ts). */
+  startsTurn?: boolean;
 }
 
 /** Holds a line until the bot's turn ends, or writes it at once when the bot is not working. */

@@ -1,6 +1,7 @@
 // Builds into dist/.
 //   dist/engine/main.mjs    the engine (Node, ESM). Dependencies stay in node_modules.
 //   dist/engine/upload-state.js   the backup's upload state reader (JavaScript for Automation), run by the engine with osascript
+//   dist/engine/guides/     the setup guides for the Power Automate flows (docs/guides/), read by the bots
 //   dist/desktop/main.cjs   the Electron main process
 //   dist/desktop/preload.cjs
 //   dist/ui/                the app window: index.html, app.js, app.css, tokens.css, bundle.css, fonts,
@@ -59,6 +60,9 @@ const builders = {
     // Not bundled: the engine runs it with osascript (engine/core/backup-restic.ts). It ships beside main.mjs, so
     // the service's copy on the internal drive has it too.
     cpSync(at("engine", "upload-state.js"), join(dist, "engine", "upload-state.js"));
+    // The setup guides for the Power Automate flows (docs/guides/, engine/core/guides.ts): the bots read them
+    // offline, and the service's copy holds only dist/, so they ship beside main.mjs.
+    cpSync(at("docs", "guides"), join(dist, "engine", "guides"), { recursive: true });
   },
 
   async desktop() {

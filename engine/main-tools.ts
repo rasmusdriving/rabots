@@ -5,7 +5,7 @@
 import { z } from "zod";
 import type { BotColor } from "../shared/protocol.js";
 import type { UsageToolArgs } from "./core/usage-history/tool.js";
-import { BOT_COLORS, USAGE_PROVIDERS, USAGE_RANGES } from "../shared/protocol.js";
+import { AHEAD_SCHEDULING_MAX, BOT_COLORS, USAGE_PROVIDERS, USAGE_RANGES } from "../shared/protocol.js";
 import type { BotTool } from "./claude/session.js";
 import { ok, TOOL_NAMES } from "./tool-names.js";
 import type { ActivityLogArgs } from "./core/activity-log.js";
@@ -59,6 +59,10 @@ const updateShape = {
     .boolean()
     .optional()
     .describe("Whether it has the calendar tools for the person's Outlook calendar. Off by default, on for the main bot; only when the person asks. Meetings with others always go on the person's card."),
+  ahead: z
+    .enum(["off", "items", "time"])
+    .optional()
+    .describe("What it may do on Ahead, the person's screen of what is coming: off (the default), items (adds its dated items with ahead_item), time (also asks for the person's time)."),
   job: z.string().max(20000).optional().describe("New text for the 'Your job' part of its AGENTS.md. Other files: bot_files."),
   color,
   eyes: z.enum(["round", "tall", "wide", "square"]).optional().describe("The eyes of its face."),
@@ -94,7 +98,8 @@ const botFilesShape = {
 };
 
 /** The main bot's own tools, after the tools every bot has. `models` names the models of the list. */
-export function mainTools(host: TeamHost, models: string): BotTool[] {
+/** `ahead`: Ahead is on (protocol 31). Off, change_settings has only the switch for it. */
+export function mainTools(host: TeamHost, models: string, ahead = false): BotTool[] {
   return [
     {
       name: TOOL_NAMES.getBot,
@@ -213,6 +218,21 @@ export function mainTools(host: TeamHost, models: string): BotTool[] {
           .max(4000)
           .optional()
           .describe("About you: a short note about the person (who they are, what they do, what matters to them, their responsibilities, how they like to be talked to) that every bot gets. The whole new text; an empty text clears it. Never anything secret."),
+        ahead: z.boolean().optional().describe("Ahead, the person's screen of what is coming, on or off. Only when the person asks."),
+        ...(ahead
+          ? {
+              ahead_time: z
+                .object({ work_start: z.string().optional(), work_end: z.string().optional(), work_days: z.array(z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])).optional(), minutes_per_day: z.number().int().optional() })
+                .optional()
+                .describe("Ahead's working hours (HH:MM), days and most your-time minutes a day (15-480)."),
+              ahead_todo_blocks: z.boolean().optional().describe("To-dos in the calendar: every new to-do from a bot gets a block of the person's time on Ahead and in their Outlook calendar, shown as busy. Needs the calendar set up. Only when the person asks."),
+              ahead_scheduling: z
+                .string()
+                .max(AHEAD_SCHEDULING_MAX)
+                .optional()
+                .describe("How the bots schedule the person: how long to-dos take them, where blocks go, what to keep free. The whole new text; empty goes back to the default. When the person gives feedback on how they were scheduled, rewrite it, keeping what still holds."),
+            }
+          : {}),
         calendar_internal_domains: z
           .array(z.string().max(200))
           .max(20)
@@ -220,9 +240,9 @@ export function mainTools(host: TeamHost, models: string): BotTool[] {
           .describe("The calendar tools: the email domains of people inside the company, whose free times are checked before a meeting is booked, like example.com. An empty list goes back to the domain of the connected mailbox. Only when the person asks."),
         providers: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional().describe("Switch a provider on or off. One that a bot runs on cannot be switched off."),
         notifications: z
-          .object({ needs: z.boolean().optional(), note: z.boolean().optional(), finished: z.boolean().optional() })
+          .object({ needs: z.boolean().optional(), note: z.boolean().optional(), finished: z.boolean().optional(), ...(ahead ? { yourTime: z.boolean().optional(), dayReady: z.boolean().optional() } : {}) })
           .optional()
-          .describe("Which notifications reach the person's devices: needs (a card waits for an answer), note (a bot sent a note), finished (a bot finished work the person asked for)."),
+          .describe(`Which notifications reach the person's devices: needs (a card waits for an answer), note (a bot sent a note), finished (a bot finished work the person asked for)${ahead ? ", yourTime (an Ahead slot starts), dayReady (a working day starts with something on Ahead)" : ""}.`),
       },
       handler: async (args) => host.changeSettings(args as ChangeSettingsArgs),
     },

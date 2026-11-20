@@ -121,7 +121,8 @@ export function withAnswers(flat: (Item | FoldBlock | TidyBlock)[]): ThreadBlock
         const goesOn = !!steeredInto && (!b.turnId || b.turnId === steeredInto);
         // Right after a message (one whose turn id the window has not heard yet) it is that message's turn.
         const prev = out[out.length - 1];
-        const afterMessage = !!prev && !("answer" in prev) && !("fold" in prev) && !("tidy" in prev) && prev.kind === "user";
+        // Or right after Pobots' own line that says why the turn starts by itself (protocol 33).
+        const afterMessage = !!prev && !("answer" in prev) && !("fold" in prev) && !("tidy" in prev) && (prev.kind === "user" || (prev.kind === "notice" && !!prev.startsTurn));
         const woke = !!b.turnId && !started.has(b.turnId) && !goesOn && !afterMessage && seenTurn && !afterAnswerNotice(out, out.length, b.turnId);
         cur = {
           answer: true,

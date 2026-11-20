@@ -30,7 +30,7 @@ import { log } from "./log.js";
 import { deviceId, NOT_SENT, sendResult, type PushOutcome, type Subscription, type Urgency } from "./push.js";
 
 /** The wait before a push, by kind. */
-export const GRACE_MS: Record<NotifyKind, number> = { needs: 5_000, note: 5_000, finished: 15_000 };
+export const GRACE_MS: Record<NotifyKind, number> = { needs: 5_000, note: 5_000, finished: 15_000, yourTime: 0, dayReady: 0 };
 /** What comes within this time after a push folds into one more push at its end. */
 export const FOLD_MS = 120_000;
 /** One more try after this long, for 429, 5xx, a time-out or no connection. */
@@ -39,8 +39,8 @@ export const RETRY_MS = 30_000;
 export const NAME_MAX = 40;
 const HOUR_S = 3600;
 /** How long a push service keeps a message for a device that is offline, in seconds. */
-export const TTL_S: Record<NotifyKind | "test", number> = { needs: 12 * HOUR_S, note: 12 * HOUR_S, finished: HOUR_S, test: 300 };
-export const URGENCY: Record<NotifyKind | "test", Urgency> = { needs: "high", note: "normal", finished: "normal", test: "high" };
+export const TTL_S: Record<NotifyKind | "test", number> = { needs: 12 * HOUR_S, note: 12 * HOUR_S, finished: HOUR_S, yourTime: 900, dayReady: 3 * HOUR_S, test: 300 };
+export const URGENCY: Record<NotifyKind | "test", Urgency> = { needs: "high", note: "normal", finished: "normal", yourTime: "normal", dayReady: "normal", test: "high" };
 
 /** What the notifier needs of the push store (engine/push.ts). Tests pass a stand-in. */
 export interface PushPort {
@@ -166,6 +166,14 @@ export function words(o: { kind: NotifyKind | "test"; name?: string; count?: num
         body = "Open Pobots to read the answer.";
       }
       break;
+    case "yourTime":
+      title = "Your time on Ahead";
+      body = "A slot for you starts now. Open Pobots to see it.";
+      break;
+    case "dayReady":
+      title = "Your day is ready";
+      body = "Open Pobots to see it on Ahead.";
+      break;
     default:
       title = "Pobots";
       body = "This is a test. Notifications reach this device.";
@@ -177,6 +185,8 @@ export function words(o: { kind: NotifyKind | "test"; name?: string; count?: num
 export function pushMessage(o: { kind: NotifyKind | "test"; botId?: string; name?: string; count?: number; outcome?: RestOutcome; prefix?: string }): PushMessage {
   const { title, body } = words(o);
   if (o.kind === "test") return { v: 1, kind: "test", title, body, tag: "pobots-test", url: "/" };
+  // Ahead's two kinds open the window as it is (Ahead is one tap away).
+  if (o.kind === "yourTime" || o.kind === "dayReady") return { v: 1, kind: o.kind, title, body, tag: `pobots-system-${o.kind}`, url: "/" };
   if (o.botId === undefined) return { v: 1, kind: o.kind, title, body, tag: `pobots-system-${o.kind}`, url: "/?open=needs" };
   const bot = encodeURIComponent(o.botId);
   const open = o.kind === "finished" ? "chat" : "needs";
@@ -483,15 +493,32 @@ export class Notifier {
   /** "notify.setKinds". */
   setKinds(patch: Partial<Record<NotifyKind, boolean>>): { notify: NotifyState } {
     const next = { ...this.kinds };
-    for (const k of ["needs", "note", "finished"] as const) if (typeof patch[k] === "boolean") next[k] = patch[k];
+    for (const k of ["needs", "note", "finished", "yourTime", "dayReady"] as const) if (typeof patch[k] === "boolean") next[k] = patch[k];
     try {
       this.host.saveKinds(next);
     } catch (err) {
       throw new EngineError("internal", (err as Error).message || "The settings file could not be written, so nothing was saved.");
     }
     this.kinds = next;
-    log.info(`Notifications: needs ${next.needs ? "on" : "off"}, note ${next.note ? "on" : "off"}, finished ${next.finished ? "on" : "off"}`);
+    log.info(`Notifications: needs ${next.needs ? "on" : "off"}, note ${next.note ? "on" : "off"}, finished ${next.finished ? "on" : "off"}, your time ${next.yourTime ? "on" : "off"}, day ready ${next.dayReady ? "on" : "off"}`);
     return { notify: this.changed() };
+  }
+
+  /** Whether a kind is switched on (no device read, for a check on the schedule clock). */
+  isOn(kind: NotifyKind): boolean {
+    return this.kinds[kind] === true;
+  }
+
+  /**
+   * Ahead's "Your time on Ahead" and "Your day is ready" (engine/core/ahead-time-tick.ts): sent now
+   * when switched on, to the devices nobody is looking at. No wait and no fold: the tick sends each once.
+   */
+  aheadNotice(kind: "yourTime" | "dayReady"): boolean {
+    if (this.stopped || !this.kinds[kind]) return false;
+    const devices = this.targets();
+    if (!devices.length) return false;
+    this.track(this.dispatch(devices, pushMessage({ kind, prefix: this.prefix }), TTL_S[kind]));
+    return true;
   }
 
   /** "notify.subscribe". */

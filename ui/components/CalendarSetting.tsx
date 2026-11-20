@@ -47,7 +47,7 @@ export function CalendarSetting({ bot }: { bot: Bot }) {
           </button>
         </div>
       ) : (
-        <span className="pb-hint">Every meeting gets a Teams link. Free times are checked for people inside the company.</span>
+        <span className="pb-hint">Every meeting gets a {calendar?.service === "google" ? "Google Meet" : "Teams"} link. Free times are checked for people inside the company.</span>
       )}
     </section>
   );
