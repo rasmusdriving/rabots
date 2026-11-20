@@ -7,7 +7,7 @@
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
 import type { ToolResult } from "../claude/session.js";
-import { AHEAD_OPEN_MAX, AHEAD_TITLE_MAX, type AheadItem, type AheadSettings, type Methods } from "../../shared/protocol.js";
+import { AHEAD_OPEN_MAX, AHEAD_TITLE_MAX, TODO_MINUTES_MAX, type AheadItem, type AheadSettings, type Methods } from "../../shared/protocol.js";
 import { EngineError } from "../errors.js";
 import { log } from "../log.js";
 import { ok, problem } from "../tool-names.js";
@@ -17,13 +17,15 @@ import { newAheadId } from "./ahead-store.js";
 import { addDays, dayOf, dayWords, isDay, isTime, mondayOf, startOf } from "./ahead-days.js";
 import { actionLine, tellBot } from "./ahead-news.js";
 import { findSlot, meetingStretch, overlaps, stretchOf, wholeDay, SEARCH_DAYS, type Busy, type SlotFound, type SlotNone } from "./ahead-slots.js";
+import { aheadItemsChanged } from "./todo-block-sync.js";
+import { instantFor } from "../schedule.js";
 
 /** A bot asks for 5 to 120 minutes; the main bot's own focus blocks may run a working day. */
 export const ASK_MIN = 5;
 export const ASK_MAX = 120;
 export const FOCUS_MAX = 480;
 export const WEEK_NOTE_MAX = 300;
-const DEFAULT_MINUTES = 30;
+export const DEFAULT_MINUTES = 30;
 const SETTINGS_KEY = "ahead.settings";
 
 /** The yourTime fields of the tool call (ahead_item). */
@@ -48,6 +50,35 @@ const when = (i: Pick<AheadItem, "day" | "time">) => `${dayWords(i.day)}${i.time
 /** True for a "your time" item that has a place (a time). */
 const placed = (i: AheadItem) => i.kind === "your-time" && !!i.time && isTime(i.time);
 
+/**
+ * False for what does not count toward the day's limit: the main bot's focus blocks and the blocks
+ * of to-dos (engine 0.41.0: a to-do is work the person must do anyway; a limit would push it past its date).
+ */
+function countsToward(eng: Engine, i: Pick<AheadItem, "botId" | "forTodo">): boolean {
+  if (i.forTodo) return false;
+  const main = mainBot(eng);
+  return !main || i.botId !== main.folder.id;
+}
+
+/** The longest a your-time item may be: a to-do's block 240 minutes, the main bot's focus blocks 480, others 120. */
+function maxMinutes(eng: Engine, i: Pick<AheadItem, "botId" | "forTodo">): number {
+  if (i.forTodo) return TODO_MINUTES_MAX;
+  return countsToward(eng, i) ? ASK_MAX : FOCUS_MAX;
+}
+
+/** By when a to-do's block should end: its by_when with a time, as an instant. */
+export function latestEndOf(eng: Engine, i: Pick<AheadItem, "forTodo">): number | undefined {
+  const due = i.forTodo ? eng.store.getTodo(i.forTodo)?.todo.due : undefined;
+  const m = due ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(due) : null;
+  return m ? instantFor(+m[1]!, +m[2]! - 1, +m[3]!, +m[4]!, +m[5]!, eng.tz) : undefined;
+}
+
+/** The latest-by rules of an item when it is placed again. */
+const lateOf = (eng: Engine, i: AheadItem) => {
+  const latestEnd = latestEndOf(eng, i);
+  return { ...(i.latestBy ? { latestBy: i.latestBy } : {}), ...(latestEnd !== undefined ? { latestEnd } : {}) };
+};
+
 // ---------------------------------------------------------------- what is taken
 
 interface Taken {
@@ -69,27 +100,27 @@ async function taken(eng: Engine, from: string, except?: string): Promise<Taken>
       else if (m.time) busy.push(meetingStretch(m.day, m.time, m.end, eng.tz));
     }
   }
-  const main = mainBot(eng);
   for (const i of eng.store.ahead.list({ from, to })) {
     if (i.id === except || !placed(i) || (i.botId && !eng.bots.has(i.botId))) continue;
     const minutes = i.minutes ?? DEFAULT_MINUTES;
     busy.push(stretchOf(i.day, i.time!, minutes, eng.tz));
-    // The main bot's own items are focus blocks: they block, and do not count toward the limit.
-    if (!main || i.botId !== main.folder.id) used[i.day] = (used[i.day] ?? 0) + minutes;
+    // The main bot's focus blocks and the to-dos' blocks block, and do not count toward the limit.
+    if (countsToward(eng, i)) used[i.day] = (used[i.day] ?? 0) + minutes;
   }
   return { busy, used, meetings: read.state };
 }
 
-interface PlaceAsk {
+export interface PlaceAsk {
   minutes: number;
   earliest?: string;
   notBefore?: number;
   latestBy?: string;
+  latestEnd?: number;
   except?: string;
   counts: boolean;
 }
 
-async function place(eng: Engine, a: PlaceAsk): Promise<{ slot: SlotFound | SlotNone; meetings: Taken["meetings"] }> {
+export async function place(eng: Engine, a: PlaceAsk): Promise<{ slot: SlotFound | SlotNone; meetings: Taken["meetings"] }> {
   const now = eng.clock();
   const today = dayOf(now, eng.tz);
   const from = a.earliest && a.earliest > today ? a.earliest : today;
@@ -105,12 +136,13 @@ async function place(eng: Engine, a: PlaceAsk): Promise<{ slot: SlotFound | Slot
     ...(a.earliest ? { earliest: a.earliest } : {}),
     ...(a.notBefore ? { notBefore: a.notBefore } : {}),
     ...(a.latestBy ? { latestBy: a.latestBy } : {}),
+    ...(a.latestEnd !== undefined ? { latestEnd: a.latestEnd } : {}),
     counts: a.counts,
   });
   return { slot, meetings: t.meetings };
 }
 
-function noneWords(eng: Engine, why: SlotNone["why"], minutes: number): string {
+export function noneWords(eng: Engine, why: SlotNone["why"], minutes: number): string {
   const s = aheadSettings(eng);
   if (why === "limit") return `${minutes} minutes is more than the person's limit of ${s.minutesPerDay} minutes of your-time a day. Ask for less.`;
   if (why === "hours") return `${minutes} minutes does not fit in the working day (${s.workStart} to ${s.workEnd}). Ask for less.`;
@@ -120,7 +152,7 @@ function noneWords(eng: Engine, why: SlotNone["why"], minutes: number): string {
 const meetingWords = (m: Taken["meetings"]) => (m === "problem" ? " The calendar could not be read, so meetings were not checked." : "");
 
 /** Tells the main bot (not when it is the one asking or the owner). */
-function tellMain(eng: Engine, text: string, notFor?: string): void {
+export function tellMain(eng: Engine, text: string, notFor?: string): void {
   const main = mainBot(eng);
   if (!main || main.folder.id === notFor) return;
   eng.store.addNews(main.folder.id, main.threadId, text);
@@ -201,7 +233,7 @@ export async function addYourTime(eng: Engine, rt: BotRuntime, owner: BotRuntime
   eng.store.ahead.put(item);
   if (owner !== rt) tellBot(eng, item, `Note from Pobots: the main bot put your-time on Ahead for you: "${item.title}" (${item.id}, ${when(item)}, ${minutes} minutes).`);
   if (late) tellMain(eng, `Note from Pobots: ${owner.folder.file.name} asked for the person's time, "${item.title}" (${item.id}), by ${dayWords(latestBy!)}. The first free slot is ${when(item)}, which is late. Move it with ahead_item if something else can wait.`, rt.folder.id);
-  eng.opts.emit("ahead.items", {});
+  aheadItemsChanged(eng);
   const lateWords = late ? ` That is after ${dayWords(latestBy!)}: there was no free slot before. The main bot is told.` : "";
   const fixed = byMain && a.time ? "" : " Pobots chose the time.";
   return ok(`On Ahead: ${item.id}, your-time, "${item.title}", ${when(item)}, ${minutes} minutes.${fixed}${lateWords}${meetingWords(meetings)} You hear when the person moves or finishes it.`);
@@ -215,9 +247,8 @@ export async function moveYourTime(eng: Engine, rt: BotRuntime, item: AheadItem,
   if (a.day && !isDay(a.day)) return problem("day is YYYY-MM-DD.");
   if (a.day && a.day < today) return problem(`That day has passed. Today is ${today}.`);
   if (a.time && !isTime(a.time)) return problem("time is HH:MM, such as 14:30.");
-  const main = mainBot(eng);
-  const focus = !!main && item.botId === main.folder.id;
-  const minutes = a.minutes !== undefined ? minutesOf(a, focus ? FOCUS_MAX : ASK_MAX) : item.minutes ?? DEFAULT_MINUTES;
+  const counts = countsToward(eng, item);
+  const minutes = a.minutes !== undefined ? minutesOf(a, maxMinutes(eng, item)) : item.minutes ?? DEFAULT_MINUTES;
   if (typeof minutes === "string") return problem(minutes);
   let day: string;
   let time: string;
@@ -228,7 +259,7 @@ export async function moveYourTime(eng: Engine, rt: BotRuntime, item: AheadItem,
     time = a.time;
   } else {
     const earliest = a.day && a.day > today ? a.day : undefined;
-    const r = await place(eng, { minutes, ...(earliest ? { earliest } : {}), ...(item.latestBy ? { latestBy: item.latestBy } : {}), except: item.id, counts: !focus });
+    const r = await place(eng, { minutes, ...(earliest ? { earliest } : {}), ...lateOf(eng, item), except: item.id, counts });
     if (!r.slot.ok) return problem(noneWords(eng, r.slot.why, minutes));
     ({ day, time, late } = r.slot);
     meetings = r.meetings;
@@ -242,8 +273,8 @@ export async function moveYourTime(eng: Engine, rt: BotRuntime, item: AheadItem,
   if (a.day && a.day > today && !byMainBot) next.earliest = a.day;
   eng.store.ahead.put(next);
   if (byMain) tellBot(eng, next, actionLine("the main bot", next, "move", now.day));
-  eng.opts.emit("ahead.items", {});
-  const lateWords = late ? ` That is after ${dayWords(next.latestBy!)}: there was no free slot before.` : "";
+  aheadItemsChanged(eng);
+  const lateWords = late ? ` That is after ${next.latestBy ? dayWords(next.latestBy) : "its by-when"}: there was no free slot before.` : "";
   return ok(`Moved to ${when(next)}: "${next.title}" (${next.id}, ${minutes} minutes).${lateWords}${meetingWords(meetings)}`);
 }
 
@@ -275,8 +306,7 @@ export async function placeByPerson(eng: Engine, p: Methods["ahead.act"]["params
   if (item.kind !== "your-time") throw bad("Only your-time is placed by Pobots. Pick a day instead.");
   const now = eng.clock();
   const today = dayOf(now, eng.tz);
-  const main = mainBot(eng);
-  const counts = !main || item.botId !== main.folder.id;
+  const counts = countsToward(eng, item);
   const minutes = item.minutes ?? DEFAULT_MINUTES;
   let earliest: string | undefined;
   let notBefore: number | undefined;
@@ -307,7 +337,7 @@ export async function placeByPerson(eng: Engine, p: Methods["ahead.act"]["params
   eng.store.ahead.put(next);
   const line = actionLine("the person", next, "move", cur.day);
   tellBot(eng, next, p.place === "next-week" ? line.replace(/\.$/, " (not this week).") : line);
-  eng.opts.emit("ahead.items", {});
+  aheadItemsChanged(eng);
   return { item: next };
 }
 
@@ -350,18 +380,17 @@ async function settle(eng: Engine, from: string, to: string): Promise<void> {
     const own = stretchOf(item.day, item.time!, item.minutes ?? DEFAULT_MINUTES, eng.tz);
     // One that has begun stays: the person may be on it.
     if (own.start <= now || !meetings.some((m) => overlaps(m, own))) continue;
-    const main = mainBot(eng);
-    const counts = !main || item.botId !== main.folder.id;
-    const r = await place(eng, { minutes: item.minutes ?? DEFAULT_MINUTES, ...(item.earliest ? { earliest: item.earliest } : {}), ...(item.latestBy ? { latestBy: item.latestBy } : {}), except: item.id, counts });
+    const r = await place(eng, { minutes: item.minutes ?? DEFAULT_MINUTES, ...(item.earliest ? { earliest: item.earliest } : {}), ...lateOf(eng, item), except: item.id, counts: countsToward(eng, item) });
     if (!r.slot.ok) continue;
     const cur = eng.store.ahead.get(item.id);
     if (!cur || cur.state !== "open" || cur.day !== item.day || cur.time !== item.time) continue;
     const next: AheadItem = { ...cur, day: r.slot.day, time: r.slot.time, movedFrom: cur.day, changedAt: new Date(eng.clock()).toISOString(), changedBy: "bot" };
     eng.store.ahead.put(next);
-    tellBot(eng, next, `Note from Pobots: a meeting came on your Ahead item "${next.title}" (${next.id}), so Pobots moved it to ${when(next)}${r.slot.late ? `, after its latest day ${dayWords(next.latestBy!)}` : ""}.`);
+    const what = next.forTodo ? `the block of your to-do "${next.title}" (${next.forTodo})` : `your Ahead item "${next.title}" (${next.id})`;
+    tellBot(eng, next, `Note from Pobots: a meeting came on ${what}, so Pobots moved it to ${when(next)}${r.slot.late ? (next.latestBy ? `, after its latest day ${dayWords(next.latestBy)}` : ", which is late") : ""}.`);
     moved = true;
   }
-  if (moved) eng.opts.emit("ahead.items", {});
+  if (moved) aheadItemsChanged(eng);
 }
 
 // ---------------------------------------------------------------- the main bot's settings

@@ -6,9 +6,11 @@
 // bots, a dated to-do, a meeting or two, an item from earlier and one later), busy (a full working
 // week of meetings with the bots' things among them, ui/engine/mock-ahead-busy.ts).
 // Levers on window.pobotsAhead: state(), add(botId, title, dayOffset, kind?) adds an item as a bot
-// would (the window then holds it behind "1 new · Show"), items().
+// would (the window then holds it behind "1 new · Show"), items(), todoBlock(botId, title, dayOffset,
+// time, minutes) a to-do with its block (protocol 32). ?todoblocks=1 with ?ahead= and ?calendar=1
+// switches to-dos in the calendar on and adds two blocks.
 import type { AheadCarry, AheadItem, AheadItemRow, AheadKind, AheadMeetingRow, AheadRow, AheadRunRow, AheadSettings, AheadView, Methods } from "../../shared/protocol";
-import { AHEAD_DAYS, AHEAD_DEFAULTS } from "../../shared/protocol";
+import { AHEAD_DAYS, AHEAD_DEFAULTS, AHEAD_SCHEDULING_DEFAULT, AHEAD_SCHEDULING_MAX } from "../../shared/protocol";
 import type { MockEngine } from "./mock";
 import { isoDay } from "./mock-data";
 import { EngineError } from "./types";
@@ -17,6 +19,8 @@ import { seedBusy } from "./mock-ahead-busy";
 
 export interface AheadLevers {
   state(): AheadSettings;
+  /** Protocol 32: a to-do from a bot with its block of time, as add_todo makes it while blocks are on. Returns both ids. */
+  todoBlock(botId: string, title: string, dayOffset: number, time: string, minutes: number, more?: { due?: string; outlook?: AheadItem["outlook"]; why?: string }): { todoId: string; itemId: string };
   items(): AheadItem[];
   move(id: string, dayOffset: number): void;
   workDays(days: AheadSettings["workDays"]): void;
@@ -59,6 +63,11 @@ export class MockAhead {
     if (flag === "on" || flag === "1" || flag === "busy") this.settings.enabled = true;
     if (flag === "1") this.seed();
     if (flag === "busy") this.busy();
+    // Protocol 32: to-dos in the calendar.
+    if (this.settings.enabled && new URLSearchParams(location.search).get("todoblocks") === "1") {
+      this.settings.todoBlocks = true;
+      queueMicrotask(() => this.seedBlocks());
+    }
     // Part B: "your time" (ui/engine/mock-ahead-time.ts).
     const self = this;
     this.time = new MockAheadTime({ get settings() { return self.settings; }, get list() { return self.list; }, meetingRows: () => self.meetings, put: (b, x) => self.put(b, x) }, mock, flag);
@@ -84,6 +93,24 @@ export class MockAhead {
       { source: "meeting", key: "meeting:m2", day: plusDays(1), time: "12:00", end: "13:00", title: "Lunch walk", free: true },
       { source: "meeting", key: "meeting:m3", day: plusDays(4), allDay: true, title: "Team day" },
     ];
+  }
+
+  private seedBlocks(): void {
+    const bot = this.mock.bots.find((b) => b.role !== "main") ?? this.mock.bots[0];
+    if (!bot) return;
+    // Today on a working day; at a weekend the Friday before, so they stand in this week's grid.
+    const wd = new Date().getDay();
+    const day = wd === 6 ? -1 : wd === 0 ? -2 : 0;
+    this.levers().todoBlock(bot.id, "Send the sample summary", day, "14:00", 5, { why: "The import is done and the example team waits for it." });
+    this.levers().todoBlock(bot.id, "Review the sample deck", day, "15:00", 45, { due: `${plusDays(day)}T16:30` });
+  }
+
+  /** Protocol 32: the to-do closed; its block closes with it, as the engine does. */
+  todoClosed(todoId: string, reason: string): void {
+    const i = this.list.findIndex((x) => x.forTodo === todoId && x.state === "open");
+    if (i < 0) return;
+    this.list[i] = { ...this.list[i]!, state: reason === "answered" || reason === "done" ? "done" : "dropped", changedAt: new Date().toISOString(), changedBy: "you" };
+    this.mock.emit({ event: "ahead.items", data: {} });
   }
 
   private busy(): void {
@@ -118,7 +145,8 @@ export class MockAhead {
       ...this.list.filter((i) => i.state === "open" && live(i.botId)).map((i) => this.row(i, away(i.botId))),
       ...this.mock
         .todosState()
-        .filter((t) => t.due && t.due.slice(0, 10) >= today && live(t.botId) && !away(t.botId))
+        // A to-do with an open block shows only as its block (protocol 32).
+        .filter((t) => t.due && t.due.slice(0, 10) >= today && live(t.botId) && !away(t.botId) && !this.list.some((i) => i.forTodo === t.id && i.state === "open"))
         .map((t) => ({ source: "todo" as const, key: `todo:${t.id}`, day: t.due!.slice(0, 10), ...(/T(\d{2}:\d{2})/.exec(t.due!) ? { time: /T(\d{2}:\d{2})/.exec(t.due!)![1] } : {}), todoId: t.id, botId: t.botId, title: t.title })),
       ...this.mock.triggers.flatMap((t) => {
         if (!t.enabled || t.schedule?.type !== "once" || !t.nextAt || !live(t.botId) || away(t.botId)) return [];
@@ -174,6 +202,13 @@ export class MockAhead {
     "ahead.view": (p) => this.view(p),
     "ahead.settings.set": (p) => {
       this.settings = { ...this.settings, ...p };
+      // Protocol 32: the default text is kept as no text of the person's own, as the engine does.
+      if (p.scheduling !== undefined) {
+        const t = p.scheduling.trim();
+        if (t.length > AHEAD_SCHEDULING_MAX) throw new EngineError({ code: "bad_request", message: `Keep how to schedule you under ${AHEAD_SCHEDULING_MAX} characters.` });
+        if (t && t !== AHEAD_SCHEDULING_DEFAULT) this.settings.scheduling = t;
+        else delete this.settings.scheduling;
+      }
       this.mock.emit({ event: "ahead.changed", data: { ahead: this.settings } });
       return { ahead: this.settings };
     },
@@ -184,6 +219,16 @@ export class MockAhead {
       const i = this.list.findIndex((x) => x.id === p.itemId);
       if (i < 0) throw new EngineError({ code: "not_found", message: "That item is no longer on Ahead." });
       const was = this.list[i]!;
+      // Protocol 32: Done on a to-do's block marks the to-do done; it keeps a time; it comes back only with its to-do.
+      if (was.forTodo) {
+        const open = this.mock.todosState().some((t) => t.id === was.forTodo);
+        if (p.action === "done" && was.state === "open" && open) {
+          this.mock.closeTodoForAhead(was.forTodo);
+          return { item: this.list[i]! };
+        }
+        if (p.action === "move" && p.time === null) throw new EngineError({ code: "bad_request", message: "A to-do's block keeps a time. Pick a time, or remove the block." });
+        if (p.action === "reopen" && !open) throw new EngineError({ code: "bad_request", message: "Its to-do is no longer open, so the block cannot come back." });
+      }
       const next: AheadItem = { ...was, changedAt: new Date().toISOString(), changedBy: "you" };
       if (p.action === "done") next.state = "done";
       else if (p.action === "drop") next.state = "dropped";
@@ -230,6 +275,17 @@ export class MockAhead {
         if (day === item.day) return;
         this.list = this.list.map((i) => i.id === id ? { ...i, day, movedFrom: i.day, changedBy: "bot", changedAt: new Date().toISOString() } : i);
         this.mock.emit({ event: "ahead.items", data: {} });
+      },
+      todoBlock: (botId, title, dayOffset, time, minutes, more = {}) => {
+        const at = new Date().toISOString();
+        const todoId = this.mock.addTodoForAhead({ botId, title, minutes, ...(more.due ? { due: more.due } : {}), ...(more.why ? { why: more.why } : {}) });
+        const item = this.put(botId, {
+          kind: "your-time", title, day: plusDays(dayOffset), time, minutes, forTodo: todoId, link: { todoId }, createdAt: at, changedAt: at,
+          ...(more.why ? { why: more.why } : {}), ...(more.due ? { latestBy: more.due.slice(0, 10) } : {}),
+          outlook: more.outlook ?? { state: "made", eventId: `AAMk-mock-${todoId}`, at },
+        });
+        this.mock.emit({ event: "ahead.items", data: {} });
+        return { todoId, itemId: item.id };
       },
       add: (botId, title, dayOffset, kind = "note", time) => {
         const item = this.put(botId, { kind, title, day: plusDays(dayOffset), ...(time ? { time } : {}), createdAt: new Date().toISOString(), changedAt: new Date().toISOString() });

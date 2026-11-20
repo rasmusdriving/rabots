@@ -3,6 +3,7 @@ import { aheadOn, setAheadSettings } from "./ahead-settings.js";
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
 import type { NotifyKind, ProviderId, ProvidersState, SettingsPatch } from "../../shared/protocol.js";
+import { setTodoBlocks } from "./todo-blocks.js";
 import { setAheadTime } from "./ahead-time.js";
 import { noteChange } from "./notes.js";
 import { type ChangeSettingsArgs, ok, problem } from "../team.js";
@@ -103,6 +104,8 @@ export function changeSettingsFor(eng: Engine, rt: BotRuntime, args: ChangeSetti
       changes.push(`Ahead from ${args.ahead ? "off to on" : "on to off"}`);
     }
     if (args.ahead_time) changes.push(...setAheadTime(eng, args.ahead_time).map((c) => `Ahead, ${c}`));
+    // Protocol 32: to-dos in the calendar, and how the bots schedule the person.
+    if (args.ahead_todo_blocks !== undefined || args.ahead_scheduling !== undefined) changes.push(...setTodoBlocks(eng, args.ahead_todo_blocks, args.ahead_scheduling));
     if (patch.providers && changes.some((c) => / switched (on|off)$/.test(c))) eng.opts.emit("status.updated", { status: eng.status(), models: eng.modelList() });
     if (args.follow_up_default && args.follow_up_default !== eng.chat.followUp) {
       const was = eng.chat.followUp;

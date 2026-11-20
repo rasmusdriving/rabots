@@ -372,13 +372,14 @@ describe("ahead time: the tool's size", () => {
   test("measured for a bot at level time and for the main bot", (t) => {
     const sizes: Record<string, number> = {};
     for (const [name, file] of [["items", { role: "bot", ahead: "items" }], ["time", { role: "bot", ahead: "time" }], ["main", { role: "main" }]] as const) {
-      const tool = aheadToolFor({ tz: TZ } as never, { folder: { file } } as never);
+      const tool = aheadToolFor({ tz: TZ, store: { getValue: () => undefined } } as never, { folder: { file } } as never);
       const json = JSON.stringify({ name: tool.name, description: tool.description, input_schema: z.toJSONSchema(z.object(tool.shape)) });
       sizes[name] = Math.round(json.length / 3.5);
       t.diagnostic(`ahead_item for ${name}: ${json.length} characters, about ${sizes[name]} tokens`);
     }
     assert.ok(sizes.items! < 380, `items: ${sizes.items}`);
-    assert.ok(sizes.time! < 440, `time: ${sizes.time}`);
-    assert.ok(sizes.main! < 500, `main: ${sizes.main}`);
+    // Engine 0.41.0: level time and the main bot are told how to schedule the person (their own words, about 65 tokens by default).
+    assert.ok(sizes.time! < 510, `time: ${sizes.time}`);
+    assert.ok(sizes.main! < 620, `main: ${sizes.main}`);
   });
 });

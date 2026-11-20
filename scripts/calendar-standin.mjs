@@ -101,7 +101,10 @@ export function makeCalendarStandin(opts = {}) {
           isAllDay: false,
           isCancelled: false,
           isOrganizer: true,
-          showAs: "busy",
+          // Kept as given, as Graph does (engine 0.41.0's to-do blocks send busy and no reminder).
+          showAs: ev.showAs ?? "busy",
+          isReminderOn: ev.isReminderOn ?? true,
+          ...(ev.body ? { body: { contentType: ev.body.contentType ?? "text", content: ev.body.content ?? "" } } : {}),
           responseStatus: { response: "organizer" },
           organizer: { emailAddress: { ...mailbox } },
           attendees: (ev.attendees ?? []).map((x) => ({ type: x.type ?? "required", status: { response: "none" }, emailAddress: { ...x.emailAddress } })),

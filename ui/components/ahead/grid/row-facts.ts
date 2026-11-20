@@ -72,12 +72,14 @@ export function useRowFacts(row: AheadRow): RowFacts {
   const yourTime = item.kind === "your-time";
   const minutes = item.minutes ?? 30;
   const when = row.time ? (yourTime ? `${row.time}-${endOf(row.time, minutes)}` : row.time) : undefined;
-  const kind = yourTime ? `Your time · ${lengthWords(minutes)}${isLate(item) ? " · Late" : ""}` : KIND_WORD[item.kind];
+  // A to-do's block (protocol 32) is tagged "To-do": the to-do shows only as its block.
+  const word = item.forTodo ? "To-do" : "Your time";
+  const kind = yourTime ? `${word} · ${lengthWords(minutes)}${isLate(item) ? " · Late" : ""}` : KIND_WORD[item.kind];
   const status = closed ?? moved ?? changed;
   return {
     title: item.title, bot, tone: yourTime ? "you" : "bot", own, state: closed ? "closed" : gone ? "moved" : undefined, when, mark,
     note: status ?? `${kind} · ${owner}${row.away ? " · Away" : ""}`,
-    label: `${yourTime ? "Your time" : KIND_WORD[item.kind]}, ${item.title}, ${[owner, item.label, row.away ? "away" : undefined, status, yourTime ? lengthWords(minutes) : undefined].filter(Boolean).join(", ")}${when ? `, at ${row.time}` : ""}`,
+    label: `${yourTime ? word : KIND_WORD[item.kind]}, ${item.title}, ${[owner, item.label, row.away ? "away" : undefined, status, yourTime ? lengthWords(minutes) : undefined].filter(Boolean).join(", ")}${when ? `, at ${row.time}` : ""}`,
     open: () => openItem(item),
     drag: closed || gone ? undefined : yourTime ? "timed" : "any",
     item,

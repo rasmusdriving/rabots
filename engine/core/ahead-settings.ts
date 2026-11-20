@@ -5,7 +5,8 @@
 // so the sessions concerned start again between turns (as the calendar switch does).
 import type { Engine } from "../engine.js";
 import type { BotRuntime } from "./runtime.js";
-import { AHEAD_DEFAULTS, AHEAD_LEVELS, type AheadLevel, type AheadSettings, type Methods } from "../../shared/protocol.js";
+import { AHEAD_DEFAULTS, AHEAD_LEVELS, AHEAD_SCHEDULING_DEFAULT, AHEAD_SCHEDULING_MAX, type AheadLevel, type AheadSettings, type Methods } from "../../shared/protocol.js";
+import { flowAddress } from "./calendar-settings.js";
 import { EngineError } from "../errors.js";
 import { away } from "./vacation.js";
 
@@ -69,12 +70,41 @@ export function setAheadSettings(eng: Engine, patch: Methods["ahead.settings.set
     if (!Number.isFinite(n) || n < 15 || n > 480) throw bad("Minutes per day is between 15 and 480.");
     next.minutesPerDay = n;
   }
+  if (patch.todoBlocks !== undefined) next.todoBlocks = !!patch.todoBlocks;
+  if (patch.scheduling !== undefined) {
+    const text = String(patch.scheduling ?? "").replace(/\r\n?/g, "\n").trim();
+    if (text.length > AHEAD_SCHEDULING_MAX) throw bad(`Keep how to schedule you under ${AHEAD_SCHEDULING_MAX} characters.`);
+    // The default text is kept as "no text of their own", so a later better default reaches them.
+    if (text && text !== AHEAD_SCHEDULING_DEFAULT) next.scheduling = text;
+    else delete next.scheduling;
+  }
   save(eng, next);
-  if (next.enabled !== cur.enabled) {
-    for (const rt of eng.bots.values()) if (aheadLevel(rt) !== "off") eng.refreshSession(rt);
+  // Every bot's add_todo carries minutes and the instruction while blocks are on: they start again between turns.
+  const blocksChanged = blocksOnFor(eng, next) !== blocksOnFor(eng, cur) || (next.enabled && schedulingOf(next) !== schedulingOf(cur));
+  if (next.enabled !== cur.enabled || blocksChanged) {
+    for (const rt of eng.bots.values()) if (blocksChanged || aheadLevel(rt) !== "off") eng.refreshSession(rt);
   }
   eng.opts.emit("ahead.changed", { ahead: next });
   return next;
+}
+
+/** How the bots schedule the person: the person's own text, or the default. */
+export function schedulingOf(s: AheadSettings): string {
+  return s.scheduling?.trim() || AHEAD_SCHEDULING_DEFAULT;
+}
+
+function blocksOnFor(eng: Engine, s: AheadSettings): boolean {
+  return s.enabled && s.todoBlocks === true && !!flowAddress(eng);
+}
+
+/** True when every new to-do gets a block: Ahead on, the switch on, the calendar set up. */
+export function todoBlocksOn(eng: Engine): boolean {
+  return blocksOnFor(eng, aheadSettings(eng));
+}
+
+/** The instruction for add_todo while blocks are on; undefined while they are off. */
+export function todoBlocksText(eng: Engine): string | undefined {
+  return todoBlocksOn(eng) ? schedulingOf(aheadSettings(eng)) : undefined;
 }
 
 /** The person left Ahead (part C's "Since you looked"). */
@@ -107,7 +137,14 @@ const LEVEL_WORDS: Record<AheadLevel, string> = {
 export function aheadSettingsWords(eng: Engine): string {
   const s = aheadSettings(eng);
   if (!s.enabled) return "Ahead (the screen for what is coming): off (change_settings ahead). Off means no screen and no ahead_item tool for any bot.";
-  return `Ahead (the screen for what is coming): on (change_settings ahead). A bot uses ahead_item when its Ahead permission is not off (update_bot ahead: off, items, time). Working hours ${s.workStart} to ${s.workEnd}, ${s.workDays.join(" ")}, your-time at most ${s.minutesPerDay} minutes a day (change_settings ahead_time).`;
+  const calendar = !!flowAddress(eng);
+  const blocks = s.todoBlocks
+    ? calendar
+      ? "To-dos in the calendar: on (change_settings ahead_todo_blocks): every new to-do gets a block of the person's time on Ahead and in their Outlook calendar."
+      : "To-dos in the calendar: on, but the calendar is not set up, so no blocks are made (change_settings ahead_todo_blocks)."
+    : "To-dos in the calendar: off (change_settings ahead_todo_blocks).";
+  const how = `How to schedule the person (change_settings ahead_scheduling${s.scheduling ? "" : ", now the default"}): "${schedulingOf(s)}"`;
+  return `Ahead (the screen for what is coming): on (change_settings ahead). A bot uses ahead_item when its Ahead permission is not off (update_bot ahead: off, items, time). Working hours ${s.workStart} to ${s.workEnd}, ${s.workDays.join(" ")}, your-time at most ${s.minutesPerDay} minutes a day (change_settings ahead_time). ${blocks} ${how}`;
 }
 
 /** One line for get_bot. */

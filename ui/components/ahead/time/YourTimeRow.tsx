@@ -1,6 +1,6 @@
 // A "your time" row (Ahead part B): the time and its end, the bot, what to look at, how long. While
 // it runs the end is softly replaced by "Now"; no card, nothing else moves. Tapping opens its own
-// sheet (YourTimeSheet, shown by the page), not the item sheet.
+// sheet (YourTimeSheet, shown by the page), not the item sheet. A to-do's block is tagged "To-do".
 import type { AheadItemRow } from "../../../../shared/protocol";
 import { useAppState } from "../../../state/store";
 import { useAheadPage } from "../ahead-context";
@@ -27,6 +27,8 @@ export function YourTimeRow({ row }: { row: AheadItemRow }) {
   const late = !closed && !moved && isLate(item) ? "Late" : undefined;
   const bits = [moved, closed, late, lengthWords(minutes), who, item.label, row.away ? "Away" : undefined].filter(Boolean) as string[];
   const time = moved ? row.time : item.time;
+  // A to-do's block (protocol 32) is the to-do itself on Ahead.
+  const word = item.forTodo ? "To-do" : "Your time";
   return (
     <div className="pb-ahead-yt" data-now={running || undefined} data-ahead-your-time={item.id}>
       <RowShell
@@ -40,12 +42,12 @@ export function YourTimeRow({ row }: { row: AheadItemRow }) {
         meta={
           <>
             <span className="pb-ahead-tag" data-for="you">
-              Your time
+              {word}
             </span>
             {bits.join(" · ")}
           </>
         }
-        label={`Your time, ${item.title}, ${[moved ? `moved to ${longDate(item.day)} ${item.time ?? ""}`.trim() : undefined, ...bits.slice(moved ? 1 : 0)].filter(Boolean).join(", ")}${time ? `, at ${time}` : ""}${running ? ", now" : ""}`}
+        label={`${word}, ${item.title}, ${[moved ? `moved to ${longDate(item.day)} ${item.time ?? ""}`.trim() : undefined, ...bits.slice(moved ? 1 : 0)].filter(Boolean).join(", ")}${time ? `, at ${time}` : ""}${running ? ", now" : ""}`}
         onOpen={() => openItem(item)}
       />
     </div>

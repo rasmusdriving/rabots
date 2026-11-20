@@ -93,3 +93,4 @@ await import("./ahead.spec.js");
 await import("./ahead-screen.spec.js");
 await import("./ahead-time.spec.js");
 await import("./ahead-grid.spec.js");
+await import("./todo-blocks.spec.js");

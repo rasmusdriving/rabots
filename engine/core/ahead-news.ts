@@ -36,9 +36,12 @@ export function actionLine(who: "the person" | "the main bot", item: AheadItem, 
 export function passedNews(eng: Engine, rt: BotRuntime): string[] {
   if (!aheadTool(eng, rt)) return [];
   const today = dayOf(eng.clock(), eng.tz);
-  const items = eng.store.ahead.passedUntold(rt.folder.id, today);
+  const all = eng.store.ahead.passedUntold(rt.folder.id, today);
+  if (!all.length) return [];
+  eng.store.ahead.markPassedTold(all.map((i) => i.id));
+  // A to-do's block that passed is not the bot's to move: its to-do is still on the list.
+  const items = all.filter((i) => !i.forTodo);
   if (!items.length) return [];
-  eng.store.ahead.markPassedTold(items.map((i) => i.id));
   const list = items.slice(0, 10).map((i) => `"${i.title}" (${i.id}, ${when(i)})`).join("; ");
   const more = items.length > 10 ? ` and ${items.length - 10} more` : "";
   return [`Note from Pobots: the day passed for ${items.length === 1 ? "your Ahead item" : "these Ahead items"}: ${list}${more}. Move, finish or drop ${items.length === 1 ? "it" : "them"} with ahead_item.`];

@@ -11,3 +11,11 @@ The week note is the main bot's one note, replaced and never stacked. In the row
 In the Week grid a slot is a block as tall as its minutes on the soft amber, and it can be dragged to another day and time: see Ahead: the Week grid.
 
 Settings, Ahead, Your time: working hours as typed times, working days as the day toggles, and the most minutes a day.
+
+## To-do blocks (engine 0.41.0)
+
+With "Put to-dos in my calendar" on, every new to-do from a bot gets a block of the person's time. The block is a "your time" row and block like any other, with the amber tag reading "To-do" instead of "Your time", as tall as its minutes in the Week grid and the phone's Day. The dated to-do row is left out while its block is open: one thing, never two. Its event in Outlook is never shown as a grey meeting beside it.
+
+Its sheet puts "Open the to-do" first. Done marks the to-do done. Drop reads "Remove the block": the to-do stays on the list. Open again shows only while its to-do is open. When the block is not in the calendar (a write failed, or the calendar did not answer in time) one quiet line under the why says so; nothing shows when all is well.
+
+Settings, Ahead, "To-dos in your calendar": the switch, shown only while the calendar is connected (else one line that says where to connect it), and "How to schedule me", a text box with its count, "Use the default" and Save, as About you is drawn.

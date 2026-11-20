@@ -84,6 +84,18 @@ export class AheadStore {
     return rows.map(parse);
   }
 
+  /** Protocol 32: every to-do block, open or closed (closed ones are forgotten after 90 days). */
+  blocks(): AheadItem[] {
+    const rows = this.db.prepare("SELECT data FROM ahead_items WHERE json_extract(data, '$.forTodo') IS NOT NULL ORDER BY day LIMIT 5000").all() as { data: unknown }[];
+    return rows.map(parse);
+  }
+
+  /** Protocol 32: the block of one to-do, the newest when there were more. */
+  blockOf(todoId: string): AheadItem | undefined {
+    const r = this.db.prepare("SELECT data FROM ahead_items WHERE json_extract(data, '$.forTodo') = ? ORDER BY (state = 'open') DESC, changed_at DESC LIMIT 1").get(todoId) as { data: unknown } | undefined;
+    return r ? parse(r) : undefined;
+  }
+
   /** Done or dropped since `iso` (ISO 8601), newest first. */
   closedSince(iso: string, limit = 200): AheadItem[] {
     const rows = this.db

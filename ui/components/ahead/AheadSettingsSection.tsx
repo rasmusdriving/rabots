@@ -6,6 +6,7 @@ import { engineRequest } from "../../state/actions";
 import { store, useAppState } from "../../state/store";
 import { SectionHead } from "../SettingsView";
 import { AheadTimeSettings } from "./time/AheadTimeSettings";
+import { TodoBlocksSettings } from "./time/TodoBlocksSettings";
 
 function AheadSwitch() {
   const [state, save] = useSaver();
@@ -45,7 +46,7 @@ function AheadSwitch() {
 }
 
 /** The parts of the section, in order. Part B adds its working hours here. */
-export const AHEAD_SETTINGS: ComponentType[] = [AheadSwitch, AheadTimeSettings];
+export const AHEAD_SETTINGS: ComponentType[] = [AheadSwitch, AheadTimeSettings, TodoBlocksSettings];
 
 export function AheadSettingsSection() {
   return (

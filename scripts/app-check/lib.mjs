@@ -29,7 +29,7 @@ export const only = arg("only");
 // The sections, each runnable by itself with --only=<name>. "base" is the first bot and steps 2 to
 // 14; every other section is the first bot and its own step. scripts/check-all.mjs runs them side
 // by side. A new step gets a name here and a file of its own in sections/ (see ../app-check.mjs).
-export const SECTIONS = ["base", "files", "backup", "push", "steer", "titles", "chat7", "fullaccess", "anyfile", "todo", "sees", "workers", "maintools", "botreach", "posts", "helpersrail", "calendar", "aside", "taskmanagers", "helpersees", "gptbotsees", "gptchangesees", "activitylog", "cards-after-restart", "activityday", "railresize", "card-questions", "restored-waiting", "firststart", "gpttitles", "selfupdate", "usage-page", "connections", "codex-limits", "vacation", "ahead", "ahead-screen", "ahead-time", "ahead-grid"];
+export const SECTIONS = ["base", "files", "backup", "push", "steer", "titles", "chat7", "fullaccess", "anyfile", "todo", "sees", "workers", "maintools", "botreach", "posts", "helpersrail", "calendar", "aside", "taskmanagers", "helpersees", "gptbotsees", "gptchangesees", "activitylog", "cards-after-restart", "activityday", "railresize", "card-questions", "restored-waiting", "firststart", "gpttitles", "selfupdate", "usage-page", "connections", "codex-limits", "vacation", "ahead", "ahead-screen", "ahead-time", "ahead-grid", "todo-blocks"];
 if (process.argv.includes("--sections")) {
   console.log(SECTIONS.join("\n"));
   process.exit(0);

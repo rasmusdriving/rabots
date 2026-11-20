@@ -45,6 +45,8 @@ export interface SlotAsk {
   notBefore?: number;
   /** The last good day; a slot after it is late. */
   latestBy?: string;
+  /** The last good end, as an instant (a to-do's by_when with a time); a slot ending after it is late. */
+  latestEnd?: number;
   /** False for the main bot's own focus blocks: they do not count toward the day's limit. */
   counts?: boolean;
 }
@@ -99,7 +101,8 @@ export function findSlot(ask: SlotAsk): SlotFound | SlotNone {
     while (t + length <= close) {
       const clash = clashOf(ask.busy, t, t + length);
       if (!clash) {
-        return { ok: true, day, time: timeOf(t, tz), start: t, end: t + length, late: !!ask.latestBy && day > ask.latestBy };
+        const late = (!!ask.latestBy && day > ask.latestBy) || (ask.latestEnd !== undefined && t + length > ask.latestEnd);
+        return { ok: true, day, time: timeOf(t, tz), start: t, end: t + length, late };
       }
       t = ceilGrid(clash.end + AIR_MIN * MIN);
     }

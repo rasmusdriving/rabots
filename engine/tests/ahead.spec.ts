@@ -337,13 +337,14 @@ describe("ahead: settings and shapes", () => {
 
   test("the tool stays small: about 300 tokens for a bot, a little more for the main bot", (t) => {
     for (const role of ["bot", "main"] as const) {
-      const tool = aheadToolFor({ tz: TZ } as never, { folder: { file: { role } } } as never);
+      const tool = aheadToolFor({ tz: TZ, store: { getValue: () => undefined } } as never, { folder: { file: { role } } } as never);
       const json = JSON.stringify({ name: tool.name, description: tool.description, input_schema: z.toJSONSchema(z.object(tool.shape)) });
       // About 3.5 characters a token for English and JSON.
       const tokens = Math.round(json.length / 3.5);
       t.diagnostic(`ahead_item for ${role}: ${json.length} characters, about ${tokens} tokens`);
       // Part B adds the main bot's time manager line and week note (engine/tests/ahead-time.spec.ts measures it).
-      assert.ok(tokens < (role === "main" ? 500 : 380), `${role}: ${tokens}`);
+      // Engine 0.41.0: the main bot's text holds how to schedule the person (their own words, about 65 tokens by default).
+      assert.ok(tokens < (role === "main" ? 620 : 380), `${role}: ${tokens}`);
     }
   });
 

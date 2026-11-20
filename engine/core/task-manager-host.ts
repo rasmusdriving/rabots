@@ -28,6 +28,8 @@ import { log } from "../log.js";
 import { deliver, managerChanged, type TaskManager } from "./task-managers.js";
 import { takeGrant } from "./restored-cards.js";
 import { readWorkerFor, startWorkerFor, steerWorkerFor, stopWorkerFor } from "./task-manager-workers.js";
+import { newBlock } from "./todo-blocks.js";
+import { todoBlocksText } from "./ahead-settings.js";
 import type { ReadHelperArgs, SteerHelperArgs, StopHelperArgs } from "../helper-tools.js";
 
 /** The bot tools each choice gives. "browser" gives none: only words. */
@@ -61,7 +63,7 @@ export function managerTools(eng: Engine, rt: BotRuntime, tm: TaskManager): BotT
   // Every other method of a bot's host is never reached: its tools are left out below.
   const full = new Proxy(host, { get: (t, p) => (p in t ? t[p as keyof typeof t] : no) }) as unknown as TeamHost;
   const allowed = new Set(tm.tools.flatMap((t) => TOOLS_OF[t]));
-  const tools = buildTools("bot", full, { harness: tm.harness, models: eng.modelList() })
+  const tools = buildTools("bot", full, { harness: tm.harness, models: eng.modelList(), todoBlocks: todoBlocksText(eng) })
     .filter((t) => allowed.has(t.name))
     .map((t) => (t.name === TOOL_NAMES.startHelper ? { ...t, description: workerWords(t.description, tm.maxWorkers) } : t));
   // Protocol 31: a task manager has its bot's Ahead level; its items are the bot's.
@@ -215,7 +217,7 @@ function noteFor(eng: Engine, rt: BotRuntime, tm: TaskManager, args: { title: st
 // ------------------------------------------------------------ to-dos
 
 /** add_todo for a task manager: the to-do names it, and its answer comes back to it. */
-function addTodoFor(eng: Engine, rt: BotRuntime, tm: TaskManager, args: TodoArgs): ToolResult {
+async function addTodoFor(eng: Engine, rt: BotRuntime, tm: TaskManager, args: TodoArgs): Promise<ToolResult> {
   if (!eng.store.isOpen) return problem("Pobots is stopping, so the to-do was not added.");
   if (eng.store.openTodos(rt.folder.id).length >= TODOS_PER_BOT) return problem(`Your bot already has ${TODOS_PER_BOT} open to-dos on the person's list, the most. Remove one of yours first, or ask with ask_human.`);
   let todo: Todo;
@@ -227,7 +229,8 @@ function addTodoFor(eng: Engine, rt: BotRuntime, tm: TaskManager, args: TodoArgs
   eng.store.saveTodo({ todo, status: "open" });
   eng.opts.emit("todo.changed", { todo });
   log.info(`Bot ${rt.folder.id}: a task manager added a to-do for the person`);
-  return ok(`Added "${todo.title}" to the person's to-do list (id ${todo.id}). When they act on it you get their answer as a message from them.${todo.keepOpen ? " It stays on the list after an answer: update or remove it when it is settled." : " An answer takes it off the list."}`);
+  const block = await newBlock(eng, rt, todo, tm.ownThread);
+  return ok(`Added "${todo.title}" to the person's to-do list (id ${todo.id}). When they act on it you get their answer as a message from them.${todo.keepOpen ? " It stays on the list after an answer: update or remove it when it is settled." : " An answer takes it off the list."}${block}`);
 }
 
 /** The person answered a task manager's to-do: it gets the answer while it is there. False when it is gone (the bot gets it then). */

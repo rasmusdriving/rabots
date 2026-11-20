@@ -18,6 +18,8 @@ export function AheadBotSetting({ bot }: { bot: Bot }) {
   const [state, save] = useSaver();
   const [want, setWant] = useState<AheadLevel | null>(null);
   const on = useAppState((s) => !!s.ahead?.enabled);
+  // A to-do's block (engine 0.41.0) goes to the calendar whatever this bot's level is.
+  const blocks = useAppState((s) => !!s.ahead?.todoBlocks && !!s.calendar?.connected);
   if (bot.role === "main") return null;
   const id = `set-${bot.id}-ahead`;
   const shown = want ?? bot.ahead;
@@ -41,7 +43,11 @@ export function AheadBotSetting({ bot }: { bot: Bot }) {
         ))}
       </div>
       {on ? (
-        <span className="pb-hint">Items stay inside Pobots and never go to your calendar.</span>
+        <span className="pb-hint" data-ahead-calendar-hint="">
+          {blocks
+            ? "Items stay inside Pobots. A to-do from this bot gets its block of time in your calendar, as set in Settings, Ahead."
+            : "Items stay inside Pobots and never go to your calendar."}
+        </span>
       ) : (
         <div className="pb-calendar-note" data-ahead-note="off">
           <span className="pb-hint">Ahead is off, so this waits until you switch it on.</span>

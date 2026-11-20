@@ -13,7 +13,8 @@ import { ok, problem } from "../tool-names.js";
 import { newAheadId } from "./ahead-store.js";
 import { dayOf, dayWords, isDay, isTime } from "./ahead-days.js";
 import { actionLine, tellBot } from "./ahead-news.js";
-import { aheadLevel } from "./ahead-settings.js";
+import { aheadItemsChanged } from "./todo-block-sync.js";
+import { aheadLevel, aheadSettings, schedulingOf, todoBlocksOn } from "./ahead-settings.js";
 import { addYourTime, moveYourTime, weekNote } from "./ahead-time.js";
 
 export const AHEAD_TOOL = "ahead_item";
@@ -39,6 +40,8 @@ const LIST_MAX = 100;
 export function aheadToolFor(eng: Engine, rt: BotRuntime, opts: { threadId?: string } = {}): BotTool {
   const main = rt.folder.file.role === "main";
   const time = aheadLevel(rt) === "time";
+  const blocks = todoBlocksOn(eng);
+  const scheduling = schedulingOf(aheadSettings(eng));
   return {
     name: AHEAD_TOOL,
     description: [
@@ -52,6 +55,9 @@ export function aheadToolFor(eng: Engine, rt: BotRuntime, opts: { threadId?: str
       ...(main ? ["You may act on any bot's items; name the bot on add, and on list for one bot."] : []),
       ...(time && !main ? ["your-time asks for the person's time to look at something; day means not before; Pobots picks a free slot in working hours."] : []),
       ...(main ? ["You are responsible for the person's time: add or move any your-time; with a time you set it, else Pobots picks a free slot. Yours are focus blocks. week_note: title is the note atop Ahead, empty clears; offer it Monday mornings."] : []),
+      ...(blocks ? ["Each to-do has a block of the person's time (shown as block of to-do), kept in their Outlook calendar; it closes with its to-do."] : []),
+      ...(time ? [`How to schedule the person (their words): "${scheduling}"`] : []),
+      ...(main ? ["When the person gives feedback on their scheduling, rewrite that text with change_settings ahead_scheduling."] : []),
     ].join(" "),
     shape: {
       action: main ? z.enum(["add", "move", "done", "drop", "list", "week_note"]) : z.enum(["add", "move", "done", "drop", "list"]),
@@ -137,7 +143,7 @@ function add(eng: Engine, rt: BotRuntime, owner: BotRuntime, a: AheadArgs, today
   };
   eng.store.ahead.put(item);
   if (owner !== rt) tellBot(eng, item, `Note from Pobots: the main bot put an item on Ahead for you: "${item.title}" (${item.id}, ${when(item)}).`);
-  eng.opts.emit("ahead.items", {});
+  aheadItemsChanged(eng);
   return ok(`On Ahead: ${line(eng, item, false)}`);
 }
 
@@ -148,6 +154,11 @@ function change(eng: Engine, rt: BotRuntime, a: AheadArgs, today: string): ToolR
   const main = rt.folder.file.role === "main";
   if (!item || (!main && item.botId !== rt.folder.id)) return problem("You have no item on Ahead with that id. list shows yours.");
   if (item.state !== "open") return problem(`That item is already ${item.state}.`);
+  if (item.forTodo) {
+    // A to-do's block follows its to-do (engine 0.41.0); the main bot, the time manager, may move or remove it.
+    if (a.action === "done") return problem("A to-do's block is done when its to-do is: when the person answers it or marks it done.");
+    if (!main) return problem(a.action === "move" ? `That is the block of your to-do ${item.forTodo}. update_todo with minutes or by_when places it again; the person moves it on Ahead.` : `That is the block of your to-do ${item.forTodo}. It closes with the to-do; remove_todo removes both.`);
+  }
   if (a.action === "move" && item.kind === "your-time") return moveYourTime(eng, rt, item, a);
   const at = new Date(eng.clock()).toISOString();
   const byMain = main && item.botId !== rt.folder.id;
@@ -167,7 +178,7 @@ function change(eng: Engine, rt: BotRuntime, a: AheadArgs, today: string): ToolR
   }
   eng.store.ahead.put(next);
   if (byMain) tellBot(eng, next, actionLine("the main bot", next, a.action as "move" | "done" | "drop", a.action === "move" ? item.day : undefined));
-  eng.opts.emit("ahead.items", {});
+  aheadItemsChanged(eng);
   const word = a.action === "move" ? `Moved to ${when(next)}` : a.action === "done" ? "Done" : "Dropped";
   return ok(`${word}: "${next.title}" (${next.id}).`);
 }
@@ -191,7 +202,7 @@ function list(eng: Engine, owner: BotRuntime | undefined, a: AheadArgs, today: s
 const when = (i: Pick<AheadItem, "day" | "time">) => `${dayWords(i.day)}${i.time ? ` ${i.time}` : ""}`;
 
 function line(eng: Engine, i: AheadItem, withBot: boolean): string {
-  const bits = [`${i.id}`, `${i.day}${i.time ? ` ${i.time}` : ""}`, i.kind, `"${i.title}"`];
+  const bits = [`${i.id}`, `${i.day}${i.time ? ` ${i.time}` : ""}`, i.forTodo ? `block of to-do ${i.forTodo}, ${i.minutes ?? 15} min` : i.kind, `"${i.title}"`];
   if (i.label) bits.push(i.label);
   if (withBot) bits.push(i.botId ? eng.nameOf(i.botId) : "the person's own");
   return bits.join(" · ");

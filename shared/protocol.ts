@@ -43,7 +43,7 @@ export * from "./usage-overview.js";
 export * from "./ahead.js";
 import type { AheadAction, AheadItem, AheadLevel, AheadSettings, AheadView } from "./ahead.js";
 
-export const PROTOCOL_VERSION = 31;
+export const PROTOCOL_VERSION = 32;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -2320,4 +2320,11 @@ export interface Events {
   "ahead.changed": { ahead: AheadSettings };
   /** Protocol 31: items changed; a window showing Ahead reads the view again. */
   "ahead.items": Record<string, never>;
+}
+
+// Protocol 32: to-do blocks (docs/build/step-todo-blocks.md; the Ahead types are in shared/ahead.ts).
+
+export interface Todo {
+  /** Protocol 32: how long it takes the person, TODO_MINUTES_MIN to TODO_MINUTES_MAX, as the bot said. The length of its block. */
+  minutes?: number;
 }

@@ -8,7 +8,7 @@ import { closeSync, openSync, readSync } from "node:fs";
 import { downloadFileName } from "../shared/downloads.js";
 import { fileInFolder } from "./downloads.js";
 import type { Artifact, Todo, TodoBlock, TodoButton } from "../shared/protocol.js";
-import { TODO_BLOCKS_MAX, TODO_BUTTONS_MAX } from "../shared/protocol.js";
+import { TODO_BLOCKS_MAX, TODO_BUTTONS_MAX, TODO_MINUTES_MAX, TODO_MINUTES_MIN } from "../shared/protocol.js";
 import { sniffHead } from "./attachments.js";
 
 export const TITLE_MAX = 100;
@@ -43,6 +43,8 @@ export interface TodoArgs {
   title?: string;
   why?: string;
   by_when?: string;
+  /** Protocol 32: how long it takes the person, 5 to 240 minutes (the length of its block). */
+  minutes?: number;
   blocks?: BlockArg[];
   buttons?: { id?: string; label: string; primary?: boolean }[];
   keep_open?: boolean;
@@ -252,14 +254,23 @@ export function buildButtons(raw: TodoArgs["buttons"], hasFields: boolean): Todo
   return buttons;
 }
 
+/** The minutes as given, checked: undefined when not given. Throws plain words. */
+export function cleanMinutes(v: unknown): number | undefined {
+  if (v === undefined || v === null || v === "") return undefined;
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n) || n < TODO_MINUTES_MIN || n > TODO_MINUTES_MAX) throw new Error(`minutes is how long it takes the person, ${TODO_MINUTES_MIN} to ${TODO_MINUTES_MAX}.`);
+  return n;
+}
+
 /** A new to-do from add_todo's arguments. Throws plain words. */
 export function newTodo(botId: string, args: TodoArgs, ctx: TodoContext, at: string): Todo {
   const title = line(args.title, TITLE_MAX);
   if (!title) throw new Error("A to-do needs a short title.");
   const why = line(args.why, WHY_MAX);
   const due = cleanDue(args.by_when);
+  const minutes = cleanMinutes(args.minutes);
   const { blocks, buttons } = buildParts(args, ctx);
-  const todo: Todo = { id: newTodoId(), botId, title, ...(why ? { why } : {}), at, updatedAt: at, ...(due ? { due } : {}), blocks, buttons, keepOpen: !!args.keep_open };
+  const todo: Todo = { id: newTodoId(), botId, title, ...(why ? { why } : {}), at, updatedAt: at, ...(due ? { due } : {}), ...(minutes ? { minutes } : {}), blocks, buttons, keepOpen: !!args.keep_open };
   checkSize(todo);
   return todo;
 }
@@ -281,6 +292,11 @@ export function changedTodo(old: Todo, args: TodoArgs, ctx: TodoContext, at: str
     const due = cleanDue(args.by_when);
     if (due) next.due = due;
     else delete next.due;
+  }
+  if (args.minutes !== undefined) {
+    const minutes = cleanMinutes(args.minutes);
+    if (minutes) next.minutes = minutes;
+    else delete next.minutes;
   }
   if (args.blocks !== undefined) next.blocks = buildBlocks(args.blocks, ctx);
   if (args.blocks !== undefined || args.buttons !== undefined) {
@@ -356,6 +372,7 @@ export function listWords(todos: Todo[], ago: (iso: string) => string): string {
     ...todos.map((t) => {
       const parts = [`made ${ago(t.at)}`];
       if (t.due) parts.push(`by ${t.due.replace("T", " ")}`);
+      if (t.minutes) parts.push(`${t.minutes} min`);
       if (t.keepOpen) parts.push("kept open after an answer");
       if (t.answer) parts.push(`last answered ${ago(t.answer.at)}${t.answer.label ? ` with "${t.answer.label}"` : ""}`);
       return `- ${t.id}: "${t.title}" (${parts.join("; ")})`;

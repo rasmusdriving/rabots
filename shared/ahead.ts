@@ -1,5 +1,7 @@
 /**
  * Protocol 31: Ahead, the screen for what is coming (docs/build/step-ahead.md).
+ * Protocol 32: to-do blocks (docs/build/step-todo-blocks.md): AheadItem.forTodo and .outlook,
+ * AheadSettings.todoBlocks and .scheduling.
  *
  * The types live here so the protocol file grows little; `shared/protocol.ts` re-exports them and
  * merges them into Bot, Snapshot, Methods and Events at its end.
@@ -69,6 +71,32 @@ export interface AheadItem {
   earliest?: string;
   /** The day it was on before its last move (part B's "Moved from", part C's marks). */
   movedFrom?: string;
+  /** Protocol 32, kind "your-time": the block of time for this to-do (its id). Closes with the to-do. */
+  forTodo?: string;
+  /** Protocol 32: the block's event in the person's Outlook calendar, as Pobots last wrote it. */
+  outlook?: AheadOutlook;
+}
+
+/**
+ * Protocol 32: where a to-do's block stands in Outlook (engine/core/todo-block-sync.ts).
+ * "made": the event is there at `start` to `end` (what Pobots last wrote or followed).
+ * "unsure": a create may have happened (no answer in time); looked for before trying again.
+ * "failed": a create did not happen; tried again at the block's next change.
+ * "deleted": Pobots deleted it after the to-do closed. "kept": left in Outlook (it had begun).
+ * "gone": the person deleted it in Outlook; never made again.
+ */
+export interface AheadOutlook {
+  eventId?: string;
+  state: "made" | "unsure" | "failed" | "deleted" | "kept" | "gone";
+  /** ISO 8601 instants. */
+  start?: string;
+  end?: string;
+  /** When Pobots last wrote or tried, ISO 8601. */
+  at: string;
+  /** The subject it was made with, so a create that may have happened is found again after a new title. */
+  subject?: string;
+  /** Why the last try failed, in plain words. */
+  note?: string;
 }
 
 export interface AheadSettings {
@@ -85,7 +113,19 @@ export interface AheadSettings {
   lastOpenedAt?: string;
   /** Part B: the main bot's week note at the top of Ahead, replaced never stacked. */
   weekNote?: { text: string; at: string };
+  /** Protocol 32: every new to-do from a bot gets a block of time on Ahead and in Outlook. Off by default; needs the calendar. */
+  todoBlocks?: boolean;
+  /** Protocol 32: how the bots schedule the person, at most AHEAD_SCHEDULING_MAX characters. Absent or empty: AHEAD_SCHEDULING_DEFAULT. */
+  scheduling?: string;
 }
+
+export const AHEAD_SCHEDULING_MAX = 600;
+export const AHEAD_SCHEDULING_DEFAULT =
+  "Small things get 5 minutes, bigger ones longer. Give the time it takes the person, not the time it took you. Place what has a date before it. Keep the person's working hours free of things that can wait for another day.";
+/** Protocol 32: a to-do's minutes, the time it takes the person. */
+export const TODO_MINUTES_MIN = 5;
+export const TODO_MINUTES_MAX = 240;
+export const TODO_MINUTES_DEFAULT = 15;
 
 export const AHEAD_DEFAULTS: AheadSettings = {
   enabled: false,

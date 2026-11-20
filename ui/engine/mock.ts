@@ -150,6 +150,7 @@ import type {
   Schedule,
   Snapshot,
   SystemCard,
+  Todo,
   Trigger,
   TriggerRun,
   PlanStep,
@@ -567,6 +568,12 @@ export class MockEngine implements EngineClient {
         this.listener?.ready(this.snapshot());
         this.listener?.connection({ phase: "ready", since: Date.now() });
       },
+      newEngineVersion: (version) => {
+        this.status = { ...this.status, engineVersion: version };
+        this.connected = true;
+        this.listener?.ready(this.snapshot());
+        this.listener?.connection({ phase: "ready", since: Date.now() });
+      },
       loseSendReply: (how) => {
         this.loseReply = how;
       },
@@ -966,7 +973,19 @@ export class MockEngine implements EngineClient {
   // ------------------------------------------------------------ helpers
 
   emit(e: EngineEvent): void {
+    // Protocol 32: a to-do that closes closes its block on Ahead, as the engine does.
+    if (e.event === "todo.removed") this.ahead?.todoClosed(e.data.todoId, e.data.reason);
     if (this.connected) this.listener?.event(structuredClone(e));
+  }
+
+  /** Protocol 32 (mock-ahead.ts): a to-do with a block, as a bot's add_todo makes it while blocks are on. */
+  addTodoForAhead(partial: Partial<Todo> & { title: string; botId: string }): string {
+    return window.pobotsTodos!.add(partial);
+  }
+
+  /** Protocol 32 (mock-ahead.ts): Done on a block marks its to-do done. */
+  closeTodoForAhead(todoId: string): void {
+    this.todos.handlers["todo.close"]({ todoId, how: "done" });
   }
 
   private snapshot(): Snapshot {

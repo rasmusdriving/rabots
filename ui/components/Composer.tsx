@@ -8,6 +8,7 @@
 // Pictures and files: pasted (a screenshot from the clipboard), dropped anywhere on the chat, or
 // picked with the add button. They stand as chips in a tray above the text and upload at once, so
 // Send is instant. A message may be pictures and files alone, with no text.
+import { drafts } from "../lib/drafts";
 import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import type { Bot, FollowUp, Item } from "../../shared/protocol";
 import { messageOf } from "../engine/types";
@@ -47,7 +48,6 @@ function inTurn(bot: Bot, items: Item[]): boolean {
 const canStop = (bot: Bot) => bot.state === "thinking" || bot.state === "working";
 const NO_ITEMS: Item[] = [];
 
-const drafts = new Map<string, string>();
 
 /** A design token's duration in ms, read from the element's style. */
 function tokenMs(el: Element, name: string): number {

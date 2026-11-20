@@ -20,6 +20,16 @@ const PLACES: { place: AheadPlace; label: string }[] = [
   { place: "next", label: "Next free slot" },
 ];
 
+/** Where a to-do's block stands in Outlook, when it is not simply there. */
+function outlookWords(item: AheadItem): string | undefined {
+  const o = item.outlook;
+  if (!o || o.state === "made" || o.state === "deleted") return undefined;
+  if (o.state === "failed") return `Not in your calendar yet: ${o.note ?? "the calendar said no"}. Pobots tries again when the block changes.`;
+  if (o.state === "unsure") return "Your calendar did not answer in time. Pobots looks there before it tries again.";
+  if (o.state === "gone") return "You deleted it in your calendar.";
+  return o.note ? `Left in your calendar: ${o.note}.` : undefined;
+}
+
 export function YourTimeSheet({ item, onClose }: { item: AheadItem; onClose(): void }) {
   const { model, today } = useAheadPage();
   const bot = useAppState((s) => (item.botId ? s.bots.find((b) => b.id === item.botId) : undefined));
@@ -57,7 +67,11 @@ export function YourTimeSheet({ item, onClose }: { item: AheadItem; onClose(): v
         );
       }
     : undefined;
-  const todo = item.link?.todoId;
+  const todo = item.forTodo ?? item.link?.todoId;
+  // A to-do's block (protocol 32): Done finishes the to-do, Remove the block keeps it, and it comes back only with its to-do.
+  const block = !!item.forTodo;
+  const todoOpen = useAppState((s) => !!todo && s.todos.some((t) => t.id === todo));
+  const calendarNote = block ? outlookWords(now) : undefined;
   const when = `${longDate(now.day)}${now.time ? ` ${now.time} to ${endOf(now.time, minutes)}` : ""}`;
 
   return (
@@ -65,9 +79,14 @@ export function YourTimeSheet({ item, onClose }: { item: AheadItem; onClose(): v
       <div className="pb-ahead-sheet" data-ahead-sheet={item.id} data-ahead-time-sheet="">
         <div className="pb-ahead-sheet-from">
           <BotMark bot={bot} />
-          <span>{`Your time · ${who} · ${when} · ${lengthWords(minutes)}${isLate(now) ? " · Late" : ""}`}</span>
+          <span>{`${block ? "To-do" : "Your time"} · ${who} · ${when} · ${lengthWords(minutes)}${isLate(now) ? " · Late" : ""}`}</span>
         </div>
         {now.why && <p className="pb-ahead-sheet-why">{now.why}</p>}
+        {calendarNote && (
+          <p className="pb-hint" data-ahead-block-calendar="">
+            {calendarNote}
+          </p>
+        )}
         {(todo || toChat) && (
           <div className="pb-ahead-sheet-acts">
             {todo && (
@@ -95,8 +114,8 @@ export function YourTimeSheet({ item, onClose }: { item: AheadItem; onClose(): v
               <button type="button" className="pb-btn pb-btn-primary" disabled={busy} data-autofocus onClick={() => void run("done")}>
                 Done
               </button>
-              <button type="button" className="pb-btn" disabled={busy} onClick={() => void run("drop")}>
-                Drop
+              <button type="button" className="pb-btn" disabled={busy} data-ahead-drop="" onClick={() => void run("drop")}>
+                {block ? "Remove the block" : "Drop"}
               </button>
             </div>
             <span className="pb-ahead-sheet-label">Move</span>
@@ -137,10 +156,12 @@ export function YourTimeSheet({ item, onClose }: { item: AheadItem; onClose(): v
           </>
         ) : (
           <div className="pb-ahead-sheet-acts">
-            <span className="pb-hint">{now.state === "done" ? "Done." : "Dropped."}</span>
-            <button type="button" className="pb-btn" disabled={busy} onClick={() => void run("reopen")}>
-              Open again
-            </button>
+            <span className="pb-hint">{now.state === "done" ? "Done." : block ? "The block is removed. The to-do stays on your list." : "Dropped."}</span>
+            {(!block || (todoOpen && now.outlook?.state !== "gone")) && (
+              <button type="button" className="pb-btn" disabled={busy} onClick={() => void run("reopen")}>
+                Open again
+              </button>
+            )}
           </div>
         )}
         {error && (
@@ -153,7 +174,7 @@ export function YourTimeSheet({ item, onClose }: { item: AheadItem; onClose(): v
             Close
           </button>
         </div>
-        {item.botId && <p className="pb-hint">{`${who} is told at its next turn.`}</p>}
+        {item.botId && <p className="pb-hint">{block ? `Done marks the to-do done. ${who} is told at its next turn.` : `${who} is told at its next turn.`}</p>}
       </div>
     </Dialog>
   );

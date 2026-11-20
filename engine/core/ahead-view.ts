@@ -13,6 +13,8 @@ import { settleYourTime } from "./ahead-time.js";
 import { addDays, dayOf, isDay, mondayOf, startOf, timeOf } from "./ahead-days.js";
 import { away } from "./vacation.js";
 import { aheadCarrying } from "./ahead-carrying.js";
+import { openBlockIds } from "./todo-blocks.js";
+import { followOutlook } from "./todo-block-sync.js";
 
 interface Range {
   today: string;
@@ -51,9 +53,11 @@ const items: Source = (eng, r) =>
 
 const todos: Source = (eng, r) => {
   const out: AheadRow[] = [];
+  // A to-do with an open block shows only as its block (engine 0.41.0).
+  const blocked = openBlockIds(eng);
   for (const t of eng.store.openTodos()) {
     // As the to-do list: a bot on vacation keeps its to-dos out of sight.
-    if (!t.due || !eng.bots.has(t.botId) || away(eng.bots.get(t.botId))) continue;
+    if (!t.due || blocked.has(t.id) || !eng.bots.has(t.botId) || away(eng.bots.get(t.botId))) continue;
     const day = t.due.slice(0, 10);
     if (!isDay(day) || day < r.today) continue;
     const time = /T(\d{2}:\d{2})/.exec(t.due)?.[1];
@@ -98,7 +102,9 @@ export async function aheadView(eng: Engine, params: Methods["ahead.view"]["para
   const range: Range = { today, from, to, settings };
 
   await settleYourTime(eng, from, to);
+  // Blocks the person moved or deleted in Outlook follow before the rows are gathered.
   const meetingsRead = aheadMeetings(eng, from, to);
+  await followOutlook(eng, await meetingsRead);
   const rows: AheadRow[] = [];
   const earlier: AheadRow[] = [];
   const later: AheadRow[] = [];

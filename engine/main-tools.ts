@@ -5,7 +5,7 @@
 import { z } from "zod";
 import type { BotColor } from "../shared/protocol.js";
 import type { UsageToolArgs } from "./core/usage-history/tool.js";
-import { BOT_COLORS, USAGE_PROVIDERS, USAGE_RANGES } from "../shared/protocol.js";
+import { AHEAD_SCHEDULING_MAX, BOT_COLORS, USAGE_PROVIDERS, USAGE_RANGES } from "../shared/protocol.js";
 import type { BotTool } from "./claude/session.js";
 import { ok, TOOL_NAMES } from "./tool-names.js";
 import type { ActivityLogArgs } from "./core/activity-log.js";
@@ -225,6 +225,12 @@ export function mainTools(host: TeamHost, models: string, ahead = false): BotToo
                 .object({ work_start: z.string().optional(), work_end: z.string().optional(), work_days: z.array(z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])).optional(), minutes_per_day: z.number().int().optional() })
                 .optional()
                 .describe("Ahead's working hours (HH:MM), days and most your-time minutes a day (15-480)."),
+              ahead_todo_blocks: z.boolean().optional().describe("To-dos in the calendar: every new to-do from a bot gets a block of the person's time on Ahead and in their Outlook calendar, shown as busy. Needs the calendar set up. Only when the person asks."),
+              ahead_scheduling: z
+                .string()
+                .max(AHEAD_SCHEDULING_MAX)
+                .optional()
+                .describe("How the bots schedule the person: how long to-dos take them, where blocks go, what to keep free. The whole new text; empty goes back to the default. When the person gives feedback on how they were scheduled, rewrite it, keeping what still holds."),
             }
           : {}),
         calendar_internal_domains: z

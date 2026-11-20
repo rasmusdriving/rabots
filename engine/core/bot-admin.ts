@@ -23,6 +23,7 @@ import { ruleLabel } from "../rules.js";
 import { saveHold } from "./stop.js";
 import { closeBotItem, finishActivity } from "./harness-events.js";
 import { cancelSettle } from "./helpers.js";
+import { closeBlockOf } from "./todo-blocks.js";
 
 /**
  * A bot on a model the list lacked (an older GPT model, say) adds it to the list. The window learns
@@ -277,6 +278,7 @@ export function retireBot(eng: Engine, botId: string): void {
   for (const todo of eng.store.openTodos(botId)) {
     eng.store.saveTodo({ todo, status: "retired", closedAt: now() });
     eng.opts.emit("todo.removed", { todoId: todo.id, reason: "retired" });
+    closeBlockOf(eng, todo.id, "dropped", "bot");
   }
   // Its triggers stop and go with it. Their runs stay in the database.
   for (const row of eng.store.listTriggers(botId)) {

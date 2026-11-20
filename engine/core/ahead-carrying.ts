@@ -18,6 +18,8 @@ export function aheadCarrying(eng: Engine, today: string, rows: AheadRow[]): Ahe
     const c = botId ? counts.get(botId) : undefined;
     if (!c) continue;
     c.onAhead++;
+    // A to-do's block is its to-do, counted below with the open to-dos (engine 0.41.0).
+    if (r.source === "item" && r.item.forTodo) continue;
     if (r.source !== "todo" && r.day >= start && r.day <= end) c.due++;
     // A bot's ask for the person's time this week (or passed) waits on the person. The main bot's
     // own your-time are the person's focus blocks, not an ask.

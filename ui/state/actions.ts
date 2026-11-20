@@ -19,9 +19,9 @@ export function connect(engine: EngineClient): void {
   client = engine;
   engine.start({
     ready: (snapshot: Snapshot) => {
-      // A public install that updated itself: a page in a browser loads the new build once (engine 0.34.0).
+      // The engine came back with a new version: a page in a browser loads the new build once (engine 0.34.0; every install from 0.41.0).
       const was = store.get();
-      if (reloadForNewVersion({ version: was.status?.engineVersion, pobots: !!was.providers?.pobots }, snapshot)) return;
+      if (reloadForNewVersion({ version: was.status?.engineVersion }, snapshot)) return;
       forgetUpdateReload();
       store.snapshot(snapshot);
       // After a reconnect, read again the newest page of every chat the window has open, so

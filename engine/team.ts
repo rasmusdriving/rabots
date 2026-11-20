@@ -4,6 +4,7 @@
 // says what each tool is.
 import { z } from "zod";
 import type { AccessLevel, BotColor, Effort, EyeGap, EyeShape, Harness, ModelInfo, Schedule } from "../shared/protocol.js";
+import { TODO_MINUTES_MAX, TODO_MINUTES_MIN } from "../shared/protocol.js";
 import type { BotTool, ToolResult } from "./claude/session.js";
 import type { TodoArgs } from "./todos.js";
 import type { UsageToolArgs } from "./core/usage-history/tool.js";
@@ -208,8 +209,8 @@ export interface TeamHost extends HelperHost, TaskManagerHost, LinksToolsHost {
   showArtifact(args: { path: string; title?: string }): Promise<ToolResult>;
   startHelper(args: StartHelperArgs, signal?: AbortSignal): Promise<ToolResult>;
   // step 7c
-  addTodo(args: TodoArgs): ToolResult;
-  updateTodo(args: TodoArgs & { id?: string }): ToolResult;
+  addTodo(args: TodoArgs): ToolResult | Promise<ToolResult>;
+  updateTodo(args: TodoArgs & { id?: string }): ToolResult | Promise<ToolResult>;
   removeTodo(args: { id?: string }): ToolResult;
   listTodos(): ToolResult;
 }
@@ -287,6 +288,8 @@ export type ChangeSettingsArgs = {
   calendar_internal_domains?: string[];
   ahead?: boolean;
   ahead_time?: { work_start?: string; work_end?: string; work_days?: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun">; minutes_per_day?: number };
+  ahead_todo_blocks?: boolean;
+  ahead_scheduling?: string;
   providers?: { claude?: boolean; codex?: boolean };
   notifications?: { needs?: boolean; note?: boolean; finished?: boolean; yourTime?: boolean; dayReady?: boolean };
 };
@@ -320,6 +323,8 @@ export interface ToolContext {
   kinds?: { name: string; description?: string; problem?: string }[];
   /** Protocol 31: Ahead is on. Off, the main bot's change_settings leaves out what only matters while it is on. */
   ahead?: boolean;
+  /** Protocol 32: while to-dos get a block of time, how to schedule the person (add_todo then takes minutes). */
+  todoBlocks?: string;
 }
 
 /** The kinds as start_helper's description names them, in a few words each. */
@@ -437,6 +442,14 @@ const todoShape = {
   buttons: z.array(todoButton).max(4).optional().describe('What the person can press; you get the one they press and what they filled in. With fields and no buttons there is one "Send". The person can always mark it done or dismiss it.'),
   keep_open: z.boolean().optional().describe("True to keep it on the list after an answer, until you change or remove it. Defaults to false: an answer takes it off."),
 };
+
+/** Protocol 32: shown while to-dos get a block of time. */
+const todoMinutes = z.number().int().min(TODO_MINUTES_MIN).max(TODO_MINUTES_MAX).optional().describe(`How long it takes the person, ${TODO_MINUTES_MIN} to ${TODO_MINUTES_MAX}. The length of its block in their calendar.`);
+
+/** What add_todo says while every to-do gets a block of the person's time, with the person's own instruction. */
+export function todoBlocksWords(scheduling: string): string {
+  return `Every to-do gets a block of the person's time on Ahead and in their Outlook calendar, shown as busy, placed before by_when. Give minutes. How to schedule the person (their words, kept up to date by the main bot): "${scheduling}"`;
+}
 
 const effort = z.enum(["low", "medium", "high", "xhigh", "max"]);
 
@@ -617,14 +630,15 @@ export function buildTools(role: "main" | "bot", host: TeamHost, ctx: ToolContex
     {
       name: TOOL_NAMES.addTodo,
       description:
-        `Put a to-do on the person's list in Pobots (under Needs you): something they must do or decide that can wait, such as input on a customer task, or an email to send now that the work is done. You build the window they open from blocks and buttons. No notification is sent. When they act on it, you get their answer in your chat as a message from them. ${FOLLOW_UP_RULE} For an answer you need now use ask_human; for news with nothing to act on use notify_human.`,
-      shape: todoShape,
+        `Put a to-do on the person's list in Pobots (under Needs you): something they must do or decide that can wait, such as input on a customer task, or an email to send now that the work is done. You build the window they open from blocks and buttons. No notification is sent. When they act on it, you get their answer in your chat as a message from them. ${FOLLOW_UP_RULE} For an answer you need now use ask_human; for news with nothing to act on use notify_human.` +
+        (ctx.todoBlocks ? ` ${todoBlocksWords(ctx.todoBlocks)}` : ""),
+      shape: ctx.todoBlocks ? { ...todoShape, minutes: todoMinutes } : todoShape,
       handler: async (args) => host.addTodo(args as TodoArgs),
     },
     {
       name: TOOL_NAMES.updateTodo,
       description: `Change one of your open to-dos by its id. Give only what changes; blocks and buttons are replaced whole when given. ${FOLLOW_UP_RULE} The person's questions and your answers stay with it.`,
-      shape: { id: z.string().min(1).max(60).describe("The to-do's id, from add_todo or list_todos."), ...partialShape(todoShape) },
+      shape: { id: z.string().min(1).max(60).describe("The to-do's id, from add_todo or list_todos."), ...partialShape(ctx.todoBlocks ? { ...todoShape, minutes: todoMinutes } : todoShape) },
       handler: async (args) => host.updateTodo(args as TodoArgs & { id?: string }),
     },
     {
