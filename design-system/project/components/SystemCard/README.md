@@ -8,3 +8,7 @@ You provide the topic, a title and a sentence or two.
 - **At most one per topic.** A newer card on the same topic takes the old one's place, in the same slot: the slot does not leave and nothing arrives; the new words fade in where the old ones were. The engine sends the new card first and withdraws the old one after it.
 - **It goes by itself** when the matter is settled (after the next saved backup), leaving quietly like an expired card. "Dismiss" puts it away earlier.
 - It counts in "Needs you 2" like any card, but it never makes a bot "waiting".
+
+## After an update (topic "update", engine 0.45.0)
+
+On a public install, once after Pobots updated itself, the new engine puts up "Pobots is updated to 0.45.0". Under the title the bullets of what is new since the version before, from the repository's `CHANGELOG.md` (see ReleaseNotes): the first three, then a quiet "Show all" that opens the rest in place below them, grouped by version when there were several. One button: a quiet "Dismiss". It stays, also across a reload and a restart, until it is dismissed (on one device, gone on all), and the engine puts it up only once. With no notes for the version, the title alone and "It was 0.44.0 before.".

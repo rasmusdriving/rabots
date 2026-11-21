@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import type { ApprovalCard, Events } from "../../shared/protocol.js";
+import type { ApprovalCard, Events, SystemCard } from "../../shared/protocol.js";
 import type { ToolResult } from "../claude/session.js";
 import { loadConfigFile, parseFlags } from "../config.js";
 import { ENGINE_VERSION } from "../engine.js";
@@ -33,7 +33,7 @@ const PRIVATE = `git@github.com:${OWNER}/private-copy.git`;
 const engineTs = (v: string) => `// stand-in\nexport const ENGINE_VERSION = "${v}";\n`;
 
 /** A bare remote with the running version on main, a clone of it (the install), and a newer commit on the remote. */
-function repos(o: { newer?: boolean; packages?: boolean; remoteUrl?: string } = {}) {
+function repos(o: { newer?: boolean; packages?: boolean; remoteUrl?: string; changelog?: { first?: string; next?: string } } = {}) {
   const root = tempDir("pobots-self-");
   const remote = join(root, "remote.git");
   const work = join(root, "work");
@@ -45,6 +45,7 @@ function repos(o: { newer?: boolean; packages?: boolean; remoteUrl?: string } = 
   writeFileSync(join(work, "engine", "engine.ts"), engineTs(ENGINE_VERSION));
   writeFileSync(join(work, "package.json"), '{ "name": "pobots" }\n');
   writeFileSync(join(work, "README.md"), "Pobots\n");
+  if (o.changelog?.first) writeFileSync(join(work, "CHANGELOG.md"), o.changelog.first);
   g(work, "add", "-A");
   g(work, "commit", "-q", "-m", "first");
   g(work, "remote", "add", "origin", remote);
@@ -54,7 +55,9 @@ function repos(o: { newer?: boolean; packages?: boolean; remoteUrl?: string } = 
   if (o.newer !== false) {
     writeFileSync(join(work, "engine", "engine.ts"), engineTs(NEXT));
     if (o.packages) writeFileSync(join(work, "package.json"), '{ "name": "pobots", "dependencies": {} }\n');
-    g(work, "commit", "-q", "-am", "newer");
+    if (o.changelog?.next) writeFileSync(join(work, "CHANGELOG.md"), o.changelog.next);
+    g(work, "add", "-A");
+    g(work, "commit", "-q", "-m", "newer");
     g(work, "push", "-q", "origin", "main");
   }
   return { root, remote, work, clone, head: () => g(clone, "rev-parse", "HEAD"), remoteHead: () => g(work, "rev-parse", "HEAD") };
@@ -432,5 +435,152 @@ describe("engine 0.34.0: the main bot", { skip }, () => {
     assert.match(main, /When the person asks to update Pobots, or whether a new version is out, look with get_settings fresh/);
     assert.match(main, /run_pobots_task update_pobots, which asks them on a card/);
     assert.match(teamPrompt("bot"), /when the person asks you to update Pobots, tell them to ask the main bot, or pass it on with message_bot/);
+  });
+});
+
+// Engine 0.45.0 (protocol 36): what an update brings, from CHANGELOG.md (docs/build/step-changelog.md).
+describe("engine 0.45.0: what an update brings", { skip }, () => {
+  const V = ENGINE_VERSION.replaceAll(".", "\\.");
+  const N = NEXT.replaceAll(".", "\\.");
+  const first = `# What's new\n\n## ${ENGINE_VERSION} (21 Nov 2026)\n\n- This version's change.\n\n## 0.2.0 (1 Nov 2026)\n\n- An older change.\n\n## 0.0.5\n\n- Long ago.\n`;
+  const next = `# What's new\n\n## ${NEXT} (22 Nov 2026)\n\n- A **new** thing.\n- Another thing.\n\n${first.slice(first.indexOf("## "))}`;
+  const systemCards = (w: ReturnType<typeof setup>) => w.engine.snapshot().cards.filter((c): c is SystemCard => c.kind === "system");
+  async function po(w: ReturnType<typeof setup>): Promise<FakeSession> {
+    const bot = w.engine.createBot("Po");
+    w.engine.sendMessage({ botId: bot.id, text: "Go" });
+    await settle();
+    return w.sessions.find((s) => s.settings.botId === bot.id)!;
+  }
+
+  test("a look reads the notes of the newer version at the fetched ref; this version's own notes from the folder", async () => {
+    const r = repos({ changelog: { first, next } });
+    const w = engineOn(r.clone, runner(), { repo: r.remote });
+    await w.engine.hub.selfKnown();
+    let p = w.engine.snapshot().providers.pobots!;
+    assert.deepEqual(p.thisVersion, { version: ENGINE_VERSION, date: "21 Nov 2026", items: ["This version's change."], totalItems: 1 });
+    assert.equal(p.whatsNew, undefined, "nothing before a look");
+    const ps = await po(w);
+    const before = text(await ps.tool("get_settings", {}));
+    assert.match(before, new RegExp(`What ${V} brought: This version's change\\.`));
+    await w.engine.providersCheck();
+    p = w.engine.snapshot().providers.pobots!;
+    assert.deepEqual(p.whatsNew, [{ version: NEXT, date: "22 Nov 2026", items: ["A new thing.", "Another thing."], totalItems: 2 }], "only what is newer than the running version");
+    assert.equal(p.olderNotes, undefined);
+    const words = text(await ps.tool("get_settings", {}));
+    assert.match(words, new RegExp(`What's new in the available update, from Pobots's changelog:\\n- ${N}: A new thing\\. Another thing\\.`));
+    assert.doesNotMatch(words, /What .* brought/, "this version's notes only when no update waits");
+    // The card that asks lists them.
+    const call = ps.tool("run_pobots_task", { task: "update_pobots" });
+    await new Promise((res) => setTimeout(res, 100));
+    const card = approvals(w.events).at(-1)!;
+    assert.match(card.detail ?? "", /What's new:\n- A new thing\.\n- Another thing\./);
+    w.engine.resolveCard(card.id, { type: "deny" });
+    await call;
+    w.engine.shutdown();
+    w.store.close();
+  });
+
+  test("a new version without a changelog is still found, with no notes; the notes go when it is no longer newer", async () => {
+    const r = repos({ changelog: { first } });
+    // The newer commit removes the changelog.
+    g(r.work, "rm", "-q", "CHANGELOG.md");
+    g(r.work, "commit", "-q", "-m", "no changelog");
+    g(r.work, "push", "-q", "origin", "main");
+    const w = engineOn(r.clone, runner(), { repo: r.remote });
+    await w.engine.hub.selfKnown();
+    await w.engine.providersCheck();
+    const p = w.engine.snapshot().providers.pobots!;
+    assert.equal(p.available, true);
+    assert.equal(p.latest, NEXT);
+    assert.equal(p.whatsNew, undefined);
+    assert.equal(p.problem, undefined);
+    const ps = await po(w);
+    assert.match(text(await ps.tool("get_settings", {})), /The available update has no notes about what it changes\./);
+    w.engine.shutdown();
+    w.store.close();
+  });
+
+  test("after the restart: the card goes up once with what is new since the old version, and the bot that asked says it", async () => {
+    const r = repos({ newer: false, changelog: { first } });
+    const dataDir = tempDir();
+    const botsDir = tempDir();
+    // The engine before the update: Po asked for it.
+    let w = engineOn(r.clone, runner(), { repo: r.remote, dataDir, botsDir });
+    const ps = await po(w);
+    const poId = ps.settings.botId;
+    ps.reply("Done.");
+    await settle();
+    w.engine.shutdown();
+    w.store.close();
+    mkdirSync(join(dataDir, "updates"), { recursive: true });
+    writeFileSync(join(dataDir, "updates", "self-asked.json"), JSON.stringify({ botId: poId, at: new Date().toISOString() }));
+    writeFileSync(join(dataDir, "updates", "last.json"), JSON.stringify({ kind: "self", at: new Date().toISOString(), requestedAt: new Date().toISOString(), ok: true, installed: true, from: "0.1.0", to: ENGINE_VERSION, version: ENGINE_VERSION }));
+    // The new engine.
+    w = engineOn(r.clone, runner(), { repo: r.remote, dataDir, botsDir });
+    await w.engine.hub.selfKnown();
+    await settle();
+    let cards = systemCards(w);
+    assert.equal(cards.length, 1);
+    assert.equal(cards[0]!.topic, "update");
+    assert.equal(cards[0]!.title, `Pobots is updated to ${ENGINE_VERSION}`);
+    assert.deepEqual(cards[0]!.notes?.map((n) => n.version), [ENGINE_VERSION, "0.2.0"], "every version since the old one, newest first; nothing older");
+    assert.equal(w.engine.snapshot().providers.pobots!.run!.from, "0.1.0");
+    // Po: a quiet line right before its turn, then the note with the notes.
+    const woken = w.sessions.find((s) => s.sent.some((m) => /the update of Pobots that the person allowed has ended/.test(m.text)))!;
+    assert.ok(woken, "Po is woken");
+    const note = woken.sent.at(-1)!.text;
+    assert.match(note, new RegExp(`What is new, from Pobots's changelog:\\n${V}: This version's change\\.\\n0\\.2\\.0: An older change\\.`));
+    assert.match(note, /then in a sentence or two what is new/);
+    const items = w.engine.readThread({ threadId: w.engine.snapshot().bots.find((b) => b.id === poId)!.mainThreadId }).items;
+    const line = items.filter((i) => i.kind === "notice" && i.startsTurn);
+    assert.equal(line.length, 1);
+    assert.equal(line[0]!.kind === "notice" && line[0]!.text, `Pobots is updated to ${ENGINE_VERSION}.`);
+    woken.reply("Pobots is updated.");
+    await settle();
+    const added = w.events.filter((e) => e.event === "card.added").length;
+    w.engine.shutdown();
+    w.store.close();
+    // Another restart: the same card is still there (kept in the database), not a new one.
+    w = engineOn(r.clone, runner(), { repo: r.remote, dataDir, botsDir });
+    await w.engine.hub.selfKnown();
+    await settle();
+    cards = systemCards(w);
+    assert.equal(cards.length, 1, "still up until dismissed");
+    assert.equal(w.events.filter((e) => e.event === "card.added" && (e.data as Events["card.added"]).card.kind === "system").length, 0, "not put up again");
+    assert.ok(added > 0);
+    // Dismissed: gone, and it does not come back after a restart.
+    w.engine.resolveCard(cards[0]!.id, { type: "dismiss" });
+    assert.equal(systemCards(w).length, 0);
+    w.engine.shutdown();
+    w.store.close();
+    w = engineOn(r.clone, runner(), { repo: r.remote, dataDir, botsDir });
+    await w.engine.hub.selfKnown();
+    await settle();
+    assert.equal(systemCards(w).length, 0, "closed stays closed");
+    w.engine.shutdown();
+    w.store.close();
+  });
+
+  test("an update that failed puts up no card; an update whose changelog lacks the version shows the title alone", async () => {
+    const r = repos({ newer: false, changelog: { first: "## 0.0.1\n- Very old.\n" } });
+    const dataDir = tempDir();
+    mkdirSync(join(dataDir, "updates"), { recursive: true });
+    const last = join(dataDir, "updates", "last.json");
+    writeFileSync(last, JSON.stringify({ kind: "self", at: new Date().toISOString(), requestedAt: new Date().toISOString(), ok: false, installed: false, rolledBack: true, from: ENGINE_VERSION, version: NEXT, summary: "Not installed" }));
+    let w = engineOn(r.clone, runner(), { repo: r.remote, dataDir });
+    await w.engine.hub.selfKnown();
+    assert.equal(systemCards(w).length, 0);
+    assert.equal(w.engine.snapshot().providers.pobots!.thisVersion, undefined);
+    w.engine.shutdown();
+    w.store.close();
+    writeFileSync(last, JSON.stringify({ kind: "self", at: new Date().toISOString(), requestedAt: new Date().toISOString(), ok: true, installed: true, from: "0.1.0", to: ENGINE_VERSION, version: ENGINE_VERSION }));
+    w = engineOn(r.clone, runner(), { repo: r.remote, dataDir });
+    await w.engine.hub.selfKnown();
+    const cards = systemCards(w);
+    assert.equal(cards.length, 1);
+    assert.equal(cards[0]!.notes, undefined);
+    assert.equal(cards[0]!.text, "It was 0.1.0 before.");
+    w.engine.shutdown();
+    w.store.close();
   });
 });

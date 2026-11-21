@@ -7,7 +7,7 @@ import { TOOL_SERVER } from "../claude/session.js";
 import { log } from "../log.js";
 import { describeApproval } from "../claude/labels.js";
 import { rulesFromSuggestions, sessionUpdate } from "../rules.js";
-import type { ApprovalCard, CardDecision, CardMeeting, QuestionCard, SystemCard } from "../../shared/protocol.js";
+import type { ApprovalCard, CardDecision, CardMeeting, QuestionCard, ReleaseNote, SystemCard } from "../../shared/protocol.js";
 import { randomUUID } from "node:crypto";
 import { clip, now } from "./words.js";
 import { EngineError } from "../errors.js";
@@ -240,10 +240,10 @@ export function resolveCard(eng: Engine, cardId: string, decision: CardDecision)
 }
 
 /** Puts up the one card of a topic, replacing one that is there (it is withdrawn, the new one added). */
-export function showSystemCard(eng: Engine, topic: SystemCard["topic"], title: string, text: string): void {
+export function showSystemCard(eng: Engine, topic: SystemCard["topic"], title: string, text: string, notes?: ReleaseNote[]): void {
   if (!eng.store.isOpen) return;
   clearSystemCard(eng, topic);
-  const card: SystemCard = { id: randomUUID(), kind: "system", at: now(), topic, title: clip(title, 120), ...(text.trim() ? { text: clip(text, 1000) } : {}) };
+  const card: SystemCard = { id: randomUUID(), kind: "system", at: now(), topic, title: clip(title, 120), ...(text.trim() ? { text: clip(text, 1000) } : {}), ...(notes?.length ? { notes } : {}) };
   eng.cards.set(card.id, { card, resolve: () => undefined });
   eng.store.addCard(card);
   eng.opts.emit("card.added", { card });

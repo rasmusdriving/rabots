@@ -4,6 +4,10 @@
 // round arrow and its dialog with Pobots in the list, the run's lines, a refusal, a failed build, a
 // Pobots that cannot restart itself, and a look that did not work (calm, never red). Without the flag
 // nothing of it shows. On the laptop and the phones, dark and light.
+// Protocol 36 (docs/build/step-changelog.md): what an update brings. "What's new" on the card (three
+// bullets, then Show all, which opens in place without moving what is above), in the dialog's scroll
+// box (kept while the update runs), grouped by version when there are several; after the update
+// Pobots's own card on the rail, "What's new in 0.34.1" on the card, and Dismiss.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -38,6 +42,24 @@ const card = `(() => {
     run: $(".pb-set7-pobots-run")?.textContent ?? "",
     wide: document.documentElement.scrollWidth > innerWidth + 1,
     inView: r.right <= innerWidth + 1 && r.left >= -1,
+  };
+})()`;
+/** The notes in a place (a selector): the version heads, the bullets that are seen, the toggle. */
+const notesIn = (sel) => `(() => {
+  const n = $(${JSON.stringify(sel)});
+  if (!n) return null;
+  const seen = (x) => { const r = x.getBoundingClientRect(); const m = x.closest(".pb-relnotes-motion"); return r.height > 0 && (!m || !m.hasAttribute("data-collapsed")) && !x.closest("[inert]"); };
+  const t = n.querySelector(":scope > .pb-relnotes-toggle");
+  const body = n.querySelector(".pb-relnotes-body");
+  const r = n.getBoundingClientRect();
+  return {
+    versions: [...n.querySelectorAll(".pb-relnotes-version")].filter(seen).map((x) => x.firstChild.textContent),
+    items: [...n.querySelectorAll(".pb-relnotes-list > li")].filter(seen).map((x) => x.textContent),
+    older: [...n.querySelectorAll(".pb-relnotes-older")].filter(seen).map((x) => x.textContent).join(""),
+    toggle: t ? { text: [...t.querySelectorAll(".pb-swap-line[data-show]")].map((x) => x.textContent).join(""), expanded: t.getAttribute("aria-expanded") } : null,
+    scrolls: getComputedStyle(body).overflowY === "auto",
+    inView: r.right <= innerWidth + 1 && r.left >= -1,
+    wide: document.documentElement.scrollWidth > innerWidth + 1,
   };
 })()`;
 const arrow = `({ shown: !!$(".pb-foot-update[data-show]"), label: $(".pb-foot-update").getAttribute("aria-label") })`;
@@ -104,7 +126,29 @@ export default async function section() {
         c1,
       );
       await houseRules(T("Providers with Pobots"));
+      const PN = '.pb-set7-provider[data-provider="pobots"] .pb-relnotes';
+      const n1 = await ev(notesIn(PN));
+      check(
+        T("the card says What's new: the first three bullets of 0.34.1, no version head for one version, then Show all"),
+        (await ev(`$('.pb-set7-provider[data-provider="pobots"] .pb-relnotes-head')?.textContent`)) === "What's new" && n1?.items.length === 3 && n1.items[0] === "Before you update, Pobots shows what the new version brings." && n1.versions.length === 0 && n1.toggle?.text === "Show all" && n1.toggle.expanded === "false" && !n1.wide,
+        n1,
+      );
       await picture(`01-laptop-${theme}-available`);
+      const top1 = await ev(`Math.round($('.pb-set7-provider[data-provider="pobots"]').getBoundingClientRect().top)`);
+      await ev(`click($('${PN} > .pb-relnotes-toggle'))`);
+      // While it opens, the box is shorter than its words: they stay inside it (clipped), never drawn
+      // over what is below (found in the browser test on 21 Nov 2026).
+      const opening = await ev(`(() => { const i = $('${PN} .pb-relnotes-motion > .pb-relnotes-inner'); return i && getComputedStyle(i).overflow; })()`);
+      await sleep(400);
+      const opened = await ev(`(() => { const i = $('${PN} .pb-relnotes-motion > .pb-relnotes-inner'); return i && getComputedStyle(i).overflow; })()`);
+      check(T("the opening words stay inside their box, while it opens and once open"), opening === "clip" && opened === "clip", { opening, opened });
+      const n2 = await ev(notesIn(PN));
+      const top2 = await ev(`Math.round($('.pb-set7-provider[data-provider="pobots"]').getBoundingClientRect().top)`);
+      check(T("Show all opens the fourth bullet in place, below; the card does not move; the toggle says Show less"), n2?.items.length === 4 && n2.toggle?.text === "Show less" && n2.toggle.expanded === "true" && top1 === top2, { n2, top1, top2 });
+      await picture(`01b-laptop-${theme}-show-all`);
+      await ev(`click($('${PN} > .pb-relnotes-toggle'))`);
+      await sleep(400);
+      check(T("Show less closes it again"), (await ev(notesIn(PN)))?.items.length === 3);
       await ev(`click($('.pb-set7-provider[data-provider="pobots"] .pb-set7-update'))`);
       const d1 = await until(dialog);
       check(
@@ -112,6 +156,8 @@ export default async function section() {
         d1?.title === "Update Pobots?" && d1.what.join("|") === "Pobots 0.34.0 to 0.34.1" && /then updates itself and restarts\. It reconnects by itself after about a minute\./.test(d1.text),
         d1,
       );
+      const dn1 = await ev(notesIn(".pb-dialog .pb-relnotes"));
+      check(T("the dialog shows What's new in 0.34.1 in a scroll box, every bullet, no Show all"), (await ev(`$(".pb-set7-update-notes .pb-relnotes-head")?.textContent`)) === "What's new in 0.34.1" && dn1?.items.length === 4 && dn1.scrolls && !dn1.toggle && !dn1.wide, dn1);
       await picture(`02-laptop-${theme}-ask`);
       await mock(`updateHold(["Inbox"])`);
       await ev(`click($(".pb-set7-update-go"))`);
@@ -119,6 +165,7 @@ export default async function section() {
       await mock(`updateHold([])`);
       const building = await until(`$(".pb-set7-update-line")?.textContent === "Building Pobots 0.34.1." ? true : null`, 4000);
       check(T("then says what it does: Building Pobots 0.34.1."), !!building);
+      check(T("the notes stay in the dialog while it runs"), (await ev(notesIn(".pb-dialog .pb-relnotes")))?.items.length === 4);
       await picture(`03-laptop-${theme}-building`);
       const restarting = await until(`$(".pb-set7-update-line")?.textContent === "Restarting Pobots to finish the update." ? true : null`, 4000);
       check(T("and Restarting Pobots to finish the update."), !!restarting);
@@ -128,9 +175,54 @@ export default async function section() {
       await ev(`click($$(".pb-dialog .pb-btn").find((x) => x.textContent === "Close"))`);
       await sleep(250);
       const c2 = await ev(card);
-      check(T("the card says Up to date., the line under the cards keeps the result, and the card keeps its box"), c2?.latest === "Up to date." && c2.button === "hidden" && /^Last update of Pobots, \d\d:\d\d: Pobots updated to 0\.34\.1\.$/.test(c2.run) && c2.box === c1?.box && c2.height === c1?.height, { c1, c2 });
+      check(T("the card says Up to date., the line under the cards keeps the result, and the card keeps its column"), c2?.latest === "Up to date." && c2.button === "hidden" && /^Last update of Pobots, \d\d:\d\d: Pobots updated to 0\.34\.1\.$/.test(c2.run) && c2.box === c1?.box, { c1, c2 });
       check(T("and the arrow is gone"), !(await ev(arrow))?.shown);
+      const disc = '.pb-set7-provider[data-provider="pobots"] .pb-relnotes-disclosure';
+      check(T("the card keeps What's new in 0.34.1, closed"), (await ev(`(() => { const t = $('${disc} > .pb-relnotes-toggle'); return t && t.textContent.trim() + "|" + t.getAttribute("aria-expanded"); })()`)) === "What's new in 0.34.1|false" && !(await ev(`$(".pb-set7-pobots-notes")`)));
+      await ev(`click($('${disc} > .pb-relnotes-toggle'))`);
+      await sleep(400);
+      const dn = await ev(notesIn(`${disc} .pb-relnotes`));
+      check(T("it opens in place with that version's bullets"), dn?.items.length === 4 && !dn.toggle, dn);
       await picture(`04-laptop-${theme}-done`);
+      await key("Escape");
+      await sleep(300);
+      const RC = '.app-rail .pb-card-system[data-topic="update"]';
+      const rc = await until(`(() => { const c = $('${RC}'); return c && { title: c.querySelector(".pb-card-title").textContent, head: c.querySelector(".pb-card-head").textContent, notes: (${notesIn(`${RC} .pb-relnotes`)}), dismiss: !!$$("button", c).find((x) => x.textContent === "Dismiss") }; })()`, 3000);
+      check(
+        T("Pobots's own card is on the rail: Pobots is updated to 0.34.1, three bullets, Show all, Dismiss"),
+        rc?.title === "Pobots is updated to 0.34.1" && rc.head.endsWith("Pobots tells you") && rc.notes?.items.length === 3 && rc.notes.toggle?.text === "Show all" && rc.dismiss,
+        rc,
+      );
+      await picture(`04b-laptop-${theme}-rail-card`);
+      const railTop1 = await ev(`Math.round($('${RC}').getBoundingClientRect().top)`);
+      await ev(`click($('${RC} .pb-relnotes > .pb-relnotes-toggle'))`);
+      await sleep(400);
+      check(T("Show all on the rail card opens in place; the card stays where it is"), (await ev(notesIn(`${RC} .pb-relnotes`)))?.items.length === 4 && (await ev(`Math.round($('${RC}').getBoundingClientRect().top)`)) === railTop1);
+      await ev(`click($$("button", $('${RC}')).find((x) => x.textContent === "Dismiss"))`);
+      check(T("Dismiss puts it away"), !!(await until(`!$('${RC}')`, 3000)));
+
+      // ---------------- several versions: grouped, newest first, older ones counted
+      await open("pobots=several&update=none", { theme });
+      await toProviders();
+      const s1 = await ev(notesIn(PN));
+      check(T("several versions: grouped under their versions, newest first; the first three bullets show"), s1?.versions.join("|") === "0.36.0|0.35.1" && s1.items.length === 3 && s1.toggle?.text === "Show all", s1);
+      await ev(`click($('${PN} > .pb-relnotes-toggle'))`);
+      await sleep(400);
+      const s2 = await ev(notesIn(PN));
+      check(T("Show all adds 0.35.0 with how many more it has, and how many older versions are left out"), s2?.versions.join("|") === "0.36.0|0.35.1|0.35.0" && s2.items.includes("And 7 more.") && s2.older === "2 older versions not shown.", s2);
+      await picture(`04c-laptop-${theme}-several`);
+      await ev(`click($('.pb-set7-provider[data-provider="pobots"] .pb-set7-update'))`);
+      await until(dialog);
+      const sd = await ev(notesIn(".pb-dialog .pb-relnotes"));
+      check(T("the dialog lists every version, grouped, in its scroll box"), sd?.versions.join("|") === "0.36.0|0.35.1|0.35.0" && sd.scrolls && !sd.wide, sd);
+      await picture(`04d-laptop-${theme}-several-ask`);
+      await ev(`click($$(".pb-dialog .pb-btn").find((x) => x.textContent === "Not now"))`);
+      await key("Escape");
+
+      // ---------------- an update without notes: nothing about it, no empty box
+      await open("pobots=nonotes&update=none", { theme });
+      await toProviders();
+      check(T("a new version without notes: no What's new"), !(await ev(`$('.pb-set7-provider[data-provider="pobots"] .pb-relnotes, .pb-set7-provider[data-provider="pobots"] .pb-relnotes-head')`)) && (await ev(card))?.latest === "Pobots 0.34.1 is available.");
       await key("Escape");
 
       // ---------------- with a Codex update too: one press, harnesses first
@@ -208,7 +300,23 @@ export default async function section() {
         const pd = await until(dialog);
         check(P("the dialog fits too"), pd?.title === "Update Pobots?" && !pd.wide, pd);
         await picture(`10-phone${phone.tag}-${theme}-ask`);
+        const pdn = await ev(notesIn(".pb-dialog .pb-relnotes"));
+        check(P("the dialog's notes fit the screen"), pdn?.items.length === 4 && pdn.inView && !pdn.wide, pdn);
         await key("Escape");
+        await openPhone(phone, theme, "pobots=several&update=none");
+        await toProviders();
+        await ev(`click($('.pb-set7-provider[data-provider="pobots"] .pb-relnotes > .pb-relnotes-toggle'))`);
+        await sleep(400);
+        const pn = await ev(notesIn('.pb-set7-provider[data-provider="pobots"] .pb-relnotes'));
+        check(P("several versions, all shown, fit the card: no sideways scroll"), pn?.versions.length === 3 && pn.inView && !pn.wide, pn);
+        await picture(`11-phone${phone.tag}-${theme}-several`);
+        await openPhone(phone, theme, "scene=empty-rail&pobots=updated");
+        await ev(`click($(".app-needs-row"))`);
+        await until(`$(".app-shell").dataset.phoneScreen === "needs"`, 3000);
+        const RCP = '.app-rail .pb-card-system[data-topic="update"]';
+        const prc = await ev(`(() => { const c = $('${RCP}'); return c && { title: c.querySelector(".pb-card-title").textContent, notes: (${notesIn(`${RCP} .pb-relnotes`)}) }; })()`);
+        check(P("after an update, Pobots's card is on Needs you and fits"), prc?.title === "Pobots is updated to 0.34.1" && prc.notes?.items.length === 3 && prc.notes.inView && !prc.notes.wide, prc);
+        await picture(`12-phone${phone.tag}-${theme}-rail-card`);
       }
       await leavePhone();
     }

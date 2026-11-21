@@ -11,14 +11,37 @@
 // ?pobots= acts out a public install (engine 0.34.0): available (Pobots 0.34.1 is out), current (up
 // to date), manual (out, but Pobots cannot restart itself), problem (the last look did not work),
 // dirty (the folder has changes of its own, so the update refuses). Without it, no Pobots card.
+// Protocol 36, what an update brings: available carries the notes of 0.34.1 (four bullets), several
+// carries three versions up to 0.36.0 and two older ones left out, nonotes has none, updated is the
+// engine right after an update to 0.34.1 (its card on the rail, "What's new in 0.34.1").
 // Levers on window.pobotsMock: settingsState, providersState, usageState, updateHold, updateNext,
 // hubKeysKept, titleChat, usageNext.
-import type { ChatTitle, ChatTiming, ChatTimingKey, Events, Methods, ModelInfo, PobotsSettings, PobotsUpdateRun, ProviderId, ProvidersState, ProviderUpdateRun, UsageAccount, UsageProvider, UsageState } from "../../shared/protocol";
+import type { ChatTitle, ChatTiming, ChatTimingKey, Events, Methods, ModelInfo, PobotsSettings, PobotsUpdateRun, ProviderId, ProvidersState, ProviderUpdateRun, ReleaseNote, SystemCard, UsageAccount, UsageProvider, UsageState } from "../../shared/protocol";
 import { at } from "./mock-data";
 import { EngineError } from "./types";
 
 /** The sample public install's clone (?pobots=). */
 const CLONE = "/Users/kaja/pobots";
+
+/** Sample notes, as the engine reads them from CHANGELOG.md (protocol 36). */
+const NOTE_0341: ReleaseNote = {
+  version: "0.34.1",
+  date: "19 Nov 2026",
+  items: [
+    "Before you update, Pobots shows what the new version brings.",
+    "After an update, Pobots tells you once what is new, on a card you can dismiss.",
+    "The main bot can tell you what an update does, before and after.",
+    "Downloaded files keep their own names, even when the name is very long and has no spaces anywhere in it at all.",
+  ],
+  totalItems: 4,
+};
+/** ?pobots=updated: the card the engine puts up once after the restart. */
+export const updatedCard = (): SystemCard => ({ id: "pobots-updated", kind: "system", at: new Date(Date.now() - 60_000).toISOString(), topic: "update", title: "Pobots is updated to 0.34.1", notes: [NOTE_0341] });
+const SEVERAL: ReleaseNote[] = [
+  { version: "0.36.0", date: "21 Nov 2026", items: ["A new Ahead screen shows what is coming up.", "Bots tell you when a to-do gets its block of time."], totalItems: 2 },
+  { version: "0.35.1", date: "20 Nov 2026", items: ["The switch for to-do blocks works again."], totalItems: 1 },
+  { version: "0.35.0", date: "20 Nov 2026", items: ["Send files over a connection.", "Choose how long a connection lasts.", "Each connection belongs to one bot."], totalItems: 10 },
+];
 
 type SettingsMethod = "settings.set" | "providers.check" | "providers.update" | "usage.read" | "usage.hub.add" | "usage.hub.remove" | "chat.titles";
 type Emit = (e: { event: "settings.changed"; data: Events["settings.changed"] } | { event: "providers.changed"; data: Events["providers.changed"] } | { event: "usage.changed"; data: Events["usage.changed"] } | { event: "chat.titled"; data: Events["chat.titled"] }) => void;
@@ -30,6 +53,8 @@ export interface MockSettingsHost {
   botsOn: (p: ProviderId) => string[];
   /** Names of the bots that are working now. */
   busyBots: () => string[];
+  /** Pobots's own card on the rail (protocol 36: after an update). */
+  putCard?: (card: SystemCard) => void;
 }
 
 const DEFAULT_TIMING: ChatTiming = { enabled: true, minTokens: 100000, fullFraction: 0.75, fullTokens: 300000, warmMarginMinutes: 8, coldHours: 4, compactTokens: 300000 };
@@ -152,15 +177,21 @@ export class MockSettings {
     };
     const k = this.pobotsKind;
     if (k) {
-      const out = k !== "current";
+      const out = k !== "current" && k !== "updated";
+      const latest = k === "several" ? "0.36.0" : k === "current" ? "0.34.0" : "0.34.1";
+      const whatsNew = !out || k === "nonotes" ? undefined : k === "several" ? SEVERAL : [NOTE_0341];
       this.prov.pobots = {
-        current: "0.34.0",
-        latest: out ? "0.34.1" : "0.34.0",
+        current: k === "updated" ? "0.34.1" : "0.34.0",
+        latest,
         available: out,
         checkedAt: this.prov.checkedAt!,
         canRestart: k !== "manual",
         ...(k === "problem" ? { problem: "Pobots could not look for a new version just now. It tries again later." } : {}),
-        run: null,
+        run: k === "updated" ? { startedAt: new Date(Date.now() - 3 * 60_000).toISOString(), endedAt: new Date(Date.now() - 60_000).toISOString(), phase: "done", line: "Pobots updated to 0.34.1.", from: "0.34.0", to: "0.34.1" } : null,
+        ...(whatsNew ? { whatsNew } : {}),
+        ...(k === "several" ? { olderNotes: 2 } : {}),
+        ...(k === "current" ? { thisVersion: { version: "0.34.0", date: "18 Nov 2026", items: ["Pobots updates itself with one click."], totalItems: 1 } } : {}),
+        ...(k === "updated" ? { thisVersion: NOTE_0341 } : {}),
       };
     }
     // Titles for the first two bots: three earlier sessions, a fresh run and a helper.
@@ -376,10 +407,18 @@ export class MockSettings {
       return tell();
     }
     await step("restarting", "Restarting Pobots to finish the update.", 900);
+    const notes = pb.whatsNew ?? [];
     pb.current = run.to!;
     pb.available = false;
+    delete pb.whatsNew;
+    delete pb.olderNotes;
+    const own = notes.find((n) => n.version === run.to);
+    if (own) pb.thisVersion = own;
+    else delete pb.thisVersion;
     Object.assign(run, { phase: "done", endedAt: new Date().toISOString(), line: `Pobots updated to ${run.to}.` });
     tell();
+    // The new engine, after the restart: Pobots's own card, once (protocol 36).
+    this.host.putCard?.({ id: `update-${Date.now()}`, kind: "system", at: new Date().toISOString(), topic: "update", title: `Pobots is updated to ${run.to}`, ...(notes.length ? { notes } : { text: `It was ${run.from} before.` }) });
   }
 
   /** Levers. */
