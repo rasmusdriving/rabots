@@ -165,7 +165,7 @@ import { MockBrowser } from "./mock-browser";
 import { MockFiles } from "./mock-files";
 import { MockBackup } from "./mock-backup";
 import { MockNotify } from "./mock-notify";
-import { MockSettings } from "./mock-settings";
+import { MockSettings, updatedCard } from "./mock-settings";
 import { MockVacation, requireMockPresent } from "./mock-vacation";
 import { MockTodos } from "./mock-todos";
 import { MockCardQuestions } from "./mock-cardquestions";
@@ -404,10 +404,12 @@ export class MockEngine implements EngineClient {
         models: () => this.models(),
         botsOn: (h) => this.bots.filter((b) => b.harness === h).map((b) => b.name),
         busyBots: () => this.bots.filter((b) => this.turns.has(b.id) || b.state === "thinking" || b.state === "working").map((b) => b.name),
+        putCard: (card) => this.putSystemCard(card),
       },
       flags,
       this.bots.map((b) => b.id),
     );
+    if (flags.get("pobots") === "updated") this.cards.push(updatedCard());
     this.todos = new MockTodos({ emit: (e) => this.emit(e as EngineEvent), answer: (botId, text, from) => this.todoAnswer(botId, text, from) }, scene === "first-run" ? null : flags.get("todos"));
     this.cardQuestions = new MockCardQuestions(this);
     if (scene !== "first-run") this.seed7c(flags);

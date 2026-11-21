@@ -5,6 +5,9 @@
 // local bare "remote" as its source: it sees the newer version with one fetch, refuses plainly while
 // the folder has changes of its own, and, when the new version cannot be built (the stand-in clone has
 // no build script), puts the folder back and says so. Never GitHub, never a restart.
+// Protocol 36 (docs/build/step-changelog.md): the remote's new commit has a CHANGELOG.md, and the real
+// engine's state carries its notes for the newer version; the running version's own notes come from
+// the clone's CHANGELOG.md. The main bot's words and the card after a restart are in the engine's spec.
 import { spawn, execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -43,11 +46,14 @@ export default async function section() {
   g(seed, "init", "-q", "-b", "main");
   writeFileSync(join(seed, "engine", "engine.ts"), `export const ENGINE_VERSION = "${current}";\n`);
   writeFileSync(join(seed, "README.md"), "Pobots\n");
+  const ownEntry = `## ${current} (21 Nov 2026)\n\n- What the running version brought.\n`;
+  writeFileSync(join(seed, "CHANGELOG.md"), `# What's new in Pobots\n\n${ownEntry}`);
   g(seed, "add", "-A");
   g(seed, "commit", "-q", "-m", "first");
   g(seed, "push", "-q", remote, "main");
   g(base, "clone", "-q", remote, clone);
   writeFileSync(join(seed, "engine", "engine.ts"), `export const ENGINE_VERSION = "${next}";\n`);
+  writeFileSync(join(seed, "CHANGELOG.md"), `# What's new in Pobots\n\n## ${next} (22 Nov 2026)\n\n- A **new** thing for the person.\n- Another one.\n\n${ownEntry}`);
   g(seed, "commit", "-q", "-am", "newer");
   g(seed, "push", "-q", remote, "main");
   const old = g(clone, "rev-parse", "HEAD");
@@ -90,6 +96,12 @@ export default async function section() {
     const seen = await pobots();
     check(`selfupdate: one look finds Pobots ${next}`, seen?.latest === next && seen.available === true && !!seen.checkedAt && !seen.problem, JSON.stringify(seen));
     check("selfupdate: looking changed nothing in the folder", g(clone, "rev-parse", "HEAD") === old);
+    check(
+      `selfupdate: the look reads what ${next} brings from the remote's CHANGELOG.md, and only that version`,
+      JSON.stringify(seen?.whatsNew) === JSON.stringify([{ version: next, date: "22 Nov 2026", items: ["A new thing for the person.", "Another one."], totalItems: 2 }]) && seen.olderNotes === undefined,
+      JSON.stringify(seen?.whatsNew),
+    );
+    check(`selfupdate: and what ${current} brought, from the clone's own CHANGELOG.md`, seen?.thisVersion?.version === current && seen.thisVersion.items[0] === "What the running version brought.", JSON.stringify(seen?.thisVersion));
 
     // Changes of its own: refused in one sentence, nothing changed.
     writeFileSync(join(clone, "README.md"), "Changed here\n");

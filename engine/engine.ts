@@ -75,7 +75,7 @@ import { SHORTEN_STUCK_MS, SHORTEN_WAIT_MS } from "./shorten.js";
 import { BACKUP_TIME, chatConfig, CONTEXT_DEFAULTS, fullAt, NOTIFY_DEFAULTS, writeConfigPart, type ContextSettings, type EngineConfig } from "./config.js";
 import { SettingsHub, type SettingsHubOptions } from "./settings-hub.js";
 import { SelfUpdate, type SelfUpdateOptions } from "./self-update.js";
-import { tellUpdateAsker } from "./core/pobots-tools.js";
+import { showUpdatedCard, tellUpdateAsker } from "./core/pobots-tools.js";
 import { TITLE_MODEL_DEFAULT } from "./settings.js";
 import { claudeTitleMaker, routedTitleMaker, TITLE_SYSTEM, Titles, toChatTitle, type TitleMaker } from "./titles.js";
 import { CodexTitles } from "./codex/titles.js";
@@ -125,7 +125,7 @@ import { activityDayFor } from "./core/activity-day.js";
 export { HELPER_LAST_MAX, helperLine, helperTitle, insideDir, waitingWords } from "./core/words.js";
 export { TIDY_PROMPT, TIDY_REFUSAL } from "./core/runtime.js";
 
-export const ENGINE_VERSION = "0.44.0";
+export const ENGINE_VERSION = "0.45.0";
 
 /** How long a bot waits for another bot's answer before the answer is sent later as a message. */
 const ASK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -430,7 +430,7 @@ export class Engine {
     const busyBots = () => [...this.bots.values()].filter((rt) => !calm(this, rt) || !!rt.turn).map((rt) => rt.folder.file.name);
     const self = opts.selfUpdate?.installDir
       ? new SelfUpdate(
-          { dataDir: opts.config.dataDir, busyBots, changed: () => this.hub?.selfChanged(), tellAsker: (botId, line, version, ok) => tellUpdateAsker(this, botId, line, version, ok) },
+          { dataDir: opts.config.dataDir, busyBots, changed: () => this.hub?.selfChanged(), tellAsker: (botId, line, version, ok, notes) => tellUpdateAsker(this, botId, line, version, ok, notes), updated: (from, to, notes) => showUpdatedCard(this, from, to, notes) },
           { current: ENGINE_VERSION, ...(opts.config.updates ? { config: opts.config.updates } : {}), ...(opts.config.shell ? { shell: true } : {}), ...opts.selfUpdate },
         )
       : undefined;

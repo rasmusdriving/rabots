@@ -1,0 +1,46 @@
+/* What a version of Pobots brings (protocol 36): bullets newest first, grouped by version when there
+   are several. "Show all" opens the rest below in place, calmly; nothing above it moves. */
+.pb-relnotes { display: flex; flex-direction: column; gap: var(--space-1); min-inline-size: 0; }
+.pb-relnotes-body { display: flex; flex-direction: column; gap: var(--space-2); min-inline-size: 0; }
+.pb-relnotes[data-scroll] .pb-relnotes-body {
+  max-block-size: calc(var(--space-8) * 3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--fill);
+}
+.pb-relnotes[data-scroll] .pb-relnotes-body:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb-relnotes-group { display: flex; flex-direction: column; gap: var(--space-1); min-inline-size: 0; }
+.pb-relnotes-version { margin: 0; display: flex; align-items: baseline; gap: var(--space-2); font-size: 12px; line-height: 18px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pb-relnotes-date { font-weight: 400; color: var(--ink-muted); }
+.pb-relnotes-list { margin: 0; padding: 0 0 0 var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); font-size: 13px; line-height: 20px; color: var(--ink); overflow-wrap: anywhere; }
+.pb-relnotes-list > li::marker { color: var(--ink-muted); }
+.pb-relnotes-more, .pb-relnotes-older { color: var(--ink-muted); }
+.pb-relnotes-more { list-style: none; margin-inline-start: calc(var(--space-4) * -1); }
+.pb-relnotes-older { margin: 0; font-size: 13px; line-height: 20px; }
+.pb-relnotes-toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: var(--space-1); color: var(--ink-muted); }
+.pb-relnotes-toggle svg { flex: none; transition: rotate var(--dur-quick) var(--ease-soft); }
+.pb-relnotes-toggle[aria-expanded="false"] svg { rotate: -90deg; }
+.pb-relnotes-motion {
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  transition: grid-template-rows var(--dur-calm) var(--ease-out), opacity var(--dur-calm) var(--ease-soft);
+}
+/* Clipped open and closed: while it opens or closes the box is shorter than its words, and they must
+   not show outside it. The hidden part holds only text, so no focus ring is cut. */
+.pb-relnotes-motion > .pb-relnotes-inner { min-block-size: 0; min-inline-size: 0; display: flex; flex-direction: column; gap: var(--space-2); overflow: clip; }
+.pb-relnotes-motion[data-collapsed] { grid-template-rows: 0fr; opacity: 0; }
+.pb-relnotes-disclosure { display: flex; flex-direction: column; min-inline-size: 0; }
+.pb-relnotes-disclosure > .pb-relnotes-motion > .pb-relnotes-inner { padding-block-start: var(--space-1); }
+/* On the Pobots card in Providers: under the line that says a new version is there. */
+.pb-set7-pobots .pb-relnotes-head { margin: var(--space-1) 0 0; font-size: 13px; line-height: 20px; font-weight: 600; }
+/* In the update dialog, under the "Pobots 0.44.0 to 0.45.0" line. */
+.pb-set7-update-notes { display: flex; flex-direction: column; gap: var(--space-2); margin-block-end: var(--space-2); }
+.pb-set7-update-notes .pb-relnotes-head { margin: 0; font-size: 13px; line-height: 20px; font-weight: 600; color: var(--ink); }
+/* On Pobots's own card on the rail after an update. */
+.pb-card-system .pb-relnotes { margin-block-start: calc(var(--space-1) * -1); }
+@media (prefers-reduced-motion: reduce) {
+  .pb-relnotes-motion, .pb-relnotes-toggle svg { transition: none; }
+}

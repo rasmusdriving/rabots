@@ -3,8 +3,8 @@
 // itself and its General section are in AppSettings.tsx. Follows T3 Code's settings
 // (apps/web/src/components/settings/*: Providers, "Usage providers" with "Add hub", "Advanced" with the
 // health check interval).
-import { useEffect, useState, type ReactNode } from "react";
-import type { ChatTimingKey, Harness, ModelInfo, ProviderId, ProviderState, ProvidersState } from "../../shared/protocol";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { ChatTimingKey, Harness, ModelInfo, ProviderId, ProviderState, ProvidersState, ReleaseNote } from "../../shared/protocol";
 import { messageOf } from "../engine/types";
 import { useNow, useSaver, type SaveState } from "../lib/hooks";
 import { groupModels, offeredModels } from "../lib/models";
@@ -15,6 +15,7 @@ import { useAppState } from "../state/store";
 import { Dialog } from "./Dialog";
 import { Mark } from "./bits";
 import { PobotsRunLine, PobotsUpdateCard } from "./PobotsUpdateCard";
+import { ReleaseNotes } from "./ReleaseNotes";
 import { anyUpdateRunning, labelsWords, updateTodo } from "../lib/pobots-update";
 
 // ------------------------------------------------------------ small pieces
@@ -598,6 +599,12 @@ export function UpdateDialog({ onClose }: { onClose(): void }) {
   const harnesses = todo.filter((t) => t.id !== "pobots");
   const pobots = todo.some((t) => t.id === "pobots");
   const showRun = started || going;
+  // What the new Pobots brings (protocol 36). Kept while the dialog is open, also once the update runs,
+  // so the dialog keeps its size.
+  const kept = useRef<{ notes: ReleaseNote[]; older: number; latest: string } | undefined>(undefined);
+  const ps = providers?.pobots;
+  if (pobots && ps?.available && ps.latest && ps.whatsNew?.length) kept.current = { notes: ps.whatsNew, older: ps.olderNotes ?? 0, latest: ps.latest };
+  const news = kept.current;
   const start = () => {
     setError("");
     setStarted(true);
@@ -637,6 +644,12 @@ export function UpdateDialog({ onClose }: { onClose(): void }) {
   return (
     <Dialog title={title} onClose={onClose}>
       <p className="pb-dialog-text pb-set7-update-text">{intro}</p>
+      {news ? (
+        <div className="pb-set7-update-notes">
+          <p className="pb-relnotes-head">{`What's new in ${news.latest}`}</p>
+          <ReleaseNotes notes={news.notes} older={news.older} scroll label={`What's new in Pobots ${news.latest}`} />
+        </div>
+      ) : null}
       {showRun && going && <p className="pb-hint">It goes on if you close this.</p>}
       <ProblemLine text={error} />
       <div className="pb-dialog-actions">

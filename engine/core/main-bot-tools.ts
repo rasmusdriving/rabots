@@ -13,6 +13,7 @@ import { writeBotFile } from "../bots.js";
 import { EngineError } from "../errors.js";
 import { cleanDomains, setInternalDomains } from "./calendar-settings.js";
 import { ABOUT_YOU_MAX, aboutYou, setAboutYou } from "./first-start.js";
+import { notesWords } from "./changelog.js";
 
 /** The quiet line a bot's change of settings leaves in its chat: what changed, from what to what (core/notes.ts). */
 export function noteChanges(eng: Engine, rt: BotRuntime, changes: string[]): void {
@@ -64,7 +65,11 @@ function pobotsLine(version: string, s: ProvidersState["pobots"]): string {
   if (!s) return `Pobots: version ${version}. It is updated another way here, not with run_pobots_task.`;
   const run = s.run ? ` ${s.run.endedAt ? "Last update" : "Updating now"}: ${s.run.line}` : "";
   const state = s.available ? `Pobots ${s.latest} is available${s.canRestart ? " (run_pobots_task update_pobots asks the person on a card)" : ", but this Pobots cannot restart itself, so the person updates it by hand"}.` : s.checkedAt ? "Up to date." : "Not looked for a newer version yet (get_settings fresh looks).";
-  return `Pobots: version ${s.current}. ${state}${s.problem ? ` ${s.problem}` : ""}${run}`;
+  const news = s.available ? notesWords(s.whatsNew) : [];
+  const older = s.available && s.olderNotes ? `\n(${s.olderNotes} older ${s.olderNotes === 1 ? "version" : "versions"} not listed.)` : "";
+  const whatsNew = news.length ? `\nWhat's new in the available update, from Pobots's changelog:\n${news.map((l) => `- ${l}`).join("\n")}${older}` : s.available ? " The available update has no notes about what it changes." : "";
+  const thisOne = !s.available && s.thisVersion ? `\nWhat ${s.current} brought: ${notesWords([s.thisVersion]).join(" ").replace(/^\S+: /, "")}` : "";
+  return `Pobots: version ${s.current}. ${state}${s.problem ? ` ${s.problem}` : ""}${run}${whatsNew}${thisOne}`;
 }
 
 /** About you for get_settings: the text itself, since the main bot keeps it up to date. */

@@ -11,8 +11,10 @@ import { ok, problem, type PobotsTaskArgs } from "../team.js";
 import { EngineError } from "../errors.js";
 import { getSettingsFor } from "./main-bot-tools.js";
 import { calendarSettingsWords } from "./calendar-settings.js";
-import { noteChange } from "./notes.js";
-import { approval } from "./cards.js";
+import { holdNotice, noteChange } from "./notes.js";
+import { approval, showSystemCard } from "./cards.js";
+import { notesWords } from "./changelog.js";
+import type { ReleaseNote } from "../../shared/protocol.js";
 import { refused } from "./words.js";
 import { wake } from "./start-helper.js";
 import { log } from "../log.js";
@@ -74,20 +76,42 @@ function usageWords(eng: Engine): string {
 }
 
 /** The note that wakes the bot that started Pobots's own update, once it has ended (also after the restart). */
-export function updateAskerNote(line: string, version: string, ok: boolean): string {
+export function updateAskerNote(line: string, version: string, ok: boolean, notes?: ReleaseNote[]): string {
+  const news = ok ? notesWords(notes) : [];
   return [
     `Note from Pobots: the update of Pobots that the person allowed has ended. ${line} Pobots now runs version ${version}.`,
-    ok ? "Tell the person in one short sentence that Pobots is updated and which version runs now." : "Tell the person in one or two short sentences that the update did not go through, which version runs now, and the reason in plain words.",
+    ...(news.length ? [`What is new, from Pobots's changelog:\n${news.join("\n")}\n`] : []),
+    ok
+      ? news.length
+        ? "Tell the person in one short sentence that Pobots is updated and which version runs now, then in a sentence or two what is new, in your own plain words."
+        : "Tell the person in one short sentence that Pobots is updated and which version runs now."
+      : "Tell the person in one or two short sentences that the update did not go through, which version runs now, and the reason in plain words.",
     "Use no tools.",
   ].join(" ");
 }
 
+/** The quiet line that stands right before that turn in the chat, so it does not show as a helper reporting back. */
+export function updateTurnLine(version: string, ok: boolean): string {
+  return ok ? `Pobots is updated to ${version}.` : "The update of Pobots did not go through.";
+}
+
 /** Wakes that bot (the main bot when it is gone) in its main chat. */
-export function tellUpdateAsker(eng: Engine, botId: string, line: string, version: string, ok: boolean): void {
+export function tellUpdateAsker(eng: Engine, botId: string, line: string, version: string, ok: boolean, notes?: ReleaseNote[]): void {
   const rt = eng.bots.get(botId) ?? [...eng.bots.values()].find((b) => b.folder.file.role === "main");
   if (!rt) return;
   log.info(`Bot ${rt.folder.id}: told how the update of Pobots went`);
-  wake(eng, rt, { text: updateAskerNote(line, version, ok), purpose: { startedBy: "you", threadId: rt.threadId, fresh: false, hops: 0 } });
+  holdNotice(eng, rt, { text: updateTurnLine(version, ok), tone: "info", startsTurn: true });
+  wake(eng, rt, { text: updateAskerNote(line, version, ok, notes), purpose: { startedBy: "you", threadId: rt.threadId, fresh: false, hops: 0 } });
+}
+
+/**
+ * Pobots's own card on the rail, once after an update (protocol 36): "Pobots is updated to 0.45.0"
+ * with what is new since the version before. It stays until the person dismisses it.
+ */
+export function showUpdatedCard(eng: Engine, from: string | undefined, to: string, notes: ReleaseNote[]): void {
+  const text = notes.length ? "" : from ? `It was ${from} before.` : "";
+  showSystemCard(eng, "update", `Pobots is updated to ${to}`, text, notes);
+  log.info(`Pobots ${to}: the card about the update is up${notes.length ? ` with the notes of ${notes.map((n) => n.version).join(", ")}` : ""}`);
 }
 
 /** run_pobots_task: one thing for Pobots now. */
@@ -121,7 +145,7 @@ export async function runPobotsTaskFor(eng: Engine, rt: BotRuntime, args: Pobots
           rt,
           {
             title: `Update Pobots to ${s.latest}?`,
-            detail: [`Pobots ${s.current} to ${s.latest}.`, "", "It waits until every bot is calm, then restarts. The window reconnects by itself after about a minute.", "", `Asked by ${rt.folder.file.name}.`].join("\n"),
+            detail: [`Pobots ${s.current} to ${s.latest}.`, ...whatsNewDetail(s.whatsNew), "", "It waits until every bot is calm, then restarts. The window reconnects by itself after about a minute.", "", `Asked by ${rt.folder.file.name}.`].join("\n"),
             caption: "Update",
           },
           signal,
@@ -146,4 +170,13 @@ export async function runPobotsTaskFor(eng: Engine, rt: BotRuntime, args: Pobots
     return problem(err instanceof EngineError ? err.message : "That could not be done.");
   }
   return problem("Unknown task.");
+}
+
+/** "What's new" on the update_pobots card: up to five bullets, newest first, with how many more there are. */
+function whatsNewDetail(notes: ReleaseNote[] | undefined): string[] {
+  if (!notes?.length) return [];
+  const all = notes.flatMap((n) => n.items);
+  const total = notes.reduce((sum, n) => sum + n.totalItems, 0);
+  const shown = all.slice(0, 5);
+  return ["", "What's new:", ...shown.map((t) => `- ${t}`), ...(total > shown.length ? [`And ${total - shown.length} more.`] : [])];
 }

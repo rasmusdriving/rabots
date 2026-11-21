@@ -102,3 +102,4 @@ await import("./todo-block-wish.spec.js");
 await import("./ahead-setup.spec.js");
 await import("./schema-keys.spec.js");
 await import("./google-calendar.spec.js");
+await import("./changelog.spec.js");

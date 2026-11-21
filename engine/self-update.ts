@@ -14,7 +14,8 @@
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
 import { delimiter, dirname, join } from "node:path";
-import type { PobotsUpdateRun, PobotsUpdateState } from "../shared/protocol.js";
+import type { PobotsUpdateRun, PobotsUpdateState, ReleaseNote } from "../shared/protocol.js";
+import { noteFor, pickNotes, readChangelog } from "./core/changelog.js";
 import { log } from "./log.js";
 import { newer, realRunner, type Runner } from "./providers.js";
 
@@ -50,7 +51,12 @@ export interface SelfUpdateHost {
    * The update a bot started (the main bot's run_pobots_task) has ended, here or after the restart:
    * the bot tells the person in its chat which version runs now.
    */
-  tellAsker?(botId: string, line: string, version: string, ok: boolean): void;
+  tellAsker?(botId: string, line: string, version: string, ok: boolean, notes?: ReleaseNote[]): void;
+  /**
+   * Pobots was updated and this engine runs the new version: told once, after the restart (protocol
+   * 36). `notes`: what is new since `from`, from the folder's own CHANGELOG.md (may be empty).
+   */
+  updated?(from: string | undefined, to: string, notes: ReleaseNote[]): void;
 }
 
 export interface SelfUpdateOptions {
@@ -168,6 +174,8 @@ export class SelfUpdate {
   private firstTimer?: NodeJS.Timeout;
   private jobTimer?: NodeJS.Timeout;
   private stopped = false;
+  /** The source folder's own CHANGELOG.md, read once at start (protocol 36). */
+  private localChangelog?: string;
   private detected?: Promise<void>;
   private done?: Promise<void>;
 
@@ -223,11 +231,13 @@ export class SelfUpdate {
     this.source = real;
     this.remote = hit[1]!;
     this.mode = await this.restartMode();
+    this.localChangelog = readChangelog(real);
+    const thisVersion = noteFor(this.localChangelog, this.o.current);
     const told = this.lastOutcome();
-    this.state = { current: this.o.current, available: false, canRestart: this.mode.kind !== "none", run: told ?? this.pendingJob() };
+    this.state = { current: this.o.current, available: false, canRestart: this.mode.kind !== "none", run: told ?? this.pendingJob(), ...(thisVersion ? { thisVersion } : {}) };
     log.info(`This Pobots updates itself from ${this.o.config?.repo ?? PUBLIC_REPO} (${real}; restart: ${this.mode.kind})`);
     this.host.changed();
-    if (told) this.tellAsker(told);
+    if (told) this.tellAsker(told, this.announce(told));
   }
 
   private async restartMode(): Promise<RestartMode> {
@@ -275,6 +285,9 @@ export class SelfUpdate {
       const branch = this.o.config?.branch ?? "main";
       let problem: string | undefined;
       let latest = this.state!.latest;
+      // What the newer versions bring: kept from the last look when this one could not read them.
+      let whatsNew = this.state!.whatsNew;
+      let olderNotes = this.state!.olderNotes;
       const f = await this.git(src, ["fetch", "--no-tags", "--quiet", this.remote!, `+refs/heads/${branch}:${LATEST_REF}`]);
       if (!f.ok) {
         log.warn(`Could not look for a new Pobots: git fetch from ${this.remote} did not work (${firstLine(f.out)})`);
@@ -283,11 +296,31 @@ export class SelfUpdate {
         const shown = await this.git(src, ["show", `${LATEST_REF}:engine/engine.ts`]);
         const v = shown.ok ? versionIn(shown.out) : undefined;
         if (!v) problem = "The newest version could not be read. It tries again later.";
-        else latest = v;
+        else {
+          latest = v;
+          whatsNew = undefined;
+          olderNotes = undefined;
+          if (newer(v, this.o.current)) {
+            // A new version without a changelog (or with a broken one) is still found: it only has no notes.
+            const cl = await this.git(src, ["show", `${LATEST_REF}:CHANGELOG.md`]);
+            const picked = pickNotes(cl.ok ? cl.out : undefined, this.o.current, v);
+            if (picked.notes.length) whatsNew = picked.notes;
+            if (picked.older) olderNotes = picked.older;
+          }
+        }
       }
       if (this.stopped || !this.state) return;
-      const { problem: _old, ...rest } = this.state;
-      this.state = { ...rest, ...(latest ? { latest } : {}), available: newer(latest, this.o.current), checkedAt: iso(this.clock()), ...(problem ? { problem } : {}) };
+      const { problem: _old, whatsNew: _notes, olderNotes: _older, ...rest } = this.state;
+      const available = newer(latest, this.o.current);
+      this.state = {
+        ...rest,
+        ...(latest ? { latest } : {}),
+        available,
+        checkedAt: iso(this.clock()),
+        ...(problem ? { problem } : {}),
+        ...(available && whatsNew ? { whatsNew } : {}),
+        ...(available && whatsNew && olderNotes ? { olderNotes } : {}),
+      };
       this.host.changed();
     })().finally(() => {
       this.checking = undefined;
@@ -370,11 +403,23 @@ export class SelfUpdate {
     run.endedAt = iso(this.clock());
     this.set(run, phase, line);
     log.info(`Pobots update: ${line}`);
-    this.tellAsker(run);
+    this.tellAsker(run, this.announce(run));
+  }
+
+  /**
+   * When `run` ended well and this engine is its new version, the host hears it once with what is new
+   * since the old version (the card on the rail, protocol 36). Gives the notes, for the bot that asked.
+   */
+  private announce(run: PobotsUpdateRun): ReleaseNote[] | undefined {
+    if (run.phase !== "done" || (run.to && run.to !== this.o.current)) return undefined;
+    const from = run.from && newer(this.o.current, run.from) ? run.from : undefined;
+    const notes = pickNotes(this.localChangelog, from, this.o.current).notes;
+    this.host.updated?.(from, this.o.current, notes);
+    return notes;
   }
 
   /** The bot that started this update (if one did, in the last two hours) is woken to tell the person. Once. */
-  private tellAsker(run: PobotsUpdateRun): void {
+  private tellAsker(run: PobotsUpdateRun, notes?: ReleaseNote[]): void {
     const path = join(this.host.dataDir, "updates", "self-asked.json");
     let asked: { botId?: string; at?: string };
     try {
@@ -385,7 +430,7 @@ export class SelfUpdate {
     rmSync(path, { force: true });
     const at = Date.parse(asked.at ?? "");
     if (!asked.botId || !Number.isFinite(at) || this.clock() - at > 2 * 3600 * 1000) return;
-    this.host.tellAsker?.(asked.botId, run.line, this.o.current, run.phase === "done");
+    this.host.tellAsker?.(asked.botId, run.line, this.o.current, run.phase === "done", notes?.length ? notes : undefined);
   }
 
   private async runIt(run: PobotsUpdateRun, to: string): Promise<void> {
@@ -489,6 +534,8 @@ export class SelfUpdate {
       if (!r || r.requestedAt === undefined || Date.parse(r.requestedAt) < Date.parse(run.startedAt)) return;
       clearInterval(this.jobTimer);
       this.markReported();
+      // After the restart this engine's own version is not where the update came from: the job knows.
+      if (r.from) run.from = r.from;
       const o = outcome(r, run.from);
       this.end(run, o.phase, o.line);
     }, this.o.timings?.jobPollMs ?? JOB_POLL_MS);

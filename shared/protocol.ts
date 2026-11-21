@@ -43,7 +43,7 @@ export * from "./usage-overview.js";
 export * from "./ahead.js";
 import type { AheadAction, AheadItem, AheadLevel, AheadSettings, AheadView } from "./ahead.js";
 
-export const PROTOCOL_VERSION = 35;
+export const PROTOCOL_VERSION = 36;
 
 // ---------------------------------------------------------------- steering (protocol 14)
 
@@ -774,11 +774,13 @@ export interface SystemCard {
   id: string;
   kind: "system";
   at: string;
-  /** What it is about. */
-  topic: "backup";
+  /** What it is about. "update": Pobots was updated (protocol 36), told once after the restart. */
+  topic: "backup" | "update";
   title: string;
   /** A sentence or two. Plain text. */
   text?: string;
+  /** For "update": what is new since the version before, newest first (protocol 36). */
+  notes?: ReleaseNote[];
 }
 
 export type Card = ApprovalCard | QuestionCard | NoteCard | SystemCard;
@@ -1620,6 +1622,20 @@ export interface PobotsUpdateRun {
   to?: string;
 }
 
+/**
+ * What one version of Pobots brings, read from the repository's CHANGELOG.md (protocol 36). Plain text
+ * bullets for a person, already cut short by the engine.
+ */
+export interface ReleaseNote {
+  version: string;
+  /** As written in the changelog: "21 Nov 2026". */
+  date?: string;
+  /** At most 8, each at most 220 characters. */
+  items: string[];
+  /** How many bullets the version has in the changelog, also those left out of `items`. */
+  totalItems: number;
+}
+
 /** Pobots's own version on a public install (protocol 25). */
 export interface PobotsUpdateState {
   /** The running version. */
@@ -1635,6 +1651,15 @@ export interface PobotsUpdateState {
   problem?: string;
   /** The running update, or the last one (also the one before the restart, read back after it). */
   run: PobotsUpdateRun | null;
+  /**
+   * When an update is available: what each version newer than `current`, up to `latest`, brings,
+   * newest first (protocol 36). Absent when the new version has no changelog.
+   */
+  whatsNew?: ReleaseNote[];
+  /** How many more versions are newer than `current` than `whatsNew` carries (protocol 36). */
+  olderNotes?: number;
+  /** What the running version brought, from the install's own changelog (protocol 36). */
+  thisVersion?: ReleaseNote;
 }
 
 /** One limit window of one account. */

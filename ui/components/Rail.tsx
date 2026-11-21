@@ -15,6 +15,7 @@ import { TaskManagers } from "./TaskManagers";
 import { TodoList } from "./Todo";
 import { MeetingDetail } from "./MeetingCard";
 import { CardQuestions } from "./CardQuestions";
+import { ReleaseNotes } from "./ReleaseNotes";
 import { useRailExit, useRailLeaving } from "./rail-leaving";
 
 /** How often the "Expires in" line is brought up to date. */
@@ -290,7 +291,8 @@ function QuestionCard({ card, bot }: { card: Question; bot: Bot | undefined }) {
 
 /**
  * A card from Pobots itself, not from a bot: Pobots' own mark where a face would be, the news, a way to
- * the page it is about, and "Dismiss". A newer card on the same topic takes its place: its words
+ * the page it is about, and "Dismiss". After an update (topic "update", protocol 36) it lists what is
+ * new: three bullets, then "Show all". A newer card on the same topic takes its place: its words
  * fade in where the old ones were.
  */
 function SystemCard({ card }: { card: System }) {
@@ -307,6 +309,7 @@ function SystemCard({ card }: { card: System }) {
           {card.title}
         </p>
         {card.text && <p className="pb-card-text">{card.text}</p>}
+        {card.notes?.length ? <ReleaseNotes notes={card.notes} limit={3} label="What's new" /> : null}
       </div>
       <div className="pb-card-actions">
         {card.topic === "backup" && (

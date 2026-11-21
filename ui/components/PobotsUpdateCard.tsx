@@ -1,9 +1,12 @@
 // Pobots itself in Providers, on a public install only (engine 0.34.0, docs/build/step-self-update.md):
 // the running version, whether a newer one is out, and its Update button, which opens the same
 // dialog as Claude Code's and Codex's. Built like their cards, so it sits calmly at the end of the list.
+// Protocol 36: what the new version brings under its line (three bullets, then Show all), and after an
+// update "What's new in 0.45.0", which opens in place.
 import type { PobotsUpdateState } from "../../shared/protocol";
 import { clockTime } from "../lib/words";
 import { Mark } from "./bits";
+import { ReleaseNotes, ThisVersionNotes } from "./ReleaseNotes";
 
 export function PobotsUpdateCard({ s, running, onUpdate }: { s: PobotsUpdateState; running: boolean; onUpdate(): void }) {
   const can = s.available && s.canRestart;
@@ -29,6 +32,14 @@ export function PobotsUpdateCard({ s, running, onUpdate }: { s: PobotsUpdateStat
           Update
         </button>
       </div>
+      {s.available && s.whatsNew?.length ? (
+        <div className="pb-set7-pobots-notes">
+          <p className="pb-relnotes-head">What's new</p>
+          <ReleaseNotes notes={s.whatsNew} older={s.olderNotes ?? 0} limit={3} label={`What's new in Pobots ${s.latest ?? ""}`.trim()} />
+        </div>
+      ) : !s.available && s.thisVersion ? (
+        <ThisVersionNotes note={s.thisVersion} />
+      ) : null}
     </div>
   );
 }
